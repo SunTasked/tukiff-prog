@@ -243,3 +243,25 @@ for (const [name, p] of Object.entries(PROFILES)) {
   }
 }
 console.log(`Résultats : ${resultCount} (a3 et c2 ne partagent pas leurs scores)`)
+
+// Personal records (a3 has no Back Squat 1RM, to show the "1RM ?" link).
+const RECORDS = {
+  a1: { 'Back Squat': [[1, 120], [5, 100]], Deadlift: [[1, 160]], 'Clean & Jerk': [[1, 90]], Fran: '4:05' },
+  a2: { 'Back Squat': [[1, 95], [3, 88]], 'Clean & Jerk': [[1, 65]], Fran: '5:40' },
+  a3: { Deadlift: [[1, 100]] },
+  c1: { 'Back Squat': [[1, 140]], 'Clean & Jerk': [[1, 105]], Fran: '3:20' },
+}
+let recordCount = 0
+for (const [name, recs] of Object.entries(RECORDS)) {
+  const client = createClient(url, publishable, { auth: { persistSession: false } })
+  await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
+  for (const [key, value] of Object.entries(recs)) {
+    const rows =
+      typeof value === 'string'
+        ? [{ benchmark_name: key, score_type: 'time', time_s: Number(value.split(':')[0]) * 60 + Number(value.split(':')[1]) }]
+        : value.map(([rep_max, load_kg]) => ({ exercise_id: ex[key], rep_max, load_kg }))
+    must(await client.from('personal_records').insert(rows.map((r) => ({ ...r, date: dayOf(-3, 2) }))))
+    recordCount += rows.length
+  }
+}
+console.log(`Records : ${recordCount}`)
