@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  blockLevels,
   emptyItem,
   formatDuration,
   formatSummary,
@@ -103,4 +104,12 @@ describe('invalidatedBlocks', () => {
     e.blocks[1].params = { time_cap_s: 600 }
     expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
+})
+
+it('offers only RX and the levels defined in the block', () => {
+  const b = { ...newBlock('metcon', 'x'), items: [emptyItem('t'), { ...emptyItem('p'), levels: { foundation: { reps: '5' } } }] }
+  expect(blockLevels(b)).toEqual(['rx', 'foundation'])
+  b.items[0] = { ...emptyItem('t'), levels: { elite: { load_kg: 60 }, scaled: {} } }
+  expect(blockLevels(b)).toEqual(['elite', 'rx', 'foundation'])
+  expect(blockLevels(newBlock('warmup', 'w'))).toEqual(['rx'])
 })

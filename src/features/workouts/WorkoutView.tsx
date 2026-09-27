@@ -7,6 +7,7 @@ import { Chips } from '../../components/ui'
 import {
   BLOCK_KINDS,
   LEVELS,
+  blockLevels,
   formatSummary,
   itemSummary,
   resolveItem,
@@ -31,21 +32,22 @@ export function WorkoutView({
   /** Viewer's 1RM per exercise: shows the load for "% 1RM" prescriptions. */
   oneRmOf?: (exerciseId: string) => number | undefined
 }) {
-  // Remember the athlete's usual level on this device.
-  const [level, setLevelState] = useState<Level>(() => {
-    const saved = getItem('level')
-    return saved && saved in LEVELS ? (saved as Level) : 'rx'
-  })
-  const setLevel = (l: Level) => {
-    setItem('level', l)
-    setLevelState(l)
+  // Level chosen per block; defaults to the athlete's usual level (remembered on the device) when offered.
+  const [chosen, setChosen] = useState<Record<string, Level>>({})
+  const preferred = getItem('level') as Level | null
+  const levelOf = (b: BlockDraft) => {
+    const offered = blockLevels(b)
+    const l = chosen[b.id] ?? preferred
+    return l && offered.includes(l) ? l : 'rx'
   }
-  const hasLevels = workout.blocks.some((b) => b.items.some((i) => Object.keys(i.levels).length > 0))
+  const choose = (blockId: string, l: Level) => {
+    setItem('level', l)
+    setChosen({ ...chosen, [blockId]: l })
+  }
 
   return (
     <div className="flex flex-col gap-4">
       {workout.notes && <p className="whitespace-pre-line text-zinc-300">{workout.notes}</p>}
-      {hasLevels && <Chips options={LEVELS} value={level} onChange={setLevel} />}
       {workout.blocks.map((b, i) => (
         <section key={b.id} className="rounded-2xl bg-zinc-900 p-4">
           <div className="flex items-center justify-between gap-2">
@@ -59,9 +61,18 @@ export function WorkoutView({
               {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
             </h3>
           )}
+          {blockLevels(b).length > 1 && (
+            <div className="mt-2">
+              <Chips
+                options={Object.fromEntries(blockLevels(b).map((l) => [l, LEVELS[l]])) as Record<Level, string>}
+                value={levelOf(b)}
+                onChange={(l) => choose(b.id, l)}
+              />
+            </div>
+          )}
           <ul className="mt-2 flex flex-col gap-1">
             {b.items.map((item, j) => {
-              const r = resolveItem(item, level)
+              const r = resolveItem(item, levelOf(b))
               const video = r.exercise_id && videoOf?.(r.exercise_id)
               return (
                 <li key={j}>

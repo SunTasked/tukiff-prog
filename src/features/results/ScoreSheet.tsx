@@ -14,6 +14,8 @@ type Props = {
   blockId: string
   blockLabel: string
   type: ScoreType
+  /** Levels offered for this block (RX + those defined by the coach). */
+  levels: Level[]
   existing: ResultRow | undefined
   onClose: () => void
   onSaved: () => void
@@ -22,11 +24,12 @@ type Props = {
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
 
-export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, existing, onClose, onSaved }: Props) {
+export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, levels, existing, onClose, onSaved }: Props) {
   const [score, setScore] = useState<Score>(existing ?? emptyScore())
-  const [level, setLevel] = useState<Level>(
-    (existing?.level as Level) ?? ((getItem('level') as Level) in LEVELS ? (getItem('level') as Level) : 'rx'),
-  )
+  const [level, setLevel] = useState<Level>(() => {
+    const preferred = (existing?.level ?? getItem('level')) as Level | null
+    return preferred && levels.includes(preferred) ? preferred : 'rx'
+  })
   const [comment, setComment] = useState(existing?.comment ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -62,7 +65,13 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, exis
         </button>
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        <Chips options={LEVELS} value={level} onChange={setLevel} />
+        {levels.length > 1 && (
+          <Chips
+            options={Object.fromEntries(levels.map((l) => [l, LEVELS[l]])) as Record<Level, string>}
+            value={level}
+            onChange={setLevel}
+          />
+        )}
 
         {type === 'time' && (
           <>

@@ -17,7 +17,7 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
-  const { profile, session } = useAuth()
+  const { session } = useAuth()
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
   const monday = mondayOf(day)
@@ -63,7 +63,8 @@ export function HomePage() {
   return (
     <>
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Salut {profile?.display_name} 👋</h1>
+        {/* mix-blend-screen makes the logo's black background disappear on the dark page */}
+        <img src="/tkf-logo.jpg" alt="TKF Programming" className="h-14 w-auto mix-blend-screen" />
         <Link to="/timer" className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-semibold">
           ⏱ Timer
         </Link>

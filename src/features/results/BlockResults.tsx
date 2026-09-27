@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { formatScore, leaderboards, scoreType } from '../../domain/scoring'
-import { LEVELS, type BlockDraft, type Level } from '../../domain/workout'
+import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
 
@@ -60,6 +60,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           blockId={block.id}
           blockLabel={blockLabel}
           type={type}
+          levels={blockLevels(block)}
           existing={mine}
           onClose={() => setOpen(false)}
           onSaved={() => {

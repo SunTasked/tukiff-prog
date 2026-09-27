@@ -230,3 +230,10 @@ export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): 
   }
   return { changed, removed }
 }
+
+/** Levels offered for a block: RX plus the levels the coach defined in its items, in LEVELS order. */
+export function blockLevels(block: BlockDraft): Level[] {
+  return (Object.keys(LEVELS) as Level[]).filter(
+    (l) => l === 'rx' || block.items.some((i) => hasOverride(i.levels[l as AltLevel])),
+  )
+}
