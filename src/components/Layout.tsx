@@ -1,5 +1,6 @@
 import { NavLink, Outlet } from 'react-router'
 import { isCoach, useAuth } from '../features/auth/AuthProvider'
+import { InstallBanner } from './InstallBanner'
 
 type Tab = { to: string; label: string; icon: string; coachOnly?: boolean }
 
@@ -22,6 +23,7 @@ export function Layout() {
   return (
     <div className="mx-auto min-h-dvh max-w-md pt-[env(safe-area-inset-top)]">
       <main className="px-4 pt-4 pb-28">
+        <InstallBanner />
         <Outlet />
       </main>
       <nav className="fixed inset-x-0 bottom-0 border-t border-zinc-800 bg-zinc-950/95 pb-[env(safe-area-inset-bottom)] backdrop-blur">
