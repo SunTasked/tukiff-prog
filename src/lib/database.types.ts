@@ -62,6 +62,7 @@ export type Database = {
         Row: {
           created_at: string
           display_name: string | null
+          enrolled_at: string | null
           id: string
           role: string | null
           share_scores: boolean
@@ -69,6 +70,7 @@ export type Database = {
         Insert: {
           created_at?: string
           display_name?: string | null
+          enrolled_at?: string | null
           id: string
           role?: string | null
           share_scores?: boolean
@@ -76,6 +78,7 @@ export type Database = {
         Update: {
           created_at?: string
           display_name?: string | null
+          enrolled_at?: string | null
           id?: string
           role?: string | null
           share_scores?: boolean
@@ -88,9 +91,11 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
+      delete_my_account: { Args: never; Returns: undefined }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       my_role: { Args: never; Returns: string }
+      remove_member: { Args: { p_user: string }; Returns: undefined }
     }
     Enums: {
       [_ in never]: never

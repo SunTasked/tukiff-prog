@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
 import { invitationStatus, invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { supabase, type Invitation, type Profile } from '../../lib/supabase'
+import { useAuth } from '../auth/AuthProvider'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
 export function AthletesPage() {
+  const { session } = useAuth()
   const [members, setMembers] = useState<Profile[]>([])
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [error, setError] = useState('')
@@ -34,6 +36,13 @@ export function AthletesPage() {
 
   async function revoke(id: string) {
     const { error } = await supabase.from('invitations').update({ revoked_at: new Date().toISOString() }).eq('id', id)
+    if (error) setError(error.message)
+    load()
+  }
+
+  async function removeMember(m: Profile) {
+    if (!confirm(`Retirer l’accès de ${m.display_name ?? 'ce membre'} ? Il pourra être réinvité.`)) return
+    const { error } = await supabase.rpc('remove_member', { p_user: m.id })
     if (error) setError(error.message)
     load()
   }
@@ -116,9 +125,14 @@ export function AthletesPage() {
             {members.map((m) => (
               <li key={m.id} className="flex items-center justify-between py-2">
                 <span>{m.display_name ?? '—'}</span>
-                <span className="text-xs text-zinc-400">
+                <span className="flex items-center gap-3 text-xs text-zinc-400">
                   {m.role === 'coach' ? 'Coach' : 'Athlète'}
                   {m.share_scores ? ' · scores partagés' : ''}
+                  {m.id !== session?.user.id && (
+                    <button className="text-red-400" onClick={() => removeMember(m)}>
+                      Retirer
+                    </button>
+                  )}
                 </span>
               </li>
             ))}

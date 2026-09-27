@@ -18,6 +18,16 @@ export function ProfilePage() {
     setSaved(true)
   }
 
+  async function deleteAccount() {
+    if (!confirm('Supprimer définitivement ton compte et tous tes scores ? Cette action est irréversible.')) return
+    const { error } = await supabase.rpc('delete_my_account')
+    if (error) {
+      setError(error.message.includes('last_coach') ? 'Tu es le seul coach : nomme un autre coach avant de supprimer ton compte.' : error.message)
+      return
+    }
+    await supabase.auth.signOut()
+  }
+
   const saveName = (e: FormEvent) => {
     e.preventDefault()
     update({ display_name: name.trim() })
@@ -59,9 +69,12 @@ export function ProfilePage() {
         {saved && <p className="text-sm text-lime-400">Enregistré.</p>}
         <ErrorText>{error}</ErrorText>
 
-        <Button variant="danger" onClick={() => supabase.auth.signOut()}>
+        <Button variant="secondary" onClick={() => supabase.auth.signOut()}>
           Se déconnecter
         </Button>
+        <button className="py-2 text-sm text-red-400 underline" onClick={deleteAccount}>
+          Supprimer mon compte
+        </button>
       </div>
     </>
   )
