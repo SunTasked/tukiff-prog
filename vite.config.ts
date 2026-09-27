@@ -10,10 +10,6 @@ export default defineConfig({
     tailwindcss(),
     VitePWA({
       registerType: 'autoUpdate',
-      // Custom service worker (src/sw.ts) for push notifications.
-      strategies: 'injectManifest',
-      srcDir: 'src',
-      filename: 'sw.ts',
       includeAssets: ['favicon.svg', 'apple-touch-icon.png'],
       manifest: {
         name: 'Tukiff Prog',
@@ -30,6 +26,7 @@ export default defineConfig({
           { src: 'pwa-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
+      workbox: { navigateFallback: '/index.html' },
     }),
   ],
   test: { environment: 'node' },

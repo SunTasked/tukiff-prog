@@ -4,7 +4,6 @@ import { Button, Card, ErrorText, Input, PageTitle } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
-import { NotificationsCard } from './NotificationsCard'
 
 export function ProfilePage() {
   const { session, profile, refreshProfile } = useAuth()
@@ -51,8 +50,6 @@ export function ProfilePage() {
           <span className="font-semibold">Mes records</span>
           <span className="text-zinc-400">1RM, benchmarks ›</span>
         </Link>
-
-        <NotificationsCard />
 
         <Card>
           <form onSubmit={saveName} className="flex flex-col gap-3">

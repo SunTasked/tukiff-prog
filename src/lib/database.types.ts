@@ -336,41 +336,6 @@ export type Database = {
         }
         Relationships: []
       }
-      push_subscriptions: {
-        Row: {
-          auth: string
-          created_at: string
-          endpoint: string
-          id: string
-          p256dh: string
-          user_id: string
-        }
-        Insert: {
-          auth: string
-          created_at?: string
-          endpoint: string
-          id?: string
-          p256dh: string
-          user_id?: string
-        }
-        Update: {
-          auth?: string
-          created_at?: string
-          endpoint?: string
-          id?: string
-          p256dh?: string
-          user_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "push_subscriptions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       results: {
         Row: {
           athlete_id: string
@@ -532,7 +497,6 @@ export type Database = {
           date: string | null
           id: string
           notes: string | null
-          notified_at: string | null
           publish_at: string | null
           title: string
           updated_at: string
@@ -543,7 +507,6 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
-          notified_at?: string | null
           publish_at?: string | null
           title: string
           updated_at?: string
@@ -554,7 +517,6 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
-          notified_at?: string | null
           publish_at?: string | null
           title?: string
           updated_at?: string
@@ -577,15 +539,6 @@ export type Database = {
       accept_invitation: { Args: { p_code: string }; Returns: string }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
-      claim_notifications: {
-        Args: never
-        Returns: {
-          date: string
-          title: string
-          user_id: string
-          workout_id: string
-        }[]
-      }
       copy_workout: {
         Args: {
           p_date: string
