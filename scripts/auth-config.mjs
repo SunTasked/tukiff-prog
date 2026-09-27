@@ -2,13 +2,15 @@
 // Usage: node scripts/auth-config.mjs <siteUrl>
 // With SMTP_PASSWORD in the environment, configures Gmail SMTP and the French email templates
 // (Supabase refuses template changes on the built-in SMTP).
-import { api } from './lib.mjs'
+import { api, target } from './lib.mjs'
+
+const appName = target === 'prod' ? 'TKF Programming' : 'TKF Staging'
 
 const siteUrl = process.argv[2]
 if (!siteUrl) throw new Error('Usage: node scripts/auth-config.mjs <siteUrl>')
 
 const smtpUser = process.env.SMTP_USER || 'guillaume.kheng@gmail.com'
-const template = `<h2>TKF Programming</h2>
+const template = `<h2>${appName}</h2>
 <p>Ton code de connexion :</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
 <p>Saisis-le dans l’application. Il expire dans 1 heure.</p>
@@ -20,11 +22,11 @@ const smtp = process.env.SMTP_PASSWORD && {
   smtp_user: smtpUser,
   smtp_pass: process.env.SMTP_PASSWORD,
   smtp_admin_email: smtpUser,
-  smtp_sender_name: 'TKF Programming',
+  smtp_sender_name: appName,
   rate_limit_email_sent: 30,
-  mailer_subjects_magic_link: 'Ton code de connexion TKF Programming',
+  mailer_subjects_magic_link: `Ton code de connexion ${appName}`,
   mailer_templates_magic_link_content: template,
-  mailer_subjects_confirmation: 'Ton code de connexion TKF Programming',
+  mailer_subjects_confirmation: `Ton code de connexion ${appName}`,
   mailer_templates_confirmation_content: template,
 }
 
