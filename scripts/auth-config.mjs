@@ -7,8 +7,8 @@ import { api } from './lib.mjs'
 const siteUrl = process.argv[2]
 if (!siteUrl) throw new Error('Usage: node scripts/auth-config.mjs <siteUrl>')
 
-const smtpUser = 'guillaume.kheng@gmail.com'
-const template = `<h2>Tukiff Prog</h2>
+const smtpUser = process.env.SMTP_USER || 'guillaume.kheng@gmail.com'
+const template = `<h2>TKF Programming</h2>
 <p>Ton code de connexion :</p>
 <p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
 <p>Saisis-le dans l’application. Il expire dans 1 heure.</p>
@@ -20,11 +20,11 @@ const smtp = process.env.SMTP_PASSWORD && {
   smtp_user: smtpUser,
   smtp_pass: process.env.SMTP_PASSWORD,
   smtp_admin_email: smtpUser,
-  smtp_sender_name: 'Tukiff Prog',
+  smtp_sender_name: 'TKF Programming',
   rate_limit_email_sent: 30,
-  mailer_subjects_magic_link: 'Ton code de connexion Tukiff Prog',
+  mailer_subjects_magic_link: 'Ton code de connexion TKF Programming',
   mailer_templates_magic_link_content: template,
-  mailer_subjects_confirmation: 'Ton code de connexion Tukiff Prog',
+  mailer_subjects_confirmation: 'Ton code de connexion TKF Programming',
   mailer_templates_confirmation_content: template,
 }
 
