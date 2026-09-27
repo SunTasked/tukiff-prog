@@ -115,6 +115,36 @@ export type Database = {
           },
         ]
       }
+      invitation_programs: {
+        Row: {
+          invitation_id: string
+          program_id: string
+        }
+        Insert: {
+          invitation_id: string
+          program_id: string
+        }
+        Update: {
+          invitation_id?: string
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "invitation_programs_invitation_id_fkey"
+            columns: ["invitation_id"]
+            isOneToOne: false
+            referencedRelation: "invitations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "invitation_programs_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       invitations: {
         Row: {
           code: string
@@ -186,6 +216,106 @@ export type Database = {
         }
         Relationships: []
       }
+      program_members: {
+        Row: {
+          created_at: string
+          program_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          program_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          program_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_members_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_members_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      programs: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
+      workout_assignments: {
+        Row: {
+          athlete_id: string | null
+          id: string
+          program_id: string | null
+          workout_id: string
+        }
+        Insert: {
+          athlete_id?: string | null
+          id?: string
+          program_id?: string | null
+          workout_id: string
+        }
+        Update: {
+          athlete_id?: string | null
+          id?: string
+          program_id?: string | null
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "workout_assignments_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_assignments_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workout_assignments_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_blocks: {
         Row: {
           format: string
@@ -234,6 +364,7 @@ export type Database = {
           date: string | null
           id: string
           notes: string | null
+          publish_at: string | null
           title: string
           updated_at: string
         }
@@ -243,6 +374,7 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
+          publish_at?: string | null
           title: string
           updated_at?: string
         }
@@ -252,6 +384,7 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
+          publish_at?: string | null
           title?: string
           updated_at?: string
         }
@@ -271,12 +404,43 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
+      assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
+      can_see_workout: { Args: { p_workout: string }; Returns: boolean }
+      copy_workout: {
+        Args: {
+          p_date: string
+          p_publish_at: string
+          p_src: string
+          p_with_assignments: boolean
+        }
+        Returns: string
+      }
       delete_my_account: { Args: never; Returns: undefined }
+      duplicate_week: {
+        Args: { p_from: string; p_to: string }
+        Returns: number
+      }
+      duplicate_workout: {
+        Args: { p_date: string; p_id: string }
+        Returns: string
+      }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       my_role: { Args: never; Returns: string }
+      my_workouts: {
+        Args: { p_from: string; p_to: string }
+        Returns: {
+          date: string
+          id: string
+          title: string
+        }[]
+      }
       remove_member: { Args: { p_user: string }; Returns: undefined }
       save_workout: { Args: { p: Json }; Returns: string }
+      schedule_workout: {
+        Args: { p_date: string; p_template: string }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
