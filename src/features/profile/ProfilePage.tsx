@@ -1,4 +1,5 @@
 import { useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { Button, Card, ErrorText, Input, PageTitle } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
@@ -44,6 +45,11 @@ export function ProfilePage() {
             Rôle : <b className="text-lime-400">{profile?.role === 'coach' ? 'Coach' : 'Athlète'}</b>
           </p>
         </Card>
+
+        <Link to="/records" className="flex items-center justify-between rounded-2xl bg-zinc-900 p-4">
+          <span className="font-semibold">Mes records</span>
+          <span className="text-zinc-400">1RM, benchmarks ›</span>
+        </Link>
 
         <Card>
           <form onSubmit={saveName} className="flex flex-col gap-3">

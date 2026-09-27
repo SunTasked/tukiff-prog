@@ -19,6 +19,7 @@ import { LibraryPage } from './features/library/LibraryPage'
 import { WorkoutEditor } from './features/workouts/WorkoutEditor'
 import { WorkoutPage } from './features/workouts/WorkoutPage'
 import { ProfilePage } from './features/profile/ProfilePage'
+import { RecordsPage } from './features/records/RecordsPage'
 import { getItem, setItem } from './lib/storage'
 import { supabase } from './lib/supabase'
 
@@ -61,6 +62,7 @@ export default function App() {
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
         <Route path="workouts/:id" element={<AthleteWorkoutPage />} />
+        <Route path="records" element={<RecordsPage />} />
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />

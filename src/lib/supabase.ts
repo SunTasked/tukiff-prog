@@ -12,3 +12,4 @@ export type Exercise = Database['public']['Tables']['exercises']['Row']
 export type Program = Database['public']['Tables']['programs']['Row']
 export type Assignment = { program_id: string | null; athlete_id: string | null }
 export type Result = Database['public']['Tables']['results']['Row']
+export type PersonalRecord = Database['public']['Tables']['personal_records']['Row']

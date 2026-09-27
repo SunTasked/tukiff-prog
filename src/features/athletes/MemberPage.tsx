@@ -4,6 +4,9 @@ import { Card, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import { supabase, type Profile } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useTeam } from '../programs/useTeam'
+import { useExercises } from '../exercises/useExercises'
+import { RecordsList } from '../records/RecordsList'
+import { useRecords } from '../records/useRecords'
 
 /** Member detail (coach): programs the member has access to, remove access. */
 export function MemberPage() {
@@ -11,6 +14,8 @@ export function MemberPage() {
   const navigate = useNavigate()
   const { session } = useAuth()
   const { programs } = useTeam()
+  const { nameOf } = useExercises()
+  const { records } = useRecords(id)
   const [member, setMember] = useState<Profile | null>(null)
   const [programIds, setProgramIds] = useState<string[]>([])
   const [error, setError] = useState('')
@@ -75,6 +80,10 @@ export function MemberPage() {
             ))}
           </ul>
         </Card>
+        <section>
+          <h2 className="mb-2 font-semibold">Records</h2>
+          <RecordsList records={records} nameOf={nameOf} editable={false} />
+        </section>
         <ErrorText>{error}</ErrorText>
         {member.id !== session?.user.id && (
           <button className="py-2 text-sm text-red-400 underline" onClick={removeAccess}>

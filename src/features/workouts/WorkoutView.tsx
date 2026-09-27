@@ -1,4 +1,6 @@
 import { useState, type ReactNode } from 'react'
+import { Link } from 'react-router'
+import { loadFromPct } from '../../domain/records'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
@@ -18,12 +20,15 @@ export function WorkoutView({
   nameOf,
   videoOf,
   blockFooter,
+  oneRmOf,
 }: {
   workout: WorkoutDraft
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
   /** Extra content under each block (results). */
   blockFooter?: (block: BlockDraft, label: string) => ReactNode
+  /** Viewer's 1RM per exercise: shows the load for "% 1RM" prescriptions. */
+  oneRmOf?: (exerciseId: string) => number | undefined
 }) {
   // Remember the athlete's usual level on this device.
   const [level, setLevelState] = useState<Level>(() => {
@@ -57,6 +62,9 @@ export function WorkoutView({
               return (
                 <li key={j}>
                   {itemSummary(r, nameOf)}
+                  {oneRmOf && r.pct_1rm != null && r.exercise_id && (
+                    <PctLoad exerciseId={r.exercise_id} pct={r.pct_1rm} oneRm={oneRmOf(r.exercise_id)} />
+                  )}
                   {video && (
                     <a href={video} target="_blank" rel="noreferrer" className="ml-2 text-sm text-lime-400">
                       ▶ vidéo
@@ -73,4 +81,14 @@ export function WorkoutView({
       ))}
     </div>
   )
+}
+
+function PctLoad({ exerciseId, pct, oneRm }: { exerciseId: string; pct: number; oneRm: number | undefined }) {
+  if (oneRm === undefined)
+    return (
+      <Link to={`/records?add=${exerciseId}`} className="ml-2 text-sm text-lime-400">
+        1RM ?
+      </Link>
+    )
+  return <span className="ml-2 font-semibold text-lime-400">≈ {loadFromPct(oneRm, pct)} kg</span>
 }
