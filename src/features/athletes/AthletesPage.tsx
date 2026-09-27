@@ -84,7 +84,7 @@ export function AthletesPage() {
   return (
     <>
       <PageTitle>Athlètes</PageTitle>
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start">
         <Card>
           <h2 className="mb-3 font-semibold">Inviter</h2>
           <div className="mb-3 grid grid-cols-2 rounded-xl bg-zinc-800 p-1 text-sm">

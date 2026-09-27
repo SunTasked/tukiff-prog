@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
@@ -18,6 +18,7 @@ import { ExercisePicker } from '../exercises/ExercisePicker'
 import { useExercises } from '../exercises/useExercises'
 import { loadWorkout, saveWorkout } from './api'
 import { BlockEditor } from './BlockEditor'
+import { WorkoutView } from './WorkoutView'
 
 type PickTarget = { block: number; item: number | null; level?: AltLevel }
 
@@ -41,6 +42,19 @@ export function WorkoutEditor() {
         setOriginal(w)
       })
   }, [id])
+
+  // Ctrl/Cmd + S saves (desktop).
+  const saveRef = useRef<() => void>(() => {})
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+        e.preventDefault()
+        saveRef.current()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   if (!draft) return <Spinner />
 
@@ -98,8 +112,12 @@ export function WorkoutEditor() {
     )
   }
 
+  saveRef.current = () => {
+    if (!saving) save()
+  }
+
   return (
-    <>
+    <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
       <div className="flex flex-col gap-4">
         <Input
           label="Titre de la séance"
@@ -136,22 +154,29 @@ export function WorkoutEditor() {
         />
       </div>
 
-      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md px-4">
+      {/* Desktop: live preview, as athletes will see it */}
+      <aside className="sticky top-8 hidden max-h-[calc(100dvh-4rem)] overflow-y-auto lg:block">
+        <p className="mb-2 text-xs font-semibold tracking-widest text-zinc-500 uppercase">Aperçu</p>
+        <h2 className="mb-3 text-2xl font-bold">{draft.title || 'Sans titre'}</h2>
+        <WorkoutView workout={draft} nameOf={nameOf} />
+      </aside>
+
+      <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md px-4 lg:bottom-6 lg:left-56 lg:max-w-7xl lg:px-8">
         <ErrorText>{error}</ErrorText>
-        <div className="flex gap-2">
+        <div className="flex gap-2 lg:w-[calc(50%-1rem)]">
           <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
             Annuler
           </Button>
           <Button type="button" className="flex-1 shadow-lg" disabled={saving} onClick={save}>
-            Enregistrer
+            Enregistrer <span className="hidden text-sm opacity-60 lg:inline">(Ctrl+S)</span>
           </Button>
         </div>
       </div>
-      <div className="h-20" />
+      <div className="h-20 lg:col-span-2" />
 
       {pick && (
         <ExercisePicker exercises={exercises} onPick={onPicked} onCreate={(n) => create(n)} onClose={() => setPick(null)} />
       )}
-    </>
+    </div>
   )
 }

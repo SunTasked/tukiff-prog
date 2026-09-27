@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link, useSearchParams } from 'react-router'
+import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
@@ -8,9 +8,36 @@ import { searchExercises, useExercises } from '../exercises/useExercises'
 type WorkoutRow = { id: string; title: string; updated_at: string }
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
+/**
+ * Library layout. Mobile: list, or the selected item. Desktop: list and detail side by side;
+ * editors (new / edit) take the full width.
+ */
 export function LibraryPage() {
-  const [params, setParams] = useSearchParams()
-  const tab = params.get('tab') === 'exercises' ? 'exercises' : 'workouts'
+  const { pathname } = useLocation()
+  const child = pathname.replace(/\/$/, '') !== '/library'
+  if (/\/(new|edit)$/.test(pathname)) return <Outlet />
+
+  return (
+    <div className="lg:grid lg:grid-cols-[22rem_1fr] lg:items-start lg:gap-8">
+      <div className={child ? 'hidden lg:block' : ''}>
+        <LibraryList />
+      </div>
+      <div className={child ? '' : 'hidden lg:block'}>
+        {child ? (
+          <Outlet />
+        ) : (
+          <p className="mt-24 text-center text-zinc-500">Sélectionne une séance ou un exercice.</p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function LibraryList() {
+  const [params] = useSearchParams()
+  const { pathname } = useLocation()
+  const navigate = useNavigate()
+  const tab = pathname.startsWith('/library/exercises') || params.get('tab') === 'exercises' ? 'exercises' : 'workouts'
 
   return (
     <>
@@ -20,7 +47,7 @@ export function LibraryPage() {
           <button
             key={t}
             className={`rounded-lg py-2 font-semibold ${tab === t ? 'bg-zinc-800 text-lime-400' : 'text-zinc-400'}`}
-            onClick={() => setParams(t === 'exercises' ? { tab: t } : {}, { replace: true })}
+            onClick={() => navigate(t === 'exercises' ? '/library?tab=exercises' : '/library', { replace: true })}
           >
             {t === 'workouts' ? 'Séances' : 'Exercices'}
           </button>
@@ -31,8 +58,12 @@ export function LibraryPage() {
   )
 }
 
+const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
+
 function WorkoutList() {
+  const { pathname } = useLocation()
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
+  // Reload when the detail pane changes (after a save or delete).
   useEffect(() => {
     supabase
       .from('workouts')
@@ -40,7 +71,7 @@ function WorkoutList() {
       .is('date', null)
       .order('updated_at', { ascending: false })
       .then(({ data }) => setRows(data ?? []))
-  }, [])
+  }, [pathname])
 
   return (
     <div className="flex flex-col gap-3">
@@ -51,7 +82,7 @@ function WorkoutList() {
       <ul className="divide-y divide-zinc-800 rounded-2xl bg-zinc-900">
         {rows?.map((w) => (
           <li key={w.id}>
-            <Link to={`/library/workouts/${w.id}`} className="flex justify-between px-4 py-3">
+            <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
               <span className="truncate">{w.title}</span>
               <span className="shrink-0 text-sm text-zinc-500">{dateFmt.format(new Date(w.updated_at))}</span>
             </Link>
@@ -63,7 +94,11 @@ function WorkoutList() {
 }
 
 function ExerciseList() {
-  const { exercises } = useExercises()
+  const { pathname } = useLocation()
+  const { exercises, reload } = useExercises()
+  useEffect(() => {
+    reload()
+  }, [pathname, reload])
   const [query, setQuery] = useState('')
   const results = searchExercises(exercises, query)
 
@@ -84,7 +119,7 @@ function ExerciseList() {
       <ul className="divide-y divide-zinc-800 rounded-2xl bg-zinc-900">
         {results.map((e) => (
           <li key={e.id}>
-            <Link to={`/library/exercises/${e.id}`} className="flex justify-between px-4 py-3">
+            <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
               <span className="truncate">{e.name}</span>
               <span className="shrink-0 text-sm text-zinc-500">
                 {MEASURES[e.measure as Measure]}

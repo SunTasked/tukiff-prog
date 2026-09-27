@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Layout } from './components/Layout'
 import { Spinner } from './components/ui'
@@ -25,6 +25,9 @@ import { getItem, setItem } from './lib/storage'
 import { supabase } from './lib/supabase'
 
 const INVITE_KEY = 'pendingInvite'
+
+/** Reading-width column on desktop (the layout itself is wide for planning / library). */
+const narrow = (el: ReactNode) => <div className="lg:mx-auto lg:max-w-3xl">{el}</div>
 
 export default function App() {
   const { session, profile, loading, refreshProfile } = useAuth()
@@ -60,24 +63,25 @@ export default function App() {
   return (
     <Routes>
       <Route element={<Layout />}>
-        <Route index element={<HomePage />} />
-        <Route path="profile" element={<ProfilePage />} />
-        <Route path="workouts/:id" element={<AthleteWorkoutPage />} />
-        <Route path="records" element={<RecordsPage />} />
-        <Route path="timer" element={<TimerPage />} />
+        <Route index element={narrow(<HomePage />)} />
+        <Route path="profile" element={narrow(<ProfilePage />)} />
+        <Route path="workouts/:id" element={narrow(<AthleteWorkoutPage />)} />
+        <Route path="records" element={narrow(<RecordsPage />)} />
+        <Route path="timer" element={narrow(<TimerPage />)} />
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />
-            <Route path="athletes/:id" element={<MemberPage />} />
-            <Route path="programs/:id" element={<ProgramPage />} />
+            <Route path="athletes/:id" element={narrow(<MemberPage />)} />
+            <Route path="programs/:id" element={narrow(<ProgramPage />)} />
             <Route path="calendar" element={<CalendarPage />} />
-            <Route path="calendar/workouts/:id" element={<ScheduledWorkoutPage />} />
-            <Route path="library" element={<LibraryPage />} />
-            <Route path="library/workouts/new" element={<WorkoutEditor />} />
-            <Route path="library/workouts/:id" element={<WorkoutPage />} />
-            <Route path="library/workouts/:id/edit" element={<WorkoutEditor />} />
-            <Route path="library/exercises/new" element={<ExerciseFormPage />} />
-            <Route path="library/exercises/:id" element={<ExerciseFormPage />} />
+            <Route path="calendar/workouts/:id" element={narrow(<ScheduledWorkoutPage />)} />
+            <Route path="library" element={<LibraryPage />}>
+              <Route path="workouts/new" element={<WorkoutEditor />} />
+              <Route path="workouts/:id" element={<WorkoutPage />} />
+              <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
+              <Route path="exercises/new" element={<ExerciseFormPage />} />
+              <Route path="exercises/:id" element={<ExerciseFormPage />} />
+            </Route>
           </>
         )}
         <Route path="*" element={<Navigate to="/" replace />} />
