@@ -28,10 +28,11 @@ export function WorkoutEditor() {
   const [search] = useSearchParams()
   const { exercises, byId, nameOf, create } = useExercises()
   const [draft, setDraft] = useState<WorkoutDraft | null>(
-    id ? null : { title: '', notes: '', date: search.get('date'), program_id: search.get('program'), blocks: [newBlock('warmup', crypto.randomUUID())] },
+    id ? null : { title: '', notes: '', date: search.get('date'), program_id: search.get('program'), section_id: search.get('section'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
   const [original, setOriginal] = useState<WorkoutDraft | null>(null)
   const [pick, setPick] = useState<PickTarget | null>(null)
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -42,6 +43,14 @@ export function WorkoutEditor() {
         setOriginal(w)
       })
   }, [id])
+
+  useEffect(() => {
+    supabase
+      .from('library_sections')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setSections(data ?? []))
+  }, [])
 
   // Ctrl/Cmd + S saves (desktop).
   const saveRef = useRef<() => void>(() => {})
@@ -126,6 +135,23 @@ export function WorkoutEditor() {
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
+        {!draft.date && (
+          <label className="block">
+            <span className="mb-1 block text-sm text-zinc-400">Section de la bibliothèque</span>
+            <select
+              className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100"
+              value={draft.section_id ?? ''}
+              onChange={(e) => setDraft({ ...draft, section_id: e.target.value || null })}
+            >
+              <option value="">Sans section</option>
+              {sections.map((s) => (
+                <option key={s.id} value={s.id}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         {draft.blocks.map((b, i) => (
           <BlockEditor
             key={b.id}

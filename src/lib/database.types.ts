@@ -235,6 +235,24 @@ export type Database = {
           },
         ]
       }
+      library_sections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       personal_records: {
         Row: {
           athlete_id: string
@@ -543,6 +561,7 @@ export type Database = {
           notes: string | null
           program_id: string | null
           publish_at: string | null
+          section_id: string | null
           title: string
           updated_at: string
         }
@@ -554,6 +573,7 @@ export type Database = {
           notes?: string | null
           program_id?: string | null
           publish_at?: string | null
+          section_id?: string | null
           title: string
           updated_at?: string
         }
@@ -565,6 +585,7 @@ export type Database = {
           notes?: string | null
           program_id?: string | null
           publish_at?: string | null
+          section_id?: string | null
           title?: string
           updated_at?: string
         }
@@ -581,6 +602,13 @@ export type Database = {
             columns: ["program_id"]
             isOneToOne: false
             referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "workouts_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "library_sections"
             referencedColumns: ["id"]
           },
         ]

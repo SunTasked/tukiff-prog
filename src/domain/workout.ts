@@ -76,6 +76,8 @@ export type WorkoutDraft = {
   notes: string
   date?: string | null
   program_id?: string | null
+  /** Library templates only. */
+  section_id?: string | null
   blocks: BlockDraft[]
 }
 

@@ -12,6 +12,7 @@ import {
   today,
   weekDays,
 } from '../../domain/dates'
+import { groupBySection } from '../../domain/sections'
 import { getItem, setItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { searchExercises } from '../exercises/useExercises'
@@ -438,17 +439,21 @@ function SelectionBar({
 function AddSheet({ date, programs, onClose }: { date: string; programs: EditableProgram[]; onClose: () => void }) {
   const navigate = useNavigate()
   const [programId, setProgramId] = useState(programs[0]?.id ?? '')
-  const [templates, setTemplates] = useState<{ id: string; name: string }[]>([])
+  const [templates, setTemplates] = useState<{ id: string; name: string; title: string; section_id: string | null }[]>([])
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([])
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
 
   useEffect(() => {
     supabase
       .from('workouts')
-      .select('id, title')
+      .select('id, title, section_id')
       .is('date', null)
-      .order('updated_at', { ascending: false })
-      .then(({ data }) => setTemplates((data ?? []).map((w) => ({ id: w.id, name: w.title }))))
+      .then(({ data }) => setTemplates((data ?? []).map((w) => ({ ...w, name: w.title }))))
+    supabase
+      .from('library_sections')
+      .select('id, name')
+      .then(({ data }) => setSections(data ?? []))
   }, [])
 
   async function pick(id: string) {
@@ -491,19 +496,30 @@ function AddSheet({ date, programs, onClose }: { date: string; programs: Editabl
         />
         <ErrorText>{error}</ErrorText>
       </div>
-      <ul className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-        {searchExercises(templates, query).map((t) => (
-          <li key={t.id}>
-            <button
-              className="w-full border-b border-zinc-900 px-4 py-3 text-left disabled:opacity-50"
-              disabled={!programId}
-              onClick={() => pick(t.id)}
-            >
-              {t.name}
-            </button>
-          </li>
-        ))}
-      </ul>
+      <div className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
+        {groupBySection(searchExercises(templates, query), sections)
+          .filter((g) => g.items.length > 0)
+          .map((g) => (
+            <section key={g.id ?? 'none'}>
+              <p className="sticky top-0 bg-zinc-950 px-4 pt-3 pb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                {g.name}
+              </p>
+              <ul>
+                {g.items.map((t) => (
+                  <li key={t.id}>
+                    <button
+                      className="w-full border-b border-zinc-900 px-4 py-3 text-left disabled:opacity-50"
+                      disabled={!programId}
+                      onClick={() => pick(t.id)}
+                    >
+                      {t.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          ))}
+      </div>
     </div>
   )
 }

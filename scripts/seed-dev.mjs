@@ -24,6 +24,14 @@ const PROGRAMS = {
   'Perso a3': { owner: 'c1', contributors: [], members: ['a3'] },
 }
 
+// Library sections: section -> templates
+const SECTIONS = {
+  'Benchmark CrossFit': ['Fran', 'Squat lourd + Cindy'],
+  WOD: ['Chipper DU', 'EMOM gym'],
+  Hyrox: ['Hyrox simulation'],
+  Haltéro: ['Haltéro : clean & jerk'],
+}
+
 const url = process.env.SUPABASE_URL
 const admin = createClient(url, await serviceKey(), { auth: { persistSession: false } })
 const publishable = (await api('/api-keys?reveal=true')).find((k) => k.type === 'publishable').api_key
@@ -35,6 +43,7 @@ const seedUsers = await sql(`select id from auth.users where email like '%@${DOM
 const ids = seedUsers.map((u) => q(u.id)).join(',')
 if (ids) await sql(`delete from public.workouts where created_by in (${ids})`)
 await sql(`delete from public.programs where name in (${Object.keys(PROGRAMS).map(q).join(',')})`)
+await sql(`delete from public.library_sections where name in (${Object.keys(SECTIONS).map(q).join(',')})`)
 for (const u of seedUsers) await admin.auth.admin.deleteUser(u.id)
 console.log(`Seed précédent supprimé (${seedUsers.length} utilisateurs).`)
 if (process.argv.includes('--clean')) process.exit(0)
@@ -153,6 +162,11 @@ const TEMPLATES = {
 const templateId = {}
 for (const [title, blocks] of Object.entries(TEMPLATES)) {
   templateId[title] = must(await c1.rpc('save_workout', { p: { title, notes: '', blocks } }))
+}
+
+for (const [name, titles] of Object.entries(SECTIONS)) {
+  const section = must(await c1.from('library_sections').insert({ name }).select().single())
+  must(await c1.from('workouts').update({ section_id: section.id }).in('id', titles.map((t) => templateId[t])))
 }
 
 // Schedule: 2 past weeks, current week, next week --------------------------------------

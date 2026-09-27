@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   const { data } = await supabase
     .from('workouts')
-    .select('id, title, notes, date, workout_blocks(*, block_items(*))')
+    .select('id, title, notes, date, section_id, workout_blocks(*, block_items(*))')
     .eq('id', id)
     .maybeSingle()
   if (!data) return null
@@ -34,12 +34,17 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
           }),
         ),
     }))
-  return { id: data.id, title: data.title, notes: data.notes ?? '', date: data.date, blocks }
+  return { id: data.id, title: data.title, notes: data.notes ?? '', date: data.date, section_id: data.section_id, blocks }
 }
 
 /** resetBlocks: blocks whose results must be deleted (scoring content changed). */
 export async function saveWorkout(w: WorkoutDraft, resetBlocks: string[] = []): Promise<string> {
   const { data, error } = await supabase.rpc('save_workout', { p: { ...w, reset_blocks: resetBlocks } as never })
   if (error) throw new Error(error.message)
+  // The section is a plain column of library templates, outside the save_workout tree.
+  if (!w.date) {
+    const res = await supabase.from('workouts').update({ section_id: w.section_id ?? null }).eq('id', data)
+    if (res.error) throw new Error(res.error.message)
+  }
   return data
 }
