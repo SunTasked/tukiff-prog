@@ -69,7 +69,8 @@ export type BlockDraft = {
   items: ItemDraft[]
 }
 
-export type WorkoutDraft = { id?: string; title: string; notes: string; blocks: BlockDraft[] }
+/** date: null = library template; set = scheduled copy (only used when creating). */
+export type WorkoutDraft = { id?: string; title: string; notes: string; date?: string | null; blocks: BlockDraft[] }
 
 export function defaultParams(format: Format): FormatParams {
   switch (format) {

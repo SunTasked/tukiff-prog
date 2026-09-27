@@ -40,7 +40,8 @@ export const normalize = (s: string) =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '')
 
-export function searchExercises(list: Exercise[], query: string) {
+/** Accent/case-insensitive search on a name. */
+export function searchExercises<T extends { name: string }>(list: T[], query: string) {
   const q = normalize(query)
   if (!q) return list
   return list.filter((e) => normalize(e.name).includes(q))

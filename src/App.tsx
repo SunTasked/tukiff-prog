@@ -3,6 +3,11 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Layout } from './components/Layout'
 import { Spinner } from './components/ui'
 import { AthletesPage } from './features/athletes/AthletesPage'
+import { MemberPage } from './features/athletes/MemberPage'
+import { CalendarPage } from './features/calendar/CalendarPage'
+import { ScheduledWorkoutPage } from './features/calendar/ScheduledWorkoutPage'
+import { AthleteWorkoutPage } from './features/home/AthleteWorkoutPage'
+import { ProgramPage } from './features/programs/ProgramPage'
 import { hasPassword, isCoach, useAuth } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
 import { OnboardingPage } from './features/auth/OnboardingPage'
@@ -55,9 +60,14 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
+        <Route path="workouts/:id" element={<AthleteWorkoutPage />} />
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />
+            <Route path="athletes/:id" element={<MemberPage />} />
+            <Route path="programs/:id" element={<ProgramPage />} />
+            <Route path="calendar" element={<CalendarPage />} />
+            <Route path="calendar/workouts/:id" element={<ScheduledWorkoutPage />} />
             <Route path="library" element={<LibraryPage />} />
             <Route path="library/workouts/new" element={<WorkoutEditor />} />
             <Route path="library/workouts/:id" element={<WorkoutPage />} />

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
 import {
   emptyItem,
@@ -21,9 +21,10 @@ type PickTarget = { block: number; item: number | null; level?: AltLevel }
 export function WorkoutEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [search] = useSearchParams()
   const { exercises, byId, nameOf, create } = useExercises()
   const [draft, setDraft] = useState<WorkoutDraft | null>(
-    id ? null : { title: '', notes: '', blocks: [newBlock('warmup', crypto.randomUUID())] },
+    id ? null : { title: '', notes: '', date: search.get('date'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
   const [pick, setPick] = useState<PickTarget | null>(null)
   const [error, setError] = useState('')
@@ -64,7 +65,7 @@ export function WorkoutEditor() {
     setSaving(true)
     try {
       const savedId = await saveWorkout(draft!)
-      navigate(`/library/workouts/${savedId}`, { replace: true })
+      navigate(draft!.date ? `/calendar/workouts/${savedId}` : `/library/workouts/${savedId}`, { replace: true })
     } catch (e) {
       setError((e as Error).message)
       setSaving(false)
@@ -112,7 +113,7 @@ export function WorkoutEditor() {
       <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-10 mx-auto max-w-md px-4">
         <ErrorText>{error}</ErrorText>
         <div className="flex gap-2">
-          <Button type="button" variant="secondary" onClick={() => navigate(id ? `/library/workouts/${id}` : '/library')}>
+          <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
             Annuler
           </Button>
           <Button type="button" className="flex-1 shadow-lg" disabled={saving} onClick={save}>

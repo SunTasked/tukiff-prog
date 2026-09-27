@@ -8,8 +8,14 @@ type Tab = { to: string; label: string; icon: string; coachOnly?: boolean }
 const tabs: Tab[] = [
   { to: '/', label: 'Accueil', icon: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
   {
+    to: '/calendar',
+    label: 'Planning',
+    coachOnly: true,
+    icon: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
+  },
+  {
     to: '/library',
-    label: 'Bibliothèque',
+    label: 'Biblio',
     coachOnly: true,
     icon: 'M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zm0 0a2 2 0 0 0 2 2h13M8 7h7',
   },

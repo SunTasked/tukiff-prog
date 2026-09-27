@@ -4,7 +4,7 @@ import { supabase } from '../../lib/supabase'
 export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   const { data } = await supabase
     .from('workouts')
-    .select('id, title, notes, workout_blocks(*, block_items(*))')
+    .select('id, title, notes, date, workout_blocks(*, block_items(*))')
     .eq('id', id)
     .maybeSingle()
   if (!data) return null
@@ -34,7 +34,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
           }),
         ),
     }))
-  return { id: data.id, title: data.title, notes: data.notes ?? '', blocks }
+  return { id: data.id, title: data.title, notes: data.notes ?? '', date: data.date, blocks }
 }
 
 export async function saveWorkout(w: WorkoutDraft): Promise<string> {

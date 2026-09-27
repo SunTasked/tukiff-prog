@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
   BLOCK_KINDS,
@@ -20,7 +21,15 @@ export function WorkoutView({
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
 }) {
-  const [level, setLevel] = useState<Level>('rx')
+  // Remember the athlete's usual level on this device.
+  const [level, setLevelState] = useState<Level>(() => {
+    const saved = getItem('level')
+    return saved && saved in LEVELS ? (saved as Level) : 'rx'
+  })
+  const setLevel = (l: Level) => {
+    setItem('level', l)
+    setLevelState(l)
+  }
   const hasLevels = workout.blocks.some((b) => b.items.some((i) => Object.keys(i.levels).length > 0))
 
   return (

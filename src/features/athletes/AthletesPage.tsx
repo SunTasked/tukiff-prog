@@ -1,36 +1,55 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { Link } from 'react-router'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
 import { invitationStatus, invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
-import { supabase, type Invitation, type Profile } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { supabase, type Invitation, type Profile, type Program } from '../../lib/supabase'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
+type InvitationRow = Invitation & { invitation_programs: { program_id: string }[] }
+type ProgramRow = Program & { program_members: { count: number }[] }
+
 export function AthletesPage() {
-  const { session } = useAuth()
   const [members, setMembers] = useState<Profile[]>([])
-  const [invitations, setInvitations] = useState<Invitation[]>([])
+  const [invitations, setInvitations] = useState<InvitationRow[]>([])
+  const [programs, setPrograms] = useState<ProgramRow[]>([])
   const [error, setError] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [role, setRole] = useState<'athlete' | 'coach'>('athlete')
+  const [invitePrograms, setInvitePrograms] = useState<string[]>([])
+  const [newProgram, setNewProgram] = useState('')
 
   const load = useCallback(async () => {
-    const [m, i] = await Promise.all([
+    const [m, i, p] = await Promise.all([
       supabase.from('profiles').select('*').not('role', 'is', null).order('display_name'),
-      supabase.from('invitations').select('*').order('created_at', { ascending: false }),
+      supabase.from('invitations').select('*, invitation_programs(program_id)').order('created_at', { ascending: false }),
+      supabase.from('programs').select('*, program_members(count)').is('archived_at', null).order('name'),
     ])
-    setError(m.error?.message ?? i.error?.message ?? '')
+    setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
     setMembers(m.data ?? [])
-    setInvitations((i.data ?? []).filter((inv) => invitationStatus(inv) === 'active'))
+    setInvitations(((i.data ?? []) as InvitationRow[]).filter((inv) => invitationStatus(inv) === 'active'))
+    setPrograms((p.data ?? []) as ProgramRow[])
   }, [])
 
   useEffect(() => {
     load()
   }, [load])
 
+  const programName = (id: string) => programs.find((p) => p.id === id)?.name ?? '?'
+
   async function create(validity: InvitationValidity) {
-    const { error } = await supabase.from('invitations').insert({ role, ...invitationValues(validity) })
-    if (error) setError(error.message)
+    const { data, error } = await supabase
+      .from('invitations')
+      .insert({ role, ...invitationValues(validity) })
+      .select()
+      .single()
+    if (error) return setError(error.message)
+    if (invitePrograms.length) {
+      const res = await supabase
+        .from('invitation_programs')
+        .insert(invitePrograms.map((program_id) => ({ invitation_id: data.id, program_id })))
+      if (res.error) setError(res.error.message)
+    }
     load()
   }
 
@@ -40,10 +59,11 @@ export function AthletesPage() {
     load()
   }
 
-  async function removeMember(m: Profile) {
-    if (!confirm(`Retirer l’accès de ${m.display_name ?? 'ce membre'} ? Il pourra être réinvité.`)) return
-    const { error } = await supabase.rpc('remove_member', { p_user: m.id })
-    if (error) setError(error.message)
+  async function createProgram(e: FormEvent) {
+    e.preventDefault()
+    const { error } = await supabase.from('programs').insert({ name: newProgram.trim() })
+    if (error) return setError(error.code === '23505' ? 'Un programme porte déjà ce nom.' : error.message)
+    setNewProgram('')
     load()
   }
 
@@ -57,6 +77,9 @@ export function AthletesPage() {
       setCopied(inv.id)
     }
   }
+
+  const toggleInviteProgram = (id: string) =>
+    setInvitePrograms((ids) => (ids.includes(id) ? ids.filter((x) => x !== id) : [...ids, id]))
 
   return (
     <>
@@ -75,6 +98,24 @@ export function AthletesPage() {
               </button>
             ))}
           </div>
+          {programs.length > 0 && (
+            <>
+              <p className="mb-1 text-xs text-zinc-500">Accès aux programmes</p>
+              <div className="mb-3 flex flex-wrap gap-1">
+                {programs.map((p) => (
+                  <button
+                    key={p.id}
+                    className={`rounded-full px-3 py-1.5 text-sm ${
+                      invitePrograms.includes(p.id) ? 'bg-lime-400 font-semibold text-zinc-950' : 'bg-zinc-800 text-zinc-300'
+                    }`}
+                    onClick={() => toggleInviteProgram(p.id)}
+                  >
+                    {p.name}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
           <div className="flex gap-2">
             <Button className="flex-1" onClick={() => create('single')}>
               Usage unique
@@ -102,6 +143,11 @@ export function AthletesPage() {
                       {inv.uses > 1 ? 's' : ''}
                     </span>
                   </div>
+                  {inv.invitation_programs.length > 0 && (
+                    <p className="mt-1 text-xs text-zinc-400">
+                      Programmes : {inv.invitation_programs.map((ip) => programName(ip.program_id)).join(', ')}
+                    </p>
+                  )}
                   <p className="mt-1 truncate font-mono text-xs text-zinc-500">
                     {invitationUrl(window.location.origin, inv.code)}
                   </p>
@@ -120,20 +166,44 @@ export function AthletesPage() {
         </Card>
 
         <Card>
+          <h2 className="mb-3 font-semibold">Programmes ({programs.length})</h2>
+          <ul className="divide-y divide-zinc-800">
+            {programs.map((p) => (
+              <li key={p.id}>
+                <Link to={`/programs/${p.id}`} className="flex justify-between py-2">
+                  <span>{p.name}</span>
+                  <span className="text-xs text-zinc-400">
+                    {p.program_members[0]?.count ?? 0} athlète{(p.program_members[0]?.count ?? 0) > 1 ? 's' : ''} ›
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+          <form onSubmit={createProgram} className="mt-2 flex gap-2">
+            <input
+              placeholder="Nouveau programme"
+              maxLength={60}
+              required
+              className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 outline-none focus:border-lime-400"
+              value={newProgram}
+              onChange={(e) => setNewProgram(e.target.value)}
+            />
+            <Button className="py-2">Créer</Button>
+          </form>
+        </Card>
+
+        <Card>
           <h2 className="mb-3 font-semibold">Membres ({members.length})</h2>
           <ul className="divide-y divide-zinc-800">
             {members.map((m) => (
-              <li key={m.id} className="flex items-center justify-between py-2">
-                <span>{m.display_name ?? '—'}</span>
-                <span className="flex items-center gap-3 text-xs text-zinc-400">
-                  {m.role === 'coach' ? 'Coach' : 'Athlète'}
-                  {m.share_scores ? ' · scores partagés' : ''}
-                  {m.id !== session?.user.id && (
-                    <button className="text-red-400" onClick={() => removeMember(m)}>
-                      Retirer
-                    </button>
-                  )}
-                </span>
+              <li key={m.id}>
+                <Link to={`/athletes/${m.id}`} className="flex items-center justify-between py-2">
+                  <span>{m.display_name ?? '—'}</span>
+                  <span className="text-xs text-zinc-400">
+                    {m.role === 'coach' ? 'Coach' : 'Athlète'}
+                    {m.share_scores ? ' · scores partagés' : ''} ›
+                  </span>
+                </Link>
               </li>
             ))}
           </ul>
