@@ -5,7 +5,7 @@
 //   node scripts/admin.mjs login-link <email> [redirectUrl]   (no email sent)
 //   node scripts/admin.mjs delete-user <email>   (their programs go to the app owner)
 //   node scripts/admin.mjs list
-import { serviceKey, sql } from './lib.mjs'
+import { serviceKey, sql, url } from './lib.mjs'
 
 const key = await serviceKey()
 const [cmd, email, ...rest] = process.argv.slice(2)
@@ -15,7 +15,7 @@ const opt = (name) => {
 }
 
 async function auth(path, { method = 'GET', body } = {}) {
-  const res = await fetch(`${process.env.SUPABASE_URL}/auth/v1${path}`, {
+  const res = await fetch(`${url}/auth/v1${path}`, {
     method,
     headers: { apikey: key, Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,

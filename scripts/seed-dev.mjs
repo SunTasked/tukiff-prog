@@ -1,9 +1,9 @@
 // Dev/test dataset: users c1, c2 (coaches), a1, a2, a3 (athletes) with password "a",
 // programs, library templates and scheduled workouts around the current week.
 // Re-runnable: removes the previous seed first. Usage: node scripts/seed-dev.mjs [--clean]
-// The "a" password bypasses the password policy (hash written directly), dev only.
+// The "a" password bypasses the password policy (hash written directly), staging only (refuses TARGET=prod).
 import { createClient } from '@supabase/supabase-js'
-import { api, serviceKey, sql } from './lib.mjs'
+import { api, serviceKey, sql, target, url } from './lib.mjs'
 
 const DOMAIN = 'tkf.test'
 const PASSWORD = 'a'
@@ -32,7 +32,7 @@ const SECTIONS = {
   Haltéro: ['Haltéro : clean & jerk'],
 }
 
-const url = process.env.SUPABASE_URL
+if (target === 'prod') throw new Error('seed-dev ne tourne jamais sur la prod')
 const admin = createClient(url, await serviceKey(), { auth: { persistSession: false } })
 const publishable = (await api('/api-keys?reveal=true')).find((k) => k.type === 'publishable').api_key
 const q = (s) => `'${String(s).replaceAll("'", "''")}'`

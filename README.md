@@ -11,7 +11,7 @@ PWA de programmation CrossFit pour un petit groupe (coachs et athlètes), en fra
 - Back : Supabase (Postgres + RLS, Auth par code email / mot de passe, Edge Function `join`).
 - Hébergement : Vercel (build `npm run build`, réécriture SPA dans `vercel.json`).
 
-Un seul projet Supabase sert la production et les previews.
+Deux projets Supabase : **prod** (`TKF-program`) pour la production, **staging** (`TKF-staging`) pour les previews et le développement local.
 
 ## Développement local
 
@@ -38,12 +38,16 @@ npm run build     # tsc -b + build Vite
 
 ## Scripts d'administration
 
-Ils utilisent l'API Management de Supabase et lisent ces variables d'environnement :
+Ils utilisent l'API Management de Supabase. Ils visent **staging par défaut** ; la prod uniquement avec `TARGET=prod`
+(ex. `TARGET=prod node scripts/migrate.mjs`). Chaque script affiche sa cible au démarrage.
+
+Variables d'environnement :
 
 | Variable | Usage |
 | --- | --- |
-| `SUPABASE_URL` | URL du projet Supabase |
-| `SUPABASE_AUTH_TOKEN` | jeton personnel Supabase (Management API) |
+| `SUPABASE_URL` | URL du projet Supabase de prod |
+| `SUPABASE_STAGING_URL` | URL du projet Supabase de staging |
+| `SUPABASE_AUTH_TOKEN` | jeton Supabase (Management API) couvrant les deux projets |
 | `VERCEL_TOKEN` | jeton Vercel (`vercel-setup.mjs`) |
 | `SMTP_USER`, `SMTP_PASSWORD` | compte Gmail et mot de passe d'application (`auth-config.mjs`) |
 
@@ -53,18 +57,26 @@ Ils utilisent l'API Management de Supabase et lisent ces variables d'environneme
 | `node scripts/gen-types.mjs` | régénère `src/lib/database.types.ts` depuis le schéma |
 | `node scripts/deploy-functions.mjs [nom]` | déploie les Edge Functions (`join`) |
 | `node scripts/auth-config.mjs <siteUrl>` | configure Auth : URLs, code à 6 chiffres, politique de mot de passe, SMTP Gmail et emails en français |
-| `node scripts/vercel-setup.mjs` | pousse les variables `VITE_SUPABASE_*` dans Vercel |
+| `node scripts/vercel-setup.mjs` | pousse les variables `VITE_SUPABASE_*` dans Vercel (prod → production, staging → previews) |
 | `node scripts/admin.mjs list \| create-user \| set-role \| login-link \| delete-user` | gestion ponctuelle des comptes |
-| `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a` |
+| `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a` ; refuse la prod |
 
 ## Déploiement
 
-1. Migrations : `node scripts/migrate.mjs` puis `node scripts/gen-types.mjs` (commiter le fichier de types).
-2. Edge Functions modifiées : `node scripts/deploy-functions.mjs`.
-3. Pousser la branche : Vercel déploie une preview. Merger dans `main` déploie la production.
-4. Après un changement d'URL de production : `node scripts/auth-config.mjs https://tukiff-prog.vercel.app`.
+1. Sur staging : `node scripts/migrate.mjs`, `node scripts/gen-types.mjs` (commiter le fichier de types), et
+   `node scripts/deploy-functions.mjs` si une Edge Function a changé. Pousser la branche : la preview Vercel utilise staging.
+2. Merger dans `main` : Vercel déploie la production. La CI (lint, tests, build) tourne sur chaque PR.
+3. Sur la prod, juste avant ou après le merge : `TARGET=prod node scripts/migrate.mjs` (et `deploy-functions` si besoin).
+4. Après un changement d'URL : `TARGET=prod node scripts/auth-config.mjs https://tukiff-prog.vercel.app`.
 
 Une nouvelle migration s'ajoute sous la forme `supabase/migrations/00NN_nom.sql` (numéro suivant, jamais modifier une migration déjà appliquée).
+
+## Sauvegardes
+
+La tâche GitHub « Sauvegarde base » fait un `pg_dump` de la prod chaque nuit (schémas `public` et `auth`), gardé 90 jours
+dans les artefacts GitHub Actions. Elle lit le secret `SUPABASE_DB_URL` (chaîne « Session pooler » de la prod) et peut
+se lancer à la main depuis l'onglet Actions. Restauration : `pg_restore --no-owner --data-only -d <url> backup.dump` sur une
+base où les migrations sont déjà appliquées.
 
 ## Ajouter un membre
 

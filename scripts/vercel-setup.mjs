@@ -1,6 +1,6 @@
-// Configures the Vercel project: env vars (from Supabase) and preview protection off.
+// Configures the Vercel project: env vars (prod Supabase for production, staging for previews) and preview protection off.
 // Usage: node scripts/vercel-setup.mjs
-import { api } from './lib.mjs'
+import { api, refOf, urls } from './lib.mjs'
 
 const project = 'tukiff-prog'
 const team = 'slug=tukiff'
@@ -18,16 +18,25 @@ async function vercel(path, { method = 'GET', body } = {}) {
   return json
 }
 
-const keys = await api('/api-keys?reveal=true')
-const publishable = keys.find((k) => k.type === 'publishable').api_key
-
-const env = [
-  { key: 'VITE_SUPABASE_URL', value: process.env.SUPABASE_URL, target: ['production', 'preview', 'development'] },
-  { key: 'VITE_SUPABASE_ANON_KEY', value: publishable, target: ['production', 'preview', 'development'] },
+// Production uses the prod Supabase project; previews and local dev use staging.
+const publishableOf = async (u) =>
+  (await api('/api-keys?reveal=true', { project: refOf(u) })).find((k) => k.type === 'publishable').api_key
+const wanted = [
+  { target: ['production'], url: urls.prod },
+  { target: ['preview', 'development'], url: urls.staging },
 ]
-for (const e of env) {
-  await vercel(`/v10/projects/${project}/env?upsert=true`, { method: 'POST', body: { ...e, type: 'plain' } })
-  console.log(`env ${e.key} -> ${e.target.join(',')}`)
+
+// Replace existing VITE_SUPABASE_* entries (they may cover several targets at once).
+const { envs } = await vercel(`/v9/projects/${project}/env`)
+for (const e of envs.filter((e) => e.key.startsWith('VITE_SUPABASE_'))) {
+  await vercel(`/v9/projects/${project}/env/${e.id}`, { method: 'DELETE' })
+}
+for (const w of wanted) {
+  const vars = { VITE_SUPABASE_URL: w.url, VITE_SUPABASE_ANON_KEY: await publishableOf(w.url) }
+  for (const [key, value] of Object.entries(vars)) {
+    await vercel(`/v10/projects/${project}/env`, { method: 'POST', body: { key, value, target: w.target, type: 'plain' } })
+    console.log(`env ${key} -> ${w.target.join(',')} (${refOf(w.url)})`)
+  }
 }
 
 await vercel(`/v9/projects/${project}`, { method: 'PATCH', body: { ssoProtection: null, framework: 'vite' } })
