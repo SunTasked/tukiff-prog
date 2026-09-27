@@ -322,6 +322,8 @@ export type Database = {
           display_name: string | null
           enrolled_at: string | null
           id: string
+          is_admin: boolean
+          is_app_owner: boolean
           role: string | null
           share_scores: boolean
         }
@@ -330,6 +332,8 @@ export type Database = {
           display_name?: string | null
           enrolled_at?: string | null
           id: string
+          is_admin?: boolean
+          is_app_owner?: boolean
           role?: string | null
           share_scores?: boolean
         }
@@ -338,6 +342,8 @@ export type Database = {
           display_name?: string | null
           enrolled_at?: string | null
           id?: string
+          is_admin?: boolean
+          is_app_owner?: boolean
           role?: string | null
           share_scores?: boolean
         }
@@ -637,6 +643,7 @@ export type Database = {
         Args: { p_days: number; p_ids: string[] }
         Returns: number
       }
+      is_admin: { Args: never; Returns: boolean }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       move_workouts: {
@@ -661,7 +668,15 @@ export type Database = {
         Args: { p_date: string; p_program: string; p_template: string }
         Returns: string
       }
+      set_member_role: {
+        Args: { p_role: string; p_user: string }
+        Returns: undefined
+      }
       shares_scores: { Args: { p_user: string }; Returns: boolean }
+      transfer_program: {
+        Args: { p_new_owner: string; p_program: string }
+        Returns: undefined
+      }
     }
     Enums: {
       [_ in never]: never

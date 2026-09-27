@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { programColor } from '../../components/ProgramBadges'
 import { Button, Card, ErrorText, Input, PageTitle } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { roleLabel, useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
 
 export function ProfilePage() {
@@ -41,7 +41,13 @@ export function ProfilePage() {
     if (!confirm('Supprimer définitivement ton compte et tous tes scores ? Cette action est irréversible.')) return
     const { error } = await supabase.rpc('delete_my_account')
     if (error) {
-      setError(error.message.includes('last_coach') ? 'Tu es le seul coach : nomme un autre coach avant de supprimer ton compte.' : error.message)
+      setError(
+        error.message.includes('app_owner')
+          ? 'Tu es le propriétaire de l’application : ton compte ne peut pas être supprimé.'
+          : error.message.includes('last_admin')
+            ? 'Tu es le seul admin : nomme un autre admin avant de supprimer ton compte.'
+            : error.message,
+      )
       return
     }
     await supabase.auth.signOut()
@@ -59,7 +65,7 @@ export function ProfilePage() {
         <Card className="flex flex-col gap-3">
           <Row label="Email">{session?.user.email}</Row>
           <Row label="Pseudo">{profile?.display_name}</Row>
-          <Row label="Rôle">{profile?.role === 'coach' ? 'Coach' : 'Athlète'}</Row>
+          <Row label="Rôle">{roleLabel(profile)}</Row>
           <Row label="Programmes">
             {programs === null ? (
               '…'

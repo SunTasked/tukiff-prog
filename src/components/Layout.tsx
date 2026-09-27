@@ -1,5 +1,5 @@
 import { NavLink, Outlet } from 'react-router'
-import { isCoach, useAuth } from '../features/auth/AuthProvider'
+import { isAdmin, isCoach, useAuth } from '../features/auth/AuthProvider'
 import { InstallBanner } from './InstallBanner'
 
 type Tab = { to: string; label: string; icon: string; coachOnly?: boolean; longLabel?: string }
@@ -32,7 +32,9 @@ const tabs: Tab[] = [
 
 export function Layout() {
   const { profile } = useAuth()
-  const visible = tabs.filter((t) => !t.coachOnly || isCoach(profile))
+  const visible = tabs
+    .filter((t) => !t.coachOnly || isCoach(profile))
+    .map((t) => (t.to === '/athletes' && isAdmin(profile) ? { ...t, label: 'Membres', longLabel: 'Membres' } : t))
 
   const icon = (t: Tab) => (
     <svg viewBox="0 0 24 24" className="size-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

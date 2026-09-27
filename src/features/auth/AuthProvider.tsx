@@ -62,6 +62,10 @@ export function useAuth() {
 }
 
 export const isCoach = (p: Profile | null) => p?.role === 'coach'
+export const isAdmin = (p: Profile | null) => p?.is_admin === true
+
+export const roleLabel = (p: Pick<Profile, 'role' | 'is_admin'> | null) =>
+  p?.is_admin ? 'Admin' : p?.role === 'coach' ? 'Coach' : 'Athlète'
 
 /** UI flag set when the user chose a password (onboarding / reset); not a security check. */
 export const hasPassword = (s: Session | null) => s?.user.user_metadata?.password_set === true

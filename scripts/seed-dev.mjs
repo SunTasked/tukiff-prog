@@ -9,7 +9,7 @@ const DOMAIN = 'tkf.test'
 const PASSWORD = 'a'
 const OWNER = 'guillaume.kheng@gmail.com' // real coach, added to the CrossFit program
 const USERS = [
-  { name: 'c1', role: 'coach', share: true },
+  { name: 'c1', role: 'coach', share: true, admin: true },
   { name: 'c2', role: 'coach', share: false },
   { name: 'a1', role: 'athlete', share: true },
   { name: 'a2', role: 'athlete', share: true },
@@ -63,7 +63,7 @@ for (const u of USERS) {
     update auth.users set encrypted_password = extensions.crypt(${q(PASSWORD)}, extensions.gen_salt('bf'))
       where id = ${q(data.user.id)};
     update public.profiles set role = ${q(u.role)}, display_name = ${q(u.name)}, share_scores = ${u.share},
-      enrolled_at = now() where id = ${q(data.user.id)};`)
+      is_admin = ${!!u.admin}, enrolled_at = now() where id = ${q(data.user.id)};`)
 }
 const [owner] = await sql(`select id from auth.users where email = ${q(OWNER)}`)
 if (owner) userId[OWNER] = owner.id

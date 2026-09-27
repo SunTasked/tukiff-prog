@@ -18,6 +18,7 @@ export function ProgramPage() {
   const [coachIds, setCoachIds] = useState<string[]>([])
   const [everyone, setEveryone] = useState<Profile[]>([])
   const [error, setError] = useState('')
+  const [heir, setHeir] = useState('')
 
   const load = useCallback(async () => {
     const [p, pm, pc, m] = await Promise.all([
@@ -124,6 +125,31 @@ export function ProgramPage() {
               onClick={() => run(supabase.from('programs').update({ name: name.trim() }).eq('id', id!))}
             >
               Renommer
+            </Button>
+          </Card>
+        )}
+        {isOwner && otherCoaches.length > 0 && (
+          <Card className="flex flex-col gap-2">
+            <h2 className="font-semibold">Transférer la propriété</h2>
+            <p className="text-xs text-zinc-500">Le nouveau propriétaire prend la main ; tu restes contributeur.</p>
+            <select className="rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2" value={heir} onChange={(e) => setHeir(e.target.value)}>
+              <option value="">Choisir un coach…</option>
+              {otherCoaches.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.display_name}
+                </option>
+              ))}
+            </select>
+            <Button
+              variant="secondary"
+              disabled={!heir}
+              onClick={() => {
+                const name = otherCoaches.find((c) => c.id === heir)?.display_name
+                if (confirm(`Transférer « ${program.name} » à ${name} ?`))
+                  run(supabase.rpc('transfer_program', { p_program: id!, p_new_owner: heir }))
+              }}
+            >
+              Transférer
             </Button>
           </Card>
         )}

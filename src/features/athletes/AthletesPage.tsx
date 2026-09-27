@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
 import { invitationStatus, invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { supabase, type Invitation, type Profile, type Program } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
@@ -11,8 +11,10 @@ type InvitationRow = Invitation & { invitation_programs: { program_id: string }[
 type ProgramRow = Program & { program_members: { count: number }[]; program_coaches: { coach_id: string }[] }
 
 export function AthletesPage() {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const me = session?.user.id
+  const admin = isAdmin(profile)
+  const [allPrograms, setAllPrograms] = useState<ProgramRow[]>([])
   const [members, setMembers] = useState<Profile[]>([])
   const [invitations, setInvitations] = useState<InvitationRow[]>([])
   const [programs, setPrograms] = useState<ProgramRow[]>([])
@@ -31,6 +33,7 @@ export function AthletesPage() {
     setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
     setMembers(m.data ?? [])
     setInvitations(((i.data ?? []) as InvitationRow[]).filter((inv) => invitationStatus(inv) === 'active'))
+    setAllPrograms((p.data ?? []) as ProgramRow[])
     // Only the programs I own or contribute to.
     setPrograms(
       ((p.data ?? []) as ProgramRow[]).filter((x) => x.owner_id === me || x.program_coaches.some((c) => c.coach_id === me)),
@@ -89,21 +92,23 @@ export function AthletesPage() {
 
   return (
     <>
-      <PageTitle>Athlètes</PageTitle>
+      <PageTitle>{admin ? 'Membres' : 'Athlètes'}</PageTitle>
       <div className="flex flex-col gap-4 lg:grid lg:grid-cols-3 lg:items-start">
         <Card>
           <h2 className="mb-3 font-semibold">Inviter</h2>
-          <div className="mb-3 grid grid-cols-2 rounded-xl bg-zinc-800 p-1 text-sm">
-            {(['athlete', 'coach'] as const).map((r) => (
-              <button
-                key={r}
-                className={`rounded-lg py-2 font-semibold ${role === r ? 'bg-zinc-950 text-lime-400' : 'text-zinc-400'}`}
-                onClick={() => setRole(r)}
-              >
-                {r === 'athlete' ? 'Athlète' : 'Coach'}
-              </button>
-            ))}
-          </div>
+          {admin && (
+            <div className="mb-3 grid grid-cols-2 rounded-xl bg-zinc-800 p-1 text-sm">
+              {(['athlete', 'coach'] as const).map((r) => (
+                <button
+                  key={r}
+                  className={`rounded-lg py-2 font-semibold ${role === r ? 'bg-zinc-950 text-lime-400' : 'text-zinc-400'}`}
+                  onClick={() => setRole(r)}
+                >
+                  {r === 'athlete' ? 'Athlète' : 'Coach'}
+                </button>
+              ))}
+            </div>
+          )}
           {programs.length > 0 && (
             <>
               <p className="mb-1 text-xs text-zinc-500">Accès aux programmations</p>
@@ -209,7 +214,7 @@ export function AthletesPage() {
                 <Link to={`/athletes/${m.id}`} className="flex items-center justify-between py-2">
                   <span>{m.display_name ?? '—'}</span>
                   <span className="text-xs text-zinc-400">
-                    {m.role === 'coach' ? 'Coach' : 'Athlète'}
+                    {roleLabel(m)}
                     {m.share_scores ? ' · scores partagés' : ''} ›
                   </span>
                 </Link>
@@ -217,6 +222,22 @@ export function AthletesPage() {
             ))}
           </ul>
         </Card>
+        {admin && (
+          <Card>
+            <h2 className="mb-1 font-semibold">Toutes les programmations</h2>
+            <p className="mb-2 text-xs text-zinc-500">Vue admin : nom et propriétaire.</p>
+            <ul className="divide-y divide-zinc-800">
+              {allPrograms.map((p) => (
+                <li key={p.id} className="flex justify-between gap-2 py-2 text-sm">
+                  <span className="truncate">{p.name}</span>
+                  <span className="shrink-0 text-zinc-400">
+                    {members.find((m) => m.id === p.owner_id)?.display_name ?? '—'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
         <ErrorText>{error}</ErrorText>
       </div>
     </>

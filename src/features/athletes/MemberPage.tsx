@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Card, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import { supabase, type Profile } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 import { useMyPrograms } from '../programs/useMyPrograms'
 import { useExercises } from '../exercises/useExercises'
 import { RecordsList } from '../records/RecordsList'
@@ -12,7 +12,8 @@ import { useRecords } from '../records/useRecords'
 export function MemberPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { session } = useAuth()
+  const { session, profile: me } = useAuth()
+  const admin = isAdmin(me)
   const { programs: mine } = useMyPrograms()
   const programs = mine ?? []
   const { nameOf } = useExercises()
@@ -48,10 +49,20 @@ export function MemberPage() {
     load()
   }
 
+  async function setRole(role: 'athlete' | 'coach' | 'admin') {
+    const label = { athlete: 'athlète', coach: 'coach', admin: 'admin' }[role]
+    const warning =
+      role === 'athlete' && member!.role === 'coach' ? '\nSes programmations te seront transférées.' : ''
+    if (!confirm(`Passer ${member!.display_name ?? 'ce membre'} en ${label} ?${warning}`)) return
+    const { error } = await supabase.rpc('set_member_role', { p_user: id!, p_role: role })
+    setError(error ? translate(error.message) : '')
+    load()
+  }
+
   async function removeAccess() {
     if (!confirm(`Retirer l’accès de ${member!.display_name ?? 'ce membre'} ? Il pourra être réinvité.`)) return
     const { error } = await supabase.rpc('remove_member', { p_user: id! })
-    if (error) setError(error.message)
+    if (error) setError(translate(error.message))
     else navigate('/athletes')
   }
 
@@ -62,10 +73,31 @@ export function MemberPage() {
       </Link>
       <PageTitle>{member.display_name ?? '—'}</PageTitle>
       <p className="-mt-3 mb-4 text-sm text-zinc-400">
-        {member.role === 'coach' ? 'Coach' : 'Athlète'}
+        {roleLabel(member)}
+        {member.is_app_owner ? ' · propriétaire de l’app' : ''}
         {member.share_scores ? ' · scores partagés' : ''}
       </p>
       <div className="flex flex-col gap-4">
+        {admin && member.id !== session?.user.id && !member.is_app_owner && (
+          <Card>
+            <h2 className="mb-2 font-semibold">Rôle</h2>
+            <div className="grid grid-cols-3 rounded-xl bg-zinc-800 p-1 text-sm">
+              {(['athlete', 'coach', 'admin'] as const).map((r) => {
+                const current = (member.is_admin ? 'admin' : member.role) === r
+                return (
+                  <button
+                    key={r}
+                    disabled={current}
+                    className={`rounded-lg py-2 font-semibold ${current ? 'bg-zinc-950 text-lime-400' : 'text-zinc-400'}`}
+                    onClick={() => setRole(r)}
+                  >
+                    {{ athlete: 'Athlète', coach: 'Coach', admin: 'Admin' }[r]}
+                  </button>
+                )
+              })}
+            </div>
+          </Card>
+        )}
         <Card>
           <h2 className="mb-2 font-semibold">Mes programmations</h2>
           {programs.length === 0 && <p className="text-sm text-zinc-400">Tu n’as aucune programmation.</p>}
@@ -103,7 +135,7 @@ export function MemberPage() {
           <RecordsList records={records} nameOf={nameOf} editable={false} />
         </section>
         <ErrorText>{error}</ErrorText>
-        {member.id !== session?.user.id && (
+        {admin && member.id !== session?.user.id && !member.is_app_owner && (
           <button className="py-2 text-sm text-red-400 underline" onClick={removeAccess}>
             Retirer l’accès à l’application
           </button>
@@ -111,4 +143,11 @@ export function MemberPage() {
       </div>
     </>
   )
+}
+
+function translate(message: string) {
+  if (message.includes('last_admin')) return 'C’est le dernier admin : nomme d’abord un autre admin.'
+  if (message.includes('app_owner')) return 'Le propriétaire de l’application ne peut pas être modifié.'
+  if (message.includes('forbidden')) return 'Action réservée aux admins.'
+  return message
 }
