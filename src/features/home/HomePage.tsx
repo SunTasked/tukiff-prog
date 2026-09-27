@@ -1,6 +1,8 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type ReactNode } from 'react'
 import { useSearchParams } from 'react-router'
-import { ProgramBadges, type BadgeAssignment } from '../../components/ProgramBadges'
+import { programColor } from '../../components/ProgramBadges'
+import { groupByProgram, type GroupAssignment } from '../../domain/grouping'
+import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatLongDay, fromISODate, mondayOf, today, weekDays } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
@@ -15,12 +17,13 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
-  const { profile } = useAuth()
+  const { profile, session } = useAuth()
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
   const monday = mondayOf(day)
   const [week, setWeek] = useState<Row[] | null>(null)
-  const [badges, setBadges] = useState<Record<string, BadgeAssignment[]>>({})
+  const [assignments, setAssignments] = useState<Record<string, GroupAssignment[]>>({})
+  const [myPrograms, setMyPrograms] = useState<Set<string>>(new Set())
   const [workouts, setWorkouts] = useState<WorkoutDraft[] | null>(null)
 
   const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
@@ -29,16 +32,25 @@ export function HomePage() {
     supabase.rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) }).then(async ({ data }) => {
       const rows = (data ?? []) as Row[]
       setWeek(rows)
-      if (!rows.length) return setBadges({})
+      if (!rows.length) return setAssignments({})
       const { data: assignments } = await supabase
         .from('workout_assignments')
         .select('workout_id, program_id, athlete_id, programs(name)')
         .in('workout_id', rows.map((r) => r.id))
-      const byWorkout: Record<string, BadgeAssignment[]> = {}
+      const byWorkout: Record<string, GroupAssignment[]> = {}
       for (const a of assignments ?? []) (byWorkout[a.workout_id] ??= []).push(a)
-      setBadges(byWorkout)
+      setAssignments(byWorkout)
     })
   }, [monday])
+
+  useEffect(() => {
+    if (!session) return
+    supabase
+      .from('program_members')
+      .select('program_id')
+      .eq('user_id', session.user.id)
+      .then(({ data }) => setMyPrograms(new Set((data ?? []).map((r) => r.program_id))))
+  }, [session])
 
   useEffect(() => {
     if (!week) return
@@ -95,16 +107,48 @@ export function HomePage() {
           <p className="text-zinc-400">Pas de séance ce jour-là.</p>
         </Card>
       ) : (
-        workouts.map((w) => (
-          <div key={w.id} className="mb-6">
-            <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
-              <h2 className="text-xl font-bold">{w.title}</h2>
-              <ProgramBadges assignments={badges[w.id!] ?? []} />
-            </div>
-            <WorkoutWithResults workout={w} canLog />
-          </div>
+        groupByProgram(workouts, assignments, myPrograms, session?.user.id).map((panel) => (
+          <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label} programName={panel.programName}>
+            {panel.items.map((w) => (
+              <div key={w.id}>
+                <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
+                <WorkoutWithResults workout={w} canLog />
+              </div>
+            ))}
+          </ProgramPanel>
         ))
       )}
     </>
+  )
+}
+
+/** Collapsible panel for one program; the collapsed state is remembered on the device. */
+function ProgramPanel({
+  panelKey,
+  label,
+  programName,
+  children,
+}: {
+  panelKey: string
+  label: string
+  programName: string | null
+  children: ReactNode
+}) {
+  const storageKey = `panel-collapsed:${panelKey}`
+  const [open, setOpen] = useState(() => getItem(storageKey) !== '1')
+  const toggle = () => {
+    setItem(storageKey, open ? '1' : null)
+    setOpen(!open)
+  }
+  const accent = programName ? programColor(programName) : 'bg-zinc-800 text-zinc-300'
+
+  return (
+    <section className="mb-4 rounded-2xl border border-zinc-800">
+      <button className="flex w-full items-center justify-between gap-2 p-3" onClick={toggle} aria-expanded={open}>
+        <span className={`rounded-full px-3 py-1 text-sm font-bold ${accent}`}>{label}</span>
+        <span className="text-zinc-400">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && <div className="flex flex-col gap-6 px-3 pb-3">{children}</div>}
+    </section>
   )
 }
