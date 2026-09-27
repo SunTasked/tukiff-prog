@@ -77,6 +77,52 @@ export type Database = {
           },
         ]
       }
+      block_reactions: {
+        Row: {
+          block_id: string
+          created_at: string
+          emoji: string
+          user_id: string
+          workout_id: string
+        }
+        Insert: {
+          block_id: string
+          created_at?: string
+          emoji: string
+          user_id?: string
+          workout_id: string
+        }
+        Update: {
+          block_id?: string
+          created_at?: string
+          emoji?: string
+          user_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_reactions_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "workout_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_reactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_reactions_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercises: {
         Row: {
           created_at: string
