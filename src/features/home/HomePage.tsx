@@ -1,62 +1,41 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor } from '../../components/ProgramBadges'
-import { groupByProgram, type GroupAssignment } from '../../domain/grouping'
+import { groupByProgram } from '../../domain/grouping'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatLongDay, fromISODate, mondayOf, today, weekDays } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
 
-type Row = { id: string; title: string; date: string }
+type Row = { id: string; title: string; date: string; program_id: string; program_name: string }
 
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
-  const { session } = useAuth()
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
   const monday = mondayOf(day)
   const [week, setWeek] = useState<Row[] | null>(null)
-  const [assignments, setAssignments] = useState<Record<string, GroupAssignment[]>>({})
-  const [myPrograms, setMyPrograms] = useState<Set<string>>(new Set())
-  const [workouts, setWorkouts] = useState<WorkoutDraft[] | null>(null)
+  const [workouts, setWorkouts] = useState<(WorkoutDraft & Row)[] | null>(null)
 
   const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
 
   useEffect(() => {
-    supabase.rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) }).then(async ({ data }) => {
-      const rows = (data ?? []) as Row[]
-      setWeek(rows)
-      if (!rows.length) return setAssignments({})
-      const { data: assignments } = await supabase
-        .from('workout_assignments')
-        .select('workout_id, program_id, athlete_id, programs(name)')
-        .in('workout_id', rows.map((r) => r.id))
-      const byWorkout: Record<string, GroupAssignment[]> = {}
-      for (const a of assignments ?? []) (byWorkout[a.workout_id] ??= []).push(a)
-      setAssignments(byWorkout)
-    })
-  }, [monday])
-
-  useEffect(() => {
-    if (!session) return
     supabase
-      .from('program_members')
-      .select('program_id')
-      .eq('user_id', session.user.id)
-      .then(({ data }) => setMyPrograms(new Set((data ?? []).map((r) => r.program_id))))
-  }, [session])
+      .rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) })
+      .then(({ data }) => setWeek((data ?? []) as Row[]))
+  }, [monday])
 
   useEffect(() => {
     if (!week) return
     setWorkouts(null)
-    Promise.all(week.filter((r) => r.date === day).map((r) => loadWorkout(r.id))).then((list) =>
-      setWorkouts(list.filter((w): w is WorkoutDraft => w !== null)),
+    const rows = week.filter((r) => r.date === day)
+    Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
+      setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
     )
   }, [week, day])
 
@@ -113,8 +92,8 @@ export function HomePage() {
           <p className="text-zinc-400">Pas de séance ce jour-là.</p>
         </Card>
       ) : (
-        groupByProgram(workouts, assignments, myPrograms, session?.user.id).map((panel) => (
-          <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label} programName={panel.programName}>
+        groupByProgram(workouts).map((panel) => (
+          <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
             {panel.items.map((w) => (
               <div key={w.id}>
                 <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
@@ -132,12 +111,10 @@ export function HomePage() {
 function ProgramPanel({
   panelKey,
   label,
-  programName,
   children,
 }: {
   panelKey: string
   label: string
-  programName: string | null
   children: ReactNode
 }) {
   const storageKey = `panel-collapsed:${panelKey}`
@@ -146,7 +123,7 @@ function ProgramPanel({
     setItem(storageKey, open ? '1' : null)
     setOpen(!open)
   }
-  const accent = programName ? programColor(programName) : 'bg-zinc-800 text-zinc-300'
+  const accent = programColor(label)
 
   return (
     <section className="mb-4 rounded-2xl border border-zinc-800">

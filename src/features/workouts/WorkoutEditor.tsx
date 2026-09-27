@@ -28,7 +28,7 @@ export function WorkoutEditor() {
   const [search] = useSearchParams()
   const { exercises, byId, nameOf, create } = useExercises()
   const [draft, setDraft] = useState<WorkoutDraft | null>(
-    id ? null : { title: '', notes: '', date: search.get('date'), blocks: [newBlock('warmup', crypto.randomUUID())] },
+    id ? null : { title: '', notes: '', date: search.get('date'), program_id: search.get('program'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
   const [original, setOriginal] = useState<WorkoutDraft | null>(null)
   const [pick, setPick] = useState<PickTarget | null>(null)

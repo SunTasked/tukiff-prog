@@ -325,6 +325,36 @@ export type Database = {
         }
         Relationships: []
       }
+      program_coaches: {
+        Row: {
+          coach_id: string
+          program_id: string
+        }
+        Insert: {
+          coach_id: string
+          program_id: string
+        }
+        Update: {
+          coach_id?: string
+          program_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "program_coaches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "program_coaches_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       program_members: {
         Row: {
           created_at: string
@@ -365,6 +395,7 @@ export type Database = {
           description: string | null
           id: string
           name: string
+          owner_id: string | null
         }
         Insert: {
           archived_at?: string | null
@@ -372,6 +403,7 @@ export type Database = {
           description?: string | null
           id?: string
           name: string
+          owner_id?: string | null
         }
         Update: {
           archived_at?: string | null
@@ -379,8 +411,17 @@ export type Database = {
           description?: string | null
           id?: string
           name?: string
+          owner_id?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "programs_owner_id_fkey"
+            columns: ["owner_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       results: {
         Row: {
@@ -452,49 +493,6 @@ export type Database = {
           },
         ]
       }
-      workout_assignments: {
-        Row: {
-          athlete_id: string | null
-          id: string
-          program_id: string | null
-          workout_id: string
-        }
-        Insert: {
-          athlete_id?: string | null
-          id?: string
-          program_id?: string | null
-          workout_id: string
-        }
-        Update: {
-          athlete_id?: string | null
-          id?: string
-          program_id?: string | null
-          workout_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "workout_assignments_athlete_id_fkey"
-            columns: ["athlete_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workout_assignments_program_id_fkey"
-            columns: ["program_id"]
-            isOneToOne: false
-            referencedRelation: "programs"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "workout_assignments_workout_id_fkey"
-            columns: ["workout_id"]
-            isOneToOne: false
-            referencedRelation: "workouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       workout_blocks: {
         Row: {
           format: string
@@ -543,6 +541,7 @@ export type Database = {
           date: string | null
           id: string
           notes: string | null
+          program_id: string | null
           publish_at: string | null
           title: string
           updated_at: string
@@ -553,6 +552,7 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
+          program_id?: string | null
           publish_at?: string | null
           title: string
           updated_at?: string
@@ -563,6 +563,7 @@ export type Database = {
           date?: string | null
           id?: string
           notes?: string | null
+          program_id?: string | null
           publish_at?: string | null
           title?: string
           updated_at?: string
@@ -575,6 +576,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "workouts_program_id_fkey"
+            columns: ["program_id"]
+            isOneToOne: false
+            referencedRelation: "programs"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -584,29 +592,27 @@ export type Database = {
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
+      can_edit_program: { Args: { p_program: string }; Returns: boolean }
+      can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
       copy_workout: {
         Args: {
           p_date: string
+          p_program: string
           p_publish_at: string
           p_src: string
-          p_with_assignments: boolean
         }
         Returns: string
       }
       delete_my_account: { Args: never; Returns: undefined }
-      duplicate_week: {
-        Args: { p_from: string; p_to: string }
+      duplicate_workouts: {
+        Args: { p_days: number; p_ids: string[] }
         Returns: number
-      }
-      duplicate_workout: {
-        Args: { p_date: string; p_id: string }
-        Returns: string
       }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
-      move_workout: {
-        Args: { p_date: string; p_id: string }
+      move_workouts: {
+        Args: { p_days: number; p_ids: string[] }
         Returns: undefined
       }
       my_role: { Args: never; Returns: string }
@@ -615,13 +621,16 @@ export type Database = {
         Returns: {
           date: string
           id: string
+          program_id: string
+          program_name: string
           title: string
         }[]
       }
+      owns_program: { Args: { p_program: string }; Returns: boolean }
       remove_member: { Args: { p_user: string }; Returns: undefined }
       save_workout: { Args: { p: Json }; Returns: string }
       schedule_workout: {
-        Args: { p_date: string; p_template: string }
+        Args: { p_date: string; p_program: string; p_template: string }
         Returns: string
       }
       shares_scores: { Args: { p_user: string }; Returns: boolean }

@@ -15,10 +15,13 @@ const USERS = [
   { name: 'a2', role: 'athlete', share: true },
   { name: 'a3', role: 'athlete', share: false },
 ]
+// name: { owner, contributors, members }
 const PROGRAMS = {
-  CrossFit: ['c1', 'c2', 'a1', 'a2', 'a3', OWNER],
-  Haltéro: ['c1', 'a1'],
-  Hyrox: ['a2'],
+  CrossFit: { owner: 'c1', contributors: ['c2'], members: ['c1', 'c2', 'a1', 'a2', 'a3', OWNER] },
+  Haltéro: { owner: 'c1', contributors: [], members: ['c1', 'a1'] },
+  Hyrox: { owner: 'c2', contributors: [], members: ['a2'] },
+  'Open Gym': { owner: 'c1', contributors: [], members: ['c1', 'c2', 'a1', 'a2', 'a3', OWNER] },
+  'Perso a3': { owner: 'c1', contributors: [], members: ['a3'] },
 }
 
 const url = process.env.SUPABASE_URL
@@ -57,20 +60,29 @@ const [owner] = await sql(`select id from auth.users where email = ${q(OWNER)}`)
 if (owner) userId[OWNER] = owner.id
 console.log('Utilisateurs :', USERS.map((u) => emailOf(u.name)).join(', '))
 
-// Act as c1 through the real API (RLS + RPCs) ---------------------------------------------
-const c1 = createClient(url, publishable, { auth: { persistSession: false } })
-const login = await c1.auth.signInWithPassword({ email: emailOf('c1'), password: PASSWORD })
-if (login.error) throw login.error
+// Act as the coaches through the real API (RLS + RPCs) ---------------------------------------
+async function clientFor(name) {
+  const client = createClient(url, publishable, { auth: { persistSession: false } })
+  const { error } = await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
+  if (error) throw error
+  return client
+}
+const coach = { c1: await clientFor('c1'), c2: await clientFor('c2') }
+const c1 = coach.c1
 const must = (r) => {
   if (r.error) throw new Error(r.error.message)
   return r.data
 }
 
 const programId = {}
-for (const [name, members] of Object.entries(PROGRAMS)) {
-  programId[name] = must(await c1.from('programs').insert({ name }).select().single()).id
-  const rows = members.filter((m) => userId[m]).map((m) => ({ program_id: programId[name], user_id: userId[m] }))
-  must(await c1.from('program_members').insert(rows))
+const ownerOf = {}
+for (const [name, p] of Object.entries(PROGRAMS)) {
+  const client = coach[p.owner]
+  programId[name] = must(await client.from('programs').insert({ name }).select().single()).id
+  ownerOf[name] = client
+  for (const c of p.contributors) must(await client.from('program_coaches').insert({ program_id: programId[name], coach_id: userId[c] }))
+  const rows = p.members.filter((m) => userId[m]).map((m) => ({ program_id: programId[name], user_id: userId[m] }))
+  must(await client.from('program_members').insert(rows))
 }
 
 const ex = Object.fromEntries(must(await c1.from('exercises').select('id, name')).map((e) => [e.name, e.id]))
@@ -151,45 +163,37 @@ const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now
 const dayOf = (week, dow) => iso(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + week * 7 + dow, 12))
 const at7 = (date) => new Date(`${date}T07:00:00`).toISOString()
 
-// [template, day of week (0 = Monday), targets]
+// [template, day of week (0 = Monday), program]
 const WEEK_PLAN = [
-  ['Chipper DU', 0, ['CrossFit']],
-  ['Haltéro : clean & jerk', 1, ['Haltéro']],
-  ['Fran', 2, ['CrossFit']],
-  ['Hyrox simulation', 3, ['Hyrox']],
-  ['Squat lourd + Cindy', 4, ['CrossFit']],
-  ['EMOM gym', 5, ['all']],
+  ['Chipper DU', 0, 'CrossFit'],
+  ['Haltéro : clean & jerk', 1, 'Haltéro'],
+  ['Fran', 2, 'CrossFit'],
+  ['Hyrox simulation', 3, 'Hyrox'],
+  ['Squat lourd + Cindy', 4, 'CrossFit'],
+  ['EMOM gym', 5, 'Open Gym'],
 ]
+
+async function schedule(template, date, program, publish, title) {
+  const client = ownerOf[program]
+  const id = must(await client.rpc('schedule_workout', { p_template: templateId[template], p_date: date, p_program: programId[program] }))
+  must(await client.from('workouts').update({ publish_at: publish, ...(title && { title }) }).eq('id', id))
+}
 
 let count = 0
 for (const week of [-2, -1, 0, 1]) {
-  for (const [title, dow, targets] of WEEK_PLAN) {
-    const date = dayOf(week, dow)
-    const id = must(await c1.rpc('schedule_workout', { p_template: templateId[title], p_date: date }))
-    if (!targets.includes('all')) {
-      must(await c1.from('workout_assignments').delete().eq('workout_id', id))
-      must(await c1.from('workout_assignments').insert(targets.map((t) => ({ workout_id: id, program_id: programId[t] }))))
-    }
+  for (const [title, dow, program] of WEEK_PLAN) {
     // Past and current weeks: published on Monday 7:00. Next week: scheduled (Mon-Wed) or draft.
     const publish = week <= 0 ? at7(dayOf(week, 0)) : dow <= 2 ? at7(dayOf(1, 0)) : null
-    must(await c1.from('workouts').update({ publish_at: publish }).eq('id', id))
+    await schedule(title, dayOf(week, dow), program, publish)
     count++
   }
 }
-// Today's workout for the CrossFit program, whatever the day of week.
-const todays = must(await c1.rpc('schedule_workout', { p_template: templateId['Chipper DU'], p_date: iso(now) }))
-must(await c1.from('workout_assignments').delete().eq('workout_id', todays))
-must(await c1.from('workout_assignments').insert({ workout_id: todays, program_id: programId.CrossFit }))
-must(await c1.from('workouts').update({ publish_at: new Date().toISOString() }).eq('id', todays))
-count++
+// Today: a CrossFit workout, and one in a3's personal program.
+await schedule('Chipper DU', iso(now), 'CrossFit', new Date().toISOString())
+await schedule('Fran', iso(now), 'Perso a3', new Date().toISOString(), 'Fran (perso a3)')
+count += 2
 
-// One workout only for a3 today, to test athlete targeting.
-const special = must(await c1.rpc('schedule_workout', { p_template: templateId.Fran, p_date: iso(now) }))
-must(await c1.from('workout_assignments').delete().eq('workout_id', special))
-must(await c1.from('workout_assignments').insert({ workout_id: special, athlete_id: userId.a3 }))
-must(await c1.from('workouts').update({ title: 'Fran (perso a3)', publish_at: new Date().toISOString() }).eq('id', special))
-
-console.log(`Programmes : ${Object.keys(PROGRAMS).join(', ')} · ${Object.keys(TEMPLATES).length} modèles · ${count + 1} séances programmées`)
+console.log(`Programmes : ${Object.keys(PROGRAMS).join(', ')} · ${Object.keys(TEMPLATES).length} modèles · ${count} séances programmées`)
 
 // Results: each athlete logs scores through the API (RLS applies), on published workouts up to today.
 // Deterministic pseudo-random so reruns give the same data.

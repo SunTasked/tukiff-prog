@@ -3,13 +3,16 @@ import { Link } from 'react-router'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
 import { invitationStatus, invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { supabase, type Invitation, type Profile, type Program } from '../../lib/supabase'
+import { useAuth } from '../auth/AuthProvider'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
 type InvitationRow = Invitation & { invitation_programs: { program_id: string }[] }
-type ProgramRow = Program & { program_members: { count: number }[] }
+type ProgramRow = Program & { program_members: { count: number }[]; program_coaches: { coach_id: string }[] }
 
 export function AthletesPage() {
+  const { session } = useAuth()
+  const me = session?.user.id
   const [members, setMembers] = useState<Profile[]>([])
   const [invitations, setInvitations] = useState<InvitationRow[]>([])
   const [programs, setPrograms] = useState<ProgramRow[]>([])
@@ -23,13 +26,16 @@ export function AthletesPage() {
     const [m, i, p] = await Promise.all([
       supabase.from('profiles').select('*').not('role', 'is', null).order('display_name'),
       supabase.from('invitations').select('*, invitation_programs(program_id)').order('created_at', { ascending: false }),
-      supabase.from('programs').select('*, program_members(count)').is('archived_at', null).order('name'),
+      supabase.from('programs').select('*, program_members(count), program_coaches(coach_id)').is('archived_at', null).order('name'),
     ])
     setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
     setMembers(m.data ?? [])
     setInvitations(((i.data ?? []) as InvitationRow[]).filter((inv) => invitationStatus(inv) === 'active'))
-    setPrograms((p.data ?? []) as ProgramRow[])
-  }, [])
+    // Only the programs I own or contribute to.
+    setPrograms(
+      ((p.data ?? []) as ProgramRow[]).filter((x) => x.owner_id === me || x.program_coaches.some((c) => c.coach_id === me)),
+    )
+  }, [me])
 
   useEffect(() => {
     load()
@@ -62,7 +68,7 @@ export function AthletesPage() {
   async function createProgram(e: FormEvent) {
     e.preventDefault()
     const { error } = await supabase.from('programs').insert({ name: newProgram.trim() })
-    if (error) return setError(error.code === '23505' ? 'Un programme porte déjà ce nom.' : error.message)
+    if (error) return setError(error.code === '23505' ? 'Une programmation porte déjà ce nom.' : error.message)
     setNewProgram('')
     load()
   }
@@ -100,7 +106,7 @@ export function AthletesPage() {
           </div>
           {programs.length > 0 && (
             <>
-              <p className="mb-1 text-xs text-zinc-500">Accès aux programmes</p>
+              <p className="mb-1 text-xs text-zinc-500">Accès aux programmations</p>
               <div className="mb-3 flex flex-wrap gap-1">
                 {programs.map((p) => (
                   <button
@@ -166,12 +172,15 @@ export function AthletesPage() {
         </Card>
 
         <Card>
-          <h2 className="mb-3 font-semibold">Programmes ({programs.length})</h2>
+          <h2 className="mb-3 font-semibold">Mes programmations ({programs.length})</h2>
           <ul className="divide-y divide-zinc-800">
             {programs.map((p) => (
               <li key={p.id}>
                 <Link to={`/programs/${p.id}`} className="flex justify-between py-2">
-                  <span>{p.name}</span>
+                  <span>
+                    {p.name}
+                    {p.owner_id !== me && <span className="ml-1 text-xs text-zinc-500">(contributeur)</span>}
+                  </span>
                   <span className="text-xs text-zinc-400">
                     {p.program_members[0]?.count ?? 0} athlète{(p.program_members[0]?.count ?? 0) > 1 ? 's' : ''} ›
                   </span>
@@ -181,7 +190,7 @@ export function AthletesPage() {
           </ul>
           <form onSubmit={createProgram} className="mt-2 flex gap-2">
             <input
-              placeholder="Nouveau programme"
+              placeholder="Nouvelle programmation"
               maxLength={60}
               required
               className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 outline-none focus:border-lime-400"

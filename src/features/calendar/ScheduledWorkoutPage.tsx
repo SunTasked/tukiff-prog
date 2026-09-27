@@ -3,21 +3,20 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Button, Card, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import { formatLongDay, fromLocalInput, mondayOf, toLocalInput } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
-import { supabase, type Assignment } from '../../lib/supabase'
-import { useTeam } from '../programs/useTeam'
+import { supabase } from '../../lib/supabase'
+import { useMyPrograms } from '../programs/useMyPrograms'
 import { loadWorkout } from '../workouts/api'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { StatusBadge } from './StatusBadge'
-import { isEveryone } from './targets'
 
-type Meta = { date: string; publish_at: string | null; workout_assignments: (Assignment & { id: string })[] }
+type Meta = { date: string; publish_at: string | null; program_id: string }
 
 const input = 'rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2'
 
 export function ScheduledWorkoutPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { programs, members } = useTeam()
+  const { programs } = useMyPrograms()
   const [workout, setWorkout] = useState<WorkoutDraft | null>()
   const [meta, setMeta] = useState<Meta | null>(null)
   const [publishAt, setPublishAt] = useState('')
@@ -28,7 +27,7 @@ export function ScheduledWorkoutPage() {
   const load = useCallback(async () => {
     const [w, m] = await Promise.all([
       loadWorkout(id!),
-      supabase.from('workouts').select('date, publish_at, workout_assignments(id, program_id, athlete_id)').eq('id', id!).single(),
+      supabase.from('workouts').select('date, publish_at, program_id').eq('id', id!).single(),
     ])
     setWorkout(w)
     if (m.data) {
@@ -36,7 +35,7 @@ export function ScheduledWorkoutPage() {
       setMeta(data)
       setPublishAt(data.publish_at ? toLocalInput(data.publish_at) : `${data.date}T07:00`)
       setOtherDate((d) => d || data.date)
-      setMissing(await missingMembers(id!, data.workout_assignments))
+      setMissing(await missingMembers(id!, data.program_id))
     }
   }, [id])
 
@@ -55,21 +54,11 @@ export function ScheduledWorkoutPage() {
   const setPublication = (value: string | null) =>
     run(supabase.from('workouts').update({ publish_at: value }).eq('id', id!))
 
-  const has = (t: Assignment) =>
-    meta.workout_assignments.find((a) => a.program_id === t.program_id && a.athlete_id === t.athlete_id)
-  const toggle = (t: Assignment) => {
-    const existing = has(t)
-    run(
-      existing
-        ? supabase.from('workout_assignments').delete().eq('id', existing.id)
-        : supabase.from('workout_assignments').insert({ workout_id: id!, ...t }),
-    )
-  }
-
   async function duplicate() {
-    const { data, error } = await supabase.rpc('duplicate_workout', { p_id: id!, p_date: otherDate })
+    const days = Math.round((new Date(otherDate).getTime() - new Date(meta!.date).getTime()) / 86_400_000)
+    const { error } = await supabase.rpc('duplicate_workouts', { p_ids: [id!], p_days: days })
     if (error) return setError(error.message)
-    navigate(`/calendar/workouts/${data}`)
+    navigate(`/calendar?week=${mondayOf(otherDate)}`)
   }
 
   async function remove() {
@@ -78,12 +67,6 @@ export function ScheduledWorkoutPage() {
     if (error) setError(error.message)
     else navigate(`/calendar?week=${mondayOf(meta!.date)}`)
   }
-
-  const targets: { label: string; t: Assignment }[] = [
-    { label: 'Tous', t: { program_id: null, athlete_id: null } },
-    ...programs.map((p) => ({ label: `Programme · ${p.name}`, t: { program_id: p.id, athlete_id: null } })),
-    ...members.map((m) => ({ label: m.display_name ?? '—', t: { program_id: null, athlete_id: m.id } })),
-  ]
 
   return (
     <>
@@ -115,21 +98,20 @@ export function ScheduledWorkoutPage() {
           )}
         </Card>
 
-        <Card>
-          <h2 className="mb-2 font-semibold">Pour qui ?</h2>
-          {meta.workout_assignments.length === 0 && (
-            <p className="mb-2 text-sm text-amber-400">Aucune cible : personne ne verra cette séance.</p>
-          )}
-          <ul className="flex flex-col">
-            {targets.map(({ label, t }) => (
-              <li key={`${t.program_id}-${t.athlete_id}`}>
-                <label className="flex items-center gap-3 py-1.5">
-                  <input type="checkbox" className="size-5 accent-lime-400" checked={!!has(t)} onChange={() => toggle(t)} />
-                  <span className={isEveryone(t) ? 'font-semibold' : ''}>{label}</span>
-                </label>
-              </li>
+        <Card className="flex flex-col gap-2">
+          <h2 className="font-semibold">Programmation</h2>
+          <select
+            className={input}
+            value={meta.program_id}
+            onChange={(e) => run(supabase.from('workouts').update({ program_id: e.target.value }).eq('id', id!))}
+          >
+            {(programs ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.name}
+              </option>
             ))}
-          </ul>
+          </select>
+          <p className="text-xs text-zinc-500">Visible par les athlètes de cette programmation, une fois publiée.</p>
         </Card>
 
         {meta.publish_at && missing && (
@@ -154,7 +136,14 @@ export function ScheduledWorkoutPage() {
               variant="secondary"
               className="flex-1 py-2 text-sm"
               disabled={!otherDate || otherDate === meta.date}
-              onClick={() => run(supabase.from('workouts').update({ date: otherDate }).eq('id', id!))}
+              onClick={() =>
+                run(
+                  supabase.rpc('move_workouts', {
+                    p_ids: [id!],
+                    p_days: Math.round((new Date(otherDate).getTime() - new Date(meta.date).getTime()) / 86_400_000),
+                  }),
+                )
+              }
             >
               Déplacer
             </Button>
@@ -170,23 +159,15 @@ export function ScheduledWorkoutPage() {
   )
 }
 
-/** Names of assigned members who have not logged any result for this workout. */
-async function missingMembers(workoutId: string, assignments: Assignment[]): Promise<string[]> {
-  const everyone = assignments.some(isEveryone)
-  const programIds = assignments.flatMap((a) => (a.program_id ? [a.program_id] : []))
-  const [members, inPrograms, results] = await Promise.all([
-    supabase.from('profiles').select('id, display_name').not('role', 'is', null).order('display_name'),
-    programIds.length
-      ? supabase.from('program_members').select('user_id').in('program_id', programIds)
-      : Promise.resolve({ data: [] as { user_id: string }[] }),
+/** Names of the program's athletes who have not logged any result for this workout. */
+async function missingMembers(workoutId: string, programId: string): Promise<string[]> {
+  const [members, results] = await Promise.all([
+    supabase.from('program_members').select('user_id, profiles(display_name, role)').eq('program_id', programId),
     supabase.from('results').select('athlete_id').eq('workout_id', workoutId),
-  ])
-  const assigned = new Set([
-    ...(inPrograms.data ?? []).map((r) => r.user_id),
-    ...assignments.flatMap((a) => (a.athlete_id ? [a.athlete_id] : [])),
   ])
   const done = new Set((results.data ?? []).map((r) => r.athlete_id))
   return (members.data ?? [])
-    .filter((m) => (everyone || assigned.has(m.id)) && !done.has(m.id))
-    .map((m) => m.display_name ?? '—')
+    .filter((m) => m.profiles?.role && !done.has(m.user_id))
+    .map((m) => m.profiles?.display_name ?? '—')
+    .sort((a, b) => a.localeCompare(b))
 }
