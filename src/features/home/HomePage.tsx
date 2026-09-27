@@ -5,9 +5,8 @@ import { addDays, formatDay, formatLongDay, today } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
-import { useExercises } from '../exercises/useExercises'
 import { loadWorkout } from '../workouts/api'
-import { WorkoutView } from '../workouts/WorkoutView'
+import { WorkoutWithResults } from '../results/WorkoutWithResults'
 
 type Row = { id: string; title: string; date: string }
 
@@ -17,7 +16,6 @@ const UPCOMING_DAYS = 30
 /** Workouts assigned to me (athletes and coaches alike): today, upcoming, history. */
 export function HomePage() {
   const { profile } = useAuth()
-  const { nameOf, byId } = useExercises()
   const [rows, setRows] = useState<Row[] | null>(null)
   const [todays, setTodays] = useState<WorkoutDraft[]>([])
   const day = today()
@@ -51,7 +49,7 @@ export function HomePage() {
           {todays.map((w) => (
             <div key={w.id} className="mb-4">
               <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
-              <WorkoutView workout={w} nameOf={nameOf} videoOf={(id) => byId.get(id)?.video_url} />
+              <WorkoutWithResults workout={w} canLog />
             </div>
           ))}
         </section>

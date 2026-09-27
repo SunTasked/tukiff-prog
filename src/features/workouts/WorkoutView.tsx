@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, type ReactNode } from 'react'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
@@ -7,6 +7,7 @@ import {
   formatSummary,
   itemSummary,
   resolveItem,
+  type BlockDraft,
   type Level,
   type WorkoutDraft,
 } from '../../domain/workout'
@@ -16,10 +17,13 @@ export function WorkoutView({
   workout,
   nameOf,
   videoOf,
+  blockFooter,
 }: {
   workout: WorkoutDraft
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
+  /** Extra content under each block (results). */
+  blockFooter?: (block: BlockDraft, label: string) => ReactNode
 }) {
   // Remember the athlete's usual level on this device.
   const [level, setLevelState] = useState<Level>(() => {
@@ -64,6 +68,7 @@ export function WorkoutView({
             })}
           </ul>
           {b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
+          {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]}`)}
         </section>
       ))}
     </div>

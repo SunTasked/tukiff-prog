@@ -4,10 +4,9 @@ import { Button, Card, ErrorText, PageTitle, Spinner } from '../../components/ui
 import { formatLongDay, fromLocalInput, mondayOf, toLocalInput } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase, type Assignment } from '../../lib/supabase'
-import { useExercises } from '../exercises/useExercises'
 import { useTeam } from '../programs/useTeam'
 import { loadWorkout } from '../workouts/api'
-import { WorkoutView } from '../workouts/WorkoutView'
+import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { StatusBadge } from './StatusBadge'
 import { isEveryone } from './targets'
 
@@ -18,13 +17,13 @@ const input = 'rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2'
 export function ScheduledWorkoutPage() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { nameOf, byId } = useExercises()
   const { programs, members } = useTeam()
   const [workout, setWorkout] = useState<WorkoutDraft | null>()
   const [meta, setMeta] = useState<Meta | null>(null)
   const [publishAt, setPublishAt] = useState('')
   const [otherDate, setOtherDate] = useState('')
   const [error, setError] = useState('')
+  const [missing, setMissing] = useState<string[] | null>(null)
 
   const load = useCallback(async () => {
     const [w, m] = await Promise.all([
@@ -37,6 +36,7 @@ export function ScheduledWorkoutPage() {
       setMeta(data)
       setPublishAt(data.publish_at ? toLocalInput(data.publish_at) : `${data.date}T07:00`)
       setOtherDate((d) => d || data.date)
+      setMissing(await missingMembers(id!, data.workout_assignments))
     }
   }, [id])
 
@@ -132,7 +132,14 @@ export function ScheduledWorkoutPage() {
           </ul>
         </Card>
 
-        <WorkoutView workout={workout} nameOf={nameOf} videoOf={(eid) => byId.get(eid)?.video_url} />
+        {meta.publish_at && missing && (
+          <Card>
+            <h2 className="mb-1 font-semibold">Pas encore saisi ({missing.length})</h2>
+            <p className="text-sm text-zinc-400">{missing.length ? missing.join(', ') : 'Tout le monde a saisi un score.'}</p>
+          </Card>
+        )}
+
+        <WorkoutWithResults workout={workout} canLog={false} />
 
         <Button onClick={() => navigate(`/library/workouts/${id}/edit`)}>Modifier le contenu</Button>
 
@@ -161,4 +168,25 @@ export function ScheduledWorkoutPage() {
       </div>
     </>
   )
+}
+
+/** Names of assigned members who have not logged any result for this workout. */
+async function missingMembers(workoutId: string, assignments: Assignment[]): Promise<string[]> {
+  const everyone = assignments.some(isEveryone)
+  const programIds = assignments.flatMap((a) => (a.program_id ? [a.program_id] : []))
+  const [members, inPrograms, results] = await Promise.all([
+    supabase.from('profiles').select('id, display_name').not('role', 'is', null).order('display_name'),
+    programIds.length
+      ? supabase.from('program_members').select('user_id').in('program_id', programIds)
+      : Promise.resolve({ data: [] as { user_id: string }[] }),
+    supabase.from('results').select('athlete_id').eq('workout_id', workoutId),
+  ])
+  const assigned = new Set([
+    ...(inPrograms.data ?? []).map((r) => r.user_id),
+    ...assignments.flatMap((a) => (a.athlete_id ? [a.athlete_id] : [])),
+  ])
+  const done = new Set((results.data ?? []).map((r) => r.athlete_id))
+  return (members.data ?? [])
+    .filter((m) => (everyone || assigned.has(m.id)) && !done.has(m.id))
+    .map((m) => m.display_name ?? '—')
 }
