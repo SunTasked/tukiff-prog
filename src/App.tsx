@@ -7,7 +7,11 @@ import { isCoach, useAuth } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
 import { OnboardingPage } from './features/auth/OnboardingPage'
 import { PendingPage } from './features/auth/PendingPage'
+import { ExerciseFormPage } from './features/exercises/ExerciseFormPage'
 import { HomePage } from './features/home/HomePage'
+import { LibraryPage } from './features/library/LibraryPage'
+import { WorkoutEditor } from './features/workouts/WorkoutEditor'
+import { WorkoutPage } from './features/workouts/WorkoutPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { getItem, setItem } from './lib/storage'
 import { supabase } from './lib/supabase'
@@ -49,7 +53,17 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={<HomePage />} />
         <Route path="profile" element={<ProfilePage />} />
-        {isCoach(profile) && <Route path="athletes" element={<AthletesPage />} />}
+        {isCoach(profile) && (
+          <>
+            <Route path="athletes" element={<AthletesPage />} />
+            <Route path="library" element={<LibraryPage />} />
+            <Route path="library/workouts/new" element={<WorkoutEditor />} />
+            <Route path="library/workouts/:id" element={<WorkoutPage />} />
+            <Route path="library/workouts/:id/edit" element={<WorkoutEditor />} />
+            <Route path="library/exercises/new" element={<ExerciseFormPage />} />
+            <Route path="library/exercises/:id" element={<ExerciseFormPage />} />
+          </>
+        )}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

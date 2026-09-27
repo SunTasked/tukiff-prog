@@ -8,3 +8,4 @@ export const supabase = createClient<Database>(
 
 export type Profile = Database['public']['Tables']['profiles']['Row']
 export type Invitation = Database['public']['Tables']['invitations']['Row']
+export type Exercise = Database['public']['Tables']['exercises']['Row']

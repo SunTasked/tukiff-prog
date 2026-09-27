@@ -1,3 +1,4 @@
+import type React from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
@@ -56,4 +57,66 @@ export function Centered({ children }: { children: ReactNode }) {
       {children}
     </div>
   )
+}
+
+export function Textarea({
+  label,
+  className = '',
+  ...props
+}: React.TextareaHTMLAttributes<HTMLTextAreaElement> & { label?: string }) {
+  return (
+    <label className="block">
+      {label && <span className="mb-1 block text-sm text-zinc-400">{label}</span>}
+      <textarea
+        rows={2}
+        className={`w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100 outline-none focus:border-lime-400 ${className}`}
+        {...props}
+      />
+    </label>
+  )
+}
+
+/** Horizontal single-choice chips. */
+export function Chips<T extends string>({
+  options,
+  value,
+  onChange,
+}: {
+  options: Record<T, string>
+  value: T
+  onChange: (v: T) => void
+}) {
+  return (
+    <div className="-mx-1 flex gap-1 overflow-x-auto px-1 pb-1">
+      {(Object.keys(options) as T[]).map((k) => (
+        <button
+          key={k}
+          type="button"
+          onClick={() => onChange(k)}
+          className={`shrink-0 rounded-full px-3 py-1.5 text-sm ${
+            value === k ? 'bg-lime-400 font-semibold text-zinc-950' : 'bg-zinc-800 text-zinc-300'
+          }`}
+        >
+          {options[k]}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const smallInput =
+  'w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-zinc-100 outline-none focus:border-lime-400'
+
+/** Compact labelled field for dense forms. */
+export function Field({ label, children, className = '' }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <label className={`block min-w-0 ${className}`}>
+      <span className="mb-0.5 block text-xs text-zinc-500">{label}</span>
+      {children}
+    </label>
+  )
+}
+
+export function SmallInput(props: InputHTMLAttributes<HTMLInputElement>) {
+  return <input className={smallInput} {...props} />
 }
