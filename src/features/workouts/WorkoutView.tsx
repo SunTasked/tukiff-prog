@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { loadFromPct } from '../../domain/records'
+import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
@@ -47,9 +48,12 @@ export function WorkoutView({
       {hasLevels && <Chips options={LEVELS} value={level} onChange={setLevel} />}
       {workout.blocks.map((b, i) => (
         <section key={b.id} className="rounded-2xl bg-zinc-900 p-4">
-          <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
-          </p>
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+              {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
+            </p>
+            <TimerLink block={b} />
+          </div>
           {(b.title || formatSummary(b.format, b.params)) && (
             <h3 className="mt-1 text-lg font-bold">
               {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
@@ -91,4 +95,15 @@ function PctLoad({ exerciseId, pct, oneRm }: { exerciseId: string; pct: number; 
       </Link>
     )
   return <span className="ml-2 font-semibold text-lime-400">≈ {loadFromPct(oneRm, pct)} kg</span>
+}
+
+function TimerLink({ block }: { block: BlockDraft }) {
+  const config = timerFromBlock(block.format, block.params)
+  if (!config) return null
+  const params = new URLSearchParams({ ...timerToParams(config), title: block.title || BLOCK_KINDS[block.kind] })
+  return (
+    <Link to={`/timer?${params}`} className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-200">
+      ▶ Timer
+    </Link>
+  )
 }

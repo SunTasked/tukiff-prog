@@ -1,5 +1,5 @@
 import { useEffect, useState, type ReactNode } from 'react'
-import { useSearchParams } from 'react-router'
+import { Link, useSearchParams } from 'react-router'
 import { programColor } from '../../components/ProgramBadges'
 import { groupByProgram, type GroupAssignment } from '../../domain/grouping'
 import { getItem, setItem } from '../../lib/storage'
@@ -62,7 +62,12 @@ export function HomePage() {
 
   return (
     <>
-      <h1 className="text-2xl font-bold">Salut {profile?.display_name} 👋</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Salut {profile?.display_name} 👋</h1>
+        <Link to="/timer" className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-semibold">
+          ⏱ Timer
+        </Link>
+      </div>
 
       <div className="mt-3 mb-4">
         <div className="flex items-center justify-between">
