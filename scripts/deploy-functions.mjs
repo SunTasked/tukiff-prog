@@ -4,7 +4,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { ref } from './lib.mjs'
 
 // Functions called before sign-in must not require a JWT.
-const publicFunctions = new Set(['join'])
+const publicFunctions = new Set(['join', 'notify']) // notify checks its own auth (secret or user JWT)
 const dir = new URL('../supabase/functions/', import.meta.url)
 const names = process.argv.slice(2).length ? process.argv.slice(2) : await readdir(dir)
 
