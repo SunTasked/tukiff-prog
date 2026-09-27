@@ -8,7 +8,7 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "preview": "vite preview",
-    "test": "vitest run",
+    "test": "TZ=Europe/Paris vitest run",
     "migrate": "node scripts/migrate.mjs",
     "gen:types": "node scripts/gen-types.mjs",
     "admin": "node scripts/admin.mjs"
