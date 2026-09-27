@@ -1,16 +1,19 @@
 import { useState } from 'react'
 import { ErrorText } from '../../components/ui'
+import { groupBySection } from '../../domain/sections'
 import type { Exercise } from '../../lib/supabase'
 import { normalize, searchExercises } from './useExercises'
 
-/** Full-screen search sheet; can create a missing exercise on the fly (when onCreate is given). */
+/** Full-screen search sheet, grouped by section until a search is typed; can create a missing exercise (when onCreate is given). */
 export function ExercisePicker({
   exercises,
+  sections = [],
   onPick,
   onCreate,
   onClose,
 }: {
   exercises: Exercise[]
+  sections?: { id: string; name: string }[]
   onPick: (e: Exercise) => void
   onCreate?: (name: string) => Promise<Exercise>
   onClose: () => void
@@ -18,6 +21,7 @@ export function ExercisePicker({
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const results = searchExercises(exercises, query)
+  const groups = query.trim() || !sections.length ? [{ id: null, name: '', items: results }] : groupBySection(results, sections)
   const exact = exercises.some((e) => normalize(e.name) === normalize(query))
 
   async function create() {
@@ -53,11 +57,18 @@ export function ExercisePicker({
             </div>
           </li>
         )}
-        {results.map((e) => (
-          <li key={e.id}>
-            <button className="w-full border-b border-zinc-900 px-4 py-3 text-left" onClick={() => onPick(e)}>
-              {e.name}
-            </button>
+        {groups.map((g) => (
+          <li key={g.id ?? 'none'}>
+            {g.name && <p className="sticky top-0 bg-zinc-950 px-4 pt-4 pb-1 text-xs font-semibold text-zinc-500 uppercase">{g.name}</p>}
+            <ul>
+              {g.items.map((e) => (
+                <li key={e.id}>
+                  <button className="w-full border-b border-zinc-900 px-4 py-3 text-left" onClick={() => onPick(e)}>
+                    {e.name}
+                  </button>
+                </li>
+              ))}
+            </ul>
           </li>
         ))}
       </ul>

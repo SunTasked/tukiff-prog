@@ -28,7 +28,7 @@ export function RecordSheet({
   onSaved: () => void
 }) {
   const { profile } = useAuth()
-  const { exercises, nameOf, create } = useExercises()
+  const { exercises, sections, nameOf, create } = useExercises()
   const [kind, setKind] = useState<keyof typeof KINDS>('load')
   const [exerciseId, setExerciseId] = useState<string | null>(initialExercise ?? null)
   const [picking, setPicking] = useState(false)
@@ -122,6 +122,7 @@ export function RecordSheet({
       {picking && (
         <ExercisePicker
           exercises={exercises}
+          sections={sections}
           onPick={(e) => {
             setExerciseId(e.id)
             setPicking(false)

@@ -1,14 +1,12 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
-import { ErrorText, PageTitle } from '../../components/ui'
-import { groupBySection } from '../../domain/sections'
-import { getItem, setItem } from '../../lib/storage'
+import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { searchExercises, useExercises } from '../exercises/useExercises'
+import { SectionedList, useSectionActions, type Section } from './SectionedList'
 
 type WorkoutRow = { id: string; title: string; updated_at: string; section_id: string | null }
-type Section = { id: string; name: string }
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
 /**
@@ -63,21 +61,11 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
-/** Library templates grouped in collapsible sections (collapsed by default; opened while searching). */
 function WorkoutList() {
   const { pathname } = useLocation()
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [query, setQuery] = useState('')
-  // Sections are collapsed by default; the expanded ones are remembered on the device.
-  const [expanded, setExpanded] = useState<string[]>(() => {
-    try {
-      return JSON.parse(getItem('librarySectionsExpanded') ?? '[]')
-    } catch {
-      return []
-    }
-  })
-  const [error, setError] = useState('')
 
   const load = useCallback(async () => {
     const [w, s] = await Promise.all([
@@ -87,38 +75,14 @@ function WorkoutList() {
     setRows(w.data ?? [])
     setSections(s.data ?? [])
   }, [])
+  const actions = useSectionActions('library_sections', load)
 
   // Reload when the detail pane changes (after a save or delete).
   useEffect(() => {
     load()
   }, [load, pathname])
 
-  const toggle = (key: string) => {
-    const next = expanded.includes(key) ? expanded.filter((k) => k !== key) : [...expanded, key]
-    setItem('librarySectionsExpanded', JSON.stringify(next))
-    setExpanded(next)
-  }
-
-  async function run(p: PromiseLike<{ error: { message: string; code?: string } | null }>) {
-    const { error } = await p
-    setError(error ? (error.code === '23505' ? 'Une section porte déjà ce nom.' : error.message) : '')
-    load()
-  }
-  const createSection = () => {
-    const name = prompt('Nom de la nouvelle section (ex. Benchmark CrossFit, Hyrox, Haltéro)')?.trim()
-    if (name) run(supabase.from('library_sections').insert({ name }))
-  }
-  const renameSection = (s: Section) => {
-    const name = prompt('Nouveau nom de la section', s.name)?.trim()
-    if (name && name !== s.name) run(supabase.from('library_sections').update({ name }).eq('id', s.id))
-  }
-  const deleteSection = (s: Section) => {
-    if (confirm(`Supprimer la section « ${s.name} » ? Ses séances restent dans la bibliothèque, sans section.`))
-      run(supabase.from('library_sections').delete().eq('id', s.id))
-  }
-
   const filtered = searchExercises((rows ?? []).map((r) => ({ ...r, name: r.title })), query)
-  const groups = groupBySection(filtered, sections).filter((g) => !query || g.items.length > 0)
 
   return (
     <div className="flex flex-col gap-3">
@@ -126,7 +90,7 @@ function WorkoutList() {
         <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
           + Nouvelle séance
         </Link>
-        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={createSection}>
+        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}>
           + Section
         </button>
       </div>
@@ -136,95 +100,70 @@ function WorkoutList() {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <ErrorText>{error}</ErrorText>
       {rows?.length === 0 && <p className="text-zinc-400">Aucune séance pour l’instant.</p>}
-
-      {groups.map((g) => {
-        const key = g.id ?? 'none'
-        const open = query !== '' || expanded.includes(key)
-        const section = sections.find((s) => s.id === g.id)
-        return (
-          <section key={key} className="rounded-2xl bg-zinc-900">
-            <div className="flex items-center gap-2 px-4 py-3">
-              <button className="flex min-w-0 flex-1 items-center gap-2 text-left" onClick={() => toggle(key)} aria-expanded={open}>
-                <span className="text-zinc-500">{open ? '▾' : '▸'}</span>
-                <span className="truncate font-semibold">{g.name}</span>
-                <span className="text-sm text-zinc-500">{g.items.length}</span>
-              </button>
-              {section && (
-                <>
-                  <Link
-                    to={`/library/workouts/new?section=${section.id}`}
-                    className="px-1 text-lg text-lime-400"
-                    aria-label={`Nouvelle séance dans ${section.name}`}
-                  >
-                    +
-                  </Link>
-                  <button className="px-1 text-zinc-400" onClick={() => renameSection(section)} aria-label="Renommer la section">
-                    ✎
-                  </button>
-                  <button className="px-1 text-sm text-red-400" onClick={() => deleteSection(section)} aria-label="Supprimer la section">
-                    ✕
-                  </button>
-                </>
-              )}
-            </div>
-            {open && g.items.length > 0 && (
-              <ul className="divide-y divide-zinc-800 border-t border-zinc-800">
-                {g.items.map((w) => (
-                  <li key={w.id}>
-                    <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
-                      <span className="truncate">{w.title}</span>
-                      <span className="shrink-0 text-sm text-zinc-500">{dateFmt.format(new Date(w.updated_at))}</span>
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            )}
-            {open && g.items.length === 0 && <p className="border-t border-zinc-800 px-4 py-3 text-sm text-zinc-500">Section vide.</p>}
-          </section>
-        )
-      })}
+      <SectionedList
+        items={filtered}
+        sections={sections}
+        query={query}
+        storageKey="librarySectionsExpanded"
+        actions={actions}
+        what="séances"
+        newHref={(s) => `/library/workouts/new?section=${s.id}`}
+        renderItem={(w) => (
+          <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
+            <span className="truncate">{w.title}</span>
+            <span className="shrink-0 text-sm text-zinc-500">{dateFmt.format(new Date(w.updated_at))}</span>
+          </Link>
+        )}
+      />
     </div>
   )
 }
 
 function ExerciseList() {
   const { pathname } = useLocation()
-  const { exercises, reload } = useExercises()
+  const { exercises, sections, reload } = useExercises()
   useEffect(() => {
     reload()
   }, [pathname, reload])
+  const actions = useSectionActions('exercise_sections', reload)
   const [query, setQuery] = useState('')
   const results = searchExercises(exercises, query)
 
   return (
     <div className="flex flex-col gap-3">
-      <Link
-        to="/library/exercises/new"
-        className="rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950"
-      >
-        + Nouvel exercice
-      </Link>
+      <div className="flex gap-2">
+        <Link to="/library/exercises/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
+          + Nouvel exercice
+        </Link>
+        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Ergos, Gymnastique, Haltéro')}>
+          + Section
+        </button>
+      </div>
       <input
         placeholder={`Rechercher parmi ${exercises.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <ul className="divide-y divide-zinc-800 rounded-2xl bg-zinc-900">
-        {results.map((e) => (
-          <li key={e.id}>
-            <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
-              <span className="truncate">{e.name}</span>
-              <span className="shrink-0 text-sm text-zinc-500">
-                {MEASURES[e.measure as Measure]}
-                {e.video_url ? ' · ▶' : ''}
-              </span>
-            </Link>
-          </li>
-        ))}
-      </ul>
+      <SectionedList
+        items={results}
+        sections={sections}
+        query={query}
+        storageKey="exerciseSectionsExpanded"
+        actions={actions}
+        what="exercices"
+        newHref={(s) => `/library/exercises/new?section=${s.id}`}
+        renderItem={(e) => (
+          <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
+            <span className="truncate">{e.name}</span>
+            <span className="shrink-0 text-sm text-zinc-500">
+              {MEASURES[e.measure as Measure]}
+              {e.video_url ? ' · ▶' : ''}
+            </span>
+          </Link>
+        )}
+      />
     </div>
   )
 }

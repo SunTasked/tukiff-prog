@@ -5,11 +5,16 @@ import { supabase, type Exercise } from '../../lib/supabase'
 /** Whole exercise library (a few hundred rows at most). */
 export function useExercises() {
   const [exercises, setExercises] = useState<Exercise[]>([])
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([])
   const [loading, setLoading] = useState(true)
 
   const reload = useCallback(async () => {
-    const { data } = await supabase.from('exercises').select('*').order('name')
-    setExercises(data ?? [])
+    const [e, s] = await Promise.all([
+      supabase.from('exercises').select('*').order('name'),
+      supabase.from('exercise_sections').select('id, name').order('name'),
+    ])
+    setExercises(e.data ?? [])
+    setSections(s.data ?? [])
     setLoading(false)
   }, [])
 
@@ -30,7 +35,7 @@ export function useExercises() {
     [],
   )
 
-  return { exercises, loading, byId, nameOf, reload, create }
+  return { exercises, sections, loading, byId, nameOf, reload, create }
 }
 
 export const normalize = (s: string) =>
