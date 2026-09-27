@@ -5,13 +5,14 @@ import { supabase } from '../../lib/supabase'
 const devLogin = import.meta.env.VITE_DEV_LOGIN === '1'
 
 function translate(message: string) {
+  if (message === 'invalid_invitation') return 'Lien d’invitation invalide, expiré ou déjà utilisé.'
   if (/signups not allowed/i.test(message)) return 'Compte inconnu : demande un lien d’invitation à ton coach.'
   if (/rate limit/i.test(message)) return 'Trop de demandes d’email. Réessaie dans un moment.'
   if (/expired|invalid/i.test(message)) return 'Code invalide ou expiré.'
   return message
 }
 
-export function LoginPage({ invited }: { invited: boolean }) {
+export function LoginPage({ inviteCode }: { inviteCode: string | null }) {
   const [email, setEmail] = useState('')
   const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
@@ -30,15 +31,17 @@ export function LoginPage({ invited }: { invited: boolean }) {
 
   const sendCode = (e: FormEvent) => {
     e.preventDefault()
-    run(
-      () =>
-        supabase.auth.signInWithOtp({
-          email: email.trim(),
-          // Only invitation links may create new accounts.
-          options: { shouldCreateUser: invited, emailRedirectTo: window.location.origin },
-        }),
-      'code',
-    )
+    run(async () => {
+      // Sign-up is closed: with an invitation, the join function creates the account first.
+      if (inviteCode) {
+        const { error } = await supabase.functions.invoke('join', { body: { code: inviteCode, email: email.trim() } })
+        if (error) return { error: { message: 'invalid_invitation' } }
+      }
+      return supabase.auth.signInWithOtp({
+        email: email.trim(),
+        options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
+      })
+    }, 'code')
   }
 
   const verifyCode = (e: FormEvent) => {
@@ -56,7 +59,7 @@ export function LoginPage({ invited }: { invited: boolean }) {
       <h1 className="text-3xl font-bold">
         Tukiff <span className="text-lime-400">Prog</span>
       </h1>
-      {invited && <p className="text-zinc-300">Tu as été invité ! Connecte-toi pour rejoindre le groupe.</p>}
+      {inviteCode && <p className="text-zinc-300">Tu as été invité ! Connecte-toi pour rejoindre le groupe.</p>}
 
       {step === 'email' && (
         <form onSubmit={sendCode} className="flex flex-col gap-3">

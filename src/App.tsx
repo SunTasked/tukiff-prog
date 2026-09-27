@@ -39,7 +39,7 @@ export default function App() {
   }, [session, pendingInvite])
 
   if (loading) return <Spinner />
-  if (!session) return <LoginPage invited={!!pendingInvite} />
+  if (!session) return <LoginPage inviteCode={pendingInvite} />
   if (pendingInvite) return <Spinner />
   if (!profile?.role) return <PendingPage error={inviteError} />
   if (!profile.display_name) return <OnboardingPage />

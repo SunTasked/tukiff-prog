@@ -37,6 +37,7 @@ await api('/config/auth', {
       'https://tukiff-prog.vercel.app/**',
       'http://localhost:5173/**',
     ].join(','),
+    disable_signup: true, // accounts are created only by the join Edge Function
     mailer_otp_length: 6,
     mailer_otp_exp: 3600,
     ...smtp,
