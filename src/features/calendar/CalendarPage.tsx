@@ -10,19 +10,19 @@ import {
   today,
   weekDays,
 } from '../../domain/dates'
-import { supabase, type Assignment } from '../../lib/supabase'
+import { ProgramBadges, type BadgeAssignment } from '../../components/ProgramBadges'
+import { supabase } from '../../lib/supabase'
 import { searchExercises } from '../exercises/useExercises'
 import { useTeam } from '../programs/useTeam'
 import { StatusBadge } from './StatusBadge'
-import { targetsLabel } from './targets'
 
-type Row = { id: string; title: string; date: string; publish_at: string | null; workout_assignments: Assignment[] }
+type Row = { id: string; title: string; date: string; publish_at: string | null; workout_assignments: BadgeAssignment[] }
 
 export function CalendarPage() {
   const [params, setParams] = useSearchParams()
   const monday = mondayOf(params.get('week') ?? today())
   const days = weekDays(monday)
-  const { programs, members } = useTeam()
+  const { members } = useTeam()
   const [rows, setRows] = useState<Row[]>([])
   const [adding, setAdding] = useState<string | null>(null)
   const [panel, setPanel] = useState<'publish' | 'duplicate' | null>(null)
@@ -31,7 +31,7 @@ export function CalendarPage() {
   const load = useCallback(async () => {
     const { data, error } = await supabase
       .from('workouts')
-      .select('id, title, date, publish_at, workout_assignments(program_id, athlete_id)')
+      .select('id, title, date, publish_at, workout_assignments(program_id, athlete_id, programs(name))')
       .gte('date', monday)
       .lte('date', addDays(monday, 6))
       .order('date')
@@ -95,10 +95,11 @@ export function CalendarPage() {
               .map((r) => (
                 <Link key={r.id} to={`/calendar/workouts/${r.id}`} className="mt-2 block rounded-xl bg-zinc-950 p-3">
                   <span className="block font-semibold">{r.title}</span>
-                  <span className="flex justify-between gap-2">
-                    <span className="truncate text-xs text-zinc-400">
-                      {targetsLabel(r.workout_assignments, programs, members)}
-                    </span>
+                  <span className="mt-1 flex items-center justify-between gap-2">
+                    <ProgramBadges
+                      assignments={r.workout_assignments}
+                      athleteName={(id) => members.find((m) => m.id === id)?.display_name ?? undefined}
+                    />
                     <StatusBadge publishAt={r.publish_at} />
                   </span>
                 </Link>
