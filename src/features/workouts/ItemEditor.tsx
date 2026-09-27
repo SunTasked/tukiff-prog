@@ -104,6 +104,26 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }
                   <Field label="Charge (kg)">
                     <NumberInput value={o.load_kg} onChange={(v) => setOverride(level, { load_kg: v ?? undefined })} />
                   </Field>
+                  {item.pct_1rm != null && (
+                    <Field label="% 1RM">
+                      <NumberInput value={o.pct_1rm} onChange={(v) => setOverride(level, { pct_1rm: v ?? undefined })} />
+                    </Field>
+                  )}
+                  {(measure === 'distance' || item.distance_m != null) && (
+                    <Field label="Distance (m)">
+                      <NumberInput value={o.distance_m} onChange={(v) => setOverride(level, { distance_m: v ?? undefined })} />
+                    </Field>
+                  )}
+                  {(measure === 'calories' || item.calories != null) && (
+                    <Field label="Calories">
+                      <NumberInput value={o.calories} onChange={(v) => setOverride(level, { calories: v ?? undefined })} />
+                    </Field>
+                  )}
+                  {(measure === 'time' || item.duration_s != null) && (
+                    <Field label="Durée" className="col-span-2">
+                      <DurationPicker value={o.duration_s ?? null} onChange={(v) => setOverride(level, { duration_s: v ?? undefined })} />
+                    </Field>
+                  )}
                   <Field label="Note">
                     <SmallInput value={o.note ?? ''} onChange={(e) => setOverride(level, { note: e.target.value })} />
                   </Field>

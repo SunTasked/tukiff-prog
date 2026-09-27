@@ -123,6 +123,24 @@ export type Database = {
           },
         ]
       }
+      exercise_sections: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
@@ -131,6 +149,7 @@ export type Database = {
           id: string
           measure: string
           name: string
+          section_id: string | null
           video_url: string | null
         }
         Insert: {
@@ -140,6 +159,7 @@ export type Database = {
           id?: string
           measure?: string
           name: string
+          section_id?: string | null
           video_url?: string | null
         }
         Update: {
@@ -149,6 +169,7 @@ export type Database = {
           id?: string
           measure?: string
           name?: string
+          section_id?: string | null
           video_url?: string | null
         }
         Relationships: [
@@ -157,6 +178,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "exercises_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "exercise_sections"
             referencedColumns: ["id"]
           },
         ]

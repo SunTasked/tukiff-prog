@@ -44,7 +44,16 @@ export type FormatParams = {
   sets?: number // sets_reps
 }
 
-export type LevelOverride = { reps?: string; load_kg?: number; exercise_id?: string; note?: string }
+export type LevelOverride = {
+  reps?: string
+  load_kg?: number
+  pct_1rm?: number
+  distance_m?: number
+  calories?: number
+  duration_s?: number
+  exercise_id?: string
+  note?: string
+}
 
 export type ItemDraft = {
   exercise_id: string | null
@@ -189,11 +198,18 @@ export function resolveItem(item: ItemDraft, level: Level): ItemDraft {
   if (level === 'rx') return item
   const o = item.levels[level]
   if (!o) return item
+  // Distance, calories and duration are one quantity: overriding one replaces the RX's (20 cal -> 500 m).
+  const quantity = o.distance_m !== undefined || o.calories !== undefined || o.duration_s !== undefined
+  const q = (v: number | undefined, rx: number | null) => (quantity ? (v ?? null) : rx)
   return {
     ...item,
     exercise_id: o.exercise_id ?? item.exercise_id,
     reps: o.reps ?? item.reps,
     load_kg: o.load_kg ?? item.load_kg,
+    pct_1rm: o.pct_1rm ?? item.pct_1rm,
+    distance_m: q(o.distance_m, item.distance_m),
+    calories: q(o.calories, item.calories),
+    duration_s: q(o.duration_s, item.duration_s),
     notes: o.note ?? item.notes,
   }
 }
@@ -213,8 +229,7 @@ export function itemSummary(item: ItemDraft, exerciseName: (id: string) => strin
   return loads.length ? `${parts.join(' ')} @ ${loads.join(' / ')}` : parts.join(' ')
 }
 
-export const hasOverride = (o: LevelOverride | undefined) =>
-  !!o && (o.reps !== undefined || o.load_kg !== undefined || o.exercise_id !== undefined || o.note !== undefined)
+export const hasOverride = (o: LevelOverride | undefined) => !!o && Object.values(o).some((v) => v !== undefined)
 
 export function validateWorkout(w: WorkoutDraft): string | null {
   if (!w.title.trim()) return 'Donne un titre à la séance.'

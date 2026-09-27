@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { useNavigate, useParams } from 'react-router'
+import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, Chips, ErrorText, Input, PageTitle, Textarea } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
@@ -7,11 +7,22 @@ import { supabase } from '../../lib/supabase'
 export function ExerciseFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const [search] = useSearchParams()
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [videoUrl, setVideoUrl] = useState('')
   const [measure, setMeasure] = useState<Measure>('reps')
+  const [sectionId, setSectionId] = useState(search.get('section') ?? '')
+  const [sections, setSections] = useState<{ id: string; name: string }[]>([])
   const [error, setError] = useState('')
+
+  useEffect(() => {
+    supabase
+      .from('exercise_sections')
+      .select('id, name')
+      .order('name')
+      .then(({ data }) => setSections(data ?? []))
+  }, [])
 
   useEffect(() => {
     if (!id) return
@@ -26,6 +37,7 @@ export function ExerciseFormPage() {
         setDescription(data.description ?? '')
         setVideoUrl(data.video_url ?? '')
         setMeasure(data.measure as Measure)
+        setSectionId(data.section_id ?? '')
       })
   }, [id])
 
@@ -38,6 +50,7 @@ export function ExerciseFormPage() {
       description: description.trim() || null,
       video_url: videoUrl.trim() || null,
       measure,
+      section_id: sectionId || null,
     }
     const { error } = id
       ? await supabase.from('exercises').update(values).eq('id', id)
@@ -75,6 +88,21 @@ export function ExerciseFormPage() {
           <span className="mb-1 block text-sm text-zinc-400">Mesure principale</span>
           <Chips options={MEASURES} value={measure} onChange={setMeasure} />
         </div>
+        <label className="block">
+          <span className="mb-1 block text-sm text-zinc-400">Section</span>
+          <select
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100"
+            value={sectionId}
+            onChange={(e) => setSectionId(e.target.value)}
+          >
+            <option value="">Sans section</option>
+            {sections.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name}
+              </option>
+            ))}
+          </select>
+        </label>
         <Textarea label="Description" value={description} onChange={(e) => setDescription(e.target.value)} />
         <Input
           label="Lien vidéo"

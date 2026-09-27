@@ -26,7 +26,7 @@ export function WorkoutEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [search] = useSearchParams()
-  const { exercises, byId, nameOf, create } = useExercises()
+  const { exercises, sections: exerciseSections, byId, nameOf, create } = useExercises()
   const [draft, setDraft] = useState<WorkoutDraft | null>(
     id ? null : { title: '', notes: '', date: search.get('date'), program_id: search.get('program'), section_id: search.get('section'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
@@ -201,7 +201,7 @@ export function WorkoutEditor() {
       <div className="h-20 lg:col-span-2" />
 
       {pick && (
-        <ExercisePicker exercises={exercises} onPick={onPicked} onCreate={(n) => create(n)} onClose={() => setPick(null)} />
+        <ExercisePicker exercises={exercises} sections={exerciseSections} onPick={onPicked} onCreate={(n) => create(n)} onClose={() => setPick(null)} />
       )}
     </div>
   )

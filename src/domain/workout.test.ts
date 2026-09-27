@@ -61,6 +61,9 @@ describe('items', () => {
     expect(resolveItem(thruster, 'foundation')).toMatchObject({ load_kg: 15, reps: '15-12-9' })
     const pullup = { ...emptyItem('p'), reps: '10', levels: { foundation: { exercise_id: 'r' } } }
     expect(itemSummary(resolveItem(pullup, 'foundation'), lookup)).toBe('10 Ring Row')
+    const row = { ...emptyItem(null, 'Row'), calories: 20, levels: { scaled: { calories: 15 }, foundation: { distance_m: 500 } } }
+    expect(itemSummary(resolveItem(row, 'scaled'), lookup)).toBe('15 cal Row')
+    expect(itemSummary(resolveItem(row, 'foundation'), lookup)).toBe('500 m Row')
   })
 })
 
