@@ -78,9 +78,9 @@ export function AthletesPage() {
 
   async function share(inv: Invitation) {
     const url = invitationUrl(window.location.origin, inv.code)
-    const text = inv.role === 'coach' ? 'Rejoins Tukiff Prog en tant que coach' : 'Rejoins Tukiff Prog'
+    const text = inv.role === 'coach' ? `Rejoins ${import.meta.env.VITE_APP_NAME} en tant que coach` : `Rejoins ${import.meta.env.VITE_APP_NAME}`
     if (navigator.share) {
-      await navigator.share({ title: 'Tukiff Prog', text, url }).catch(() => {})
+      await navigator.share({ title: import.meta.env.VITE_APP_NAME, text, url }).catch(() => {})
     } else {
       await navigator.clipboard.writeText(url)
       setCopied(inv.id)

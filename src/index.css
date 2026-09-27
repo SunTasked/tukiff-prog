@@ -1,5 +1,11 @@
 @import "tailwindcss";
 
+/* Non-production builds (staging previews, local dev): red accent instead of green (see vite.config.ts). */
+html[data-env="staging"] {
+  --color-lime-300: oklch(80.8% 0.114 19.571); /* red-300 */
+  --color-lime-400: oklch(70.4% 0.191 22.216); /* red-400 */
+}
+
 html,
 body {
   background: var(--color-zinc-950);
