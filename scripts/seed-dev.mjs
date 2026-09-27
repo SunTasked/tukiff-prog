@@ -190,3 +190,56 @@ must(await c1.from('workout_assignments').insert({ workout_id: special, athlete_
 must(await c1.from('workouts').update({ title: 'Fran (perso a3)', publish_at: new Date().toISOString() }).eq('id', special))
 
 console.log(`Programmes : ${Object.keys(PROGRAMS).join(', ')} · ${Object.keys(TEMPLATES).length} modèles · ${count + 1} séances programmées`)
+
+// Results: each athlete logs scores through the API (RLS applies), on published workouts up to today.
+// Deterministic pseudo-random so reruns give the same data.
+let seed = 42
+const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31)
+const between = (min, max) => Math.round(min + rand() * (max - min))
+const PROFILES = {
+  a1: { levels: ['rx'], skill: 0.8, skip: 0.1 },
+  a2: { levels: ['rx', 'scaled'], skill: 0.6, skip: 0.2 },
+  a3: { levels: ['scaled', 'foundation'], skill: 0.4, skip: 0.2 },
+  c1: { levels: ['elite', 'rx'], skill: 0.9, skip: 0.3 },
+}
+const COMMENTS = ['Grosse séance 🔥', 'Les DU ont piqué', 'Bras cramés', 'Rythme régulier', null, null, null]
+
+function scoreFor(format, params, skill) {
+  switch (format) {
+    case 'for_time': {
+      const cap = params.time_cap_s ?? 1200
+      const t = Math.round(cap * (0.95 - skill * 0.5 + rand() * 0.25))
+      return t >= cap ? { capped: true, reps: between(80, 200) } : { time_s: t }
+    }
+    case 'amrap':
+      return { rounds: Math.round(8 + skill * 12 + rand() * 4), reps: between(0, 14) }
+    case 'sets_reps':
+      return { load_kg: Math.round((60 + skill * 80 + rand() * 20) / 2.5) * 2.5 }
+    case 'tabata':
+      return { reps: between(60, 160) }
+    default:
+      return {}
+  }
+}
+
+let resultCount = 0
+for (const [name, p] of Object.entries(PROFILES)) {
+  const client = createClient(url, publishable, { auth: { persistSession: false } })
+  const auth = await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
+  if (auth.error) throw auth.error
+  const mine = must(await client.rpc('my_workouts', { p_from: dayOf(-2, 0), p_to: iso(now) }))
+  for (const w of mine) {
+    if (rand() < p.skip) continue
+    const blocks = must(await client.from('workout_blocks').select('id, kind, format, params').eq('workout_id', w.id))
+    for (const b of blocks) {
+      if (b.kind === 'warmup') continue
+      const level = p.levels[between(0, p.levels.length - 1)]
+      const comment = COMMENTS[between(0, COMMENTS.length - 1)]
+      must(await client.from('results').insert({
+        workout_id: w.id, block_id: b.id, level, comment, ...scoreFor(b.format, b.params, p.skill),
+      }))
+      resultCount++
+    }
+  }
+}
+console.log(`Résultats : ${resultCount} (a3 et c2 ne partagent pas leurs scores)`)
