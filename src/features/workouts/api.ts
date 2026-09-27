@@ -37,8 +37,9 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   return { id: data.id, title: data.title, notes: data.notes ?? '', date: data.date, blocks }
 }
 
-export async function saveWorkout(w: WorkoutDraft): Promise<string> {
-  const { data, error } = await supabase.rpc('save_workout', { p: w as never })
+/** resetBlocks: blocks whose results must be deleted (scoring content changed). */
+export async function saveWorkout(w: WorkoutDraft, resetBlocks: string[] = []): Promise<string> {
+  const { data, error } = await supabase.rpc('save_workout', { p: { ...w, reset_blocks: resetBlocks } as never })
   if (error) throw new Error(error.message)
   return data
 }

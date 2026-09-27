@@ -3,6 +3,7 @@ import {
   emptyItem,
   formatDuration,
   formatSummary,
+  invalidatedBlocks,
   itemSummary,
   newBlock,
   parseDuration,
@@ -85,5 +86,33 @@ describe('blocks & validation', () => {
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toMatch(/Bloc 1/)
     b.items[0] = emptyItem('t')
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toBeNull()
+  })
+})
+
+describe('invalidatedBlocks', () => {
+  const base = () => ({
+    title: 'W',
+    notes: '',
+    blocks: [
+      { ...newBlock('strength', 'a'), items: [{ ...emptyItem('sq'), reps: '5', load_kg: 100 }] },
+      { ...newBlock('metcon', 'b'), items: [emptyItem('t')] },
+    ],
+  })
+  it('ignores title, notes, workout title and reordering', () => {
+    const d = base()
+    d.title = 'Other'
+    d.blocks[0].title = 'Squat'
+    d.blocks[0].notes = 'Tempo'
+    d.blocks.reverse()
+    expect(invalidatedBlocks(base(), d)).toEqual({ changed: [], removed: [] })
+  })
+  it('detects scoring changes and removed blocks', () => {
+    const d = base()
+    d.blocks[0].items[0].load_kg = 110
+    d.blocks.pop()
+    expect(invalidatedBlocks(base(), d)).toEqual({ changed: ['a'], removed: ['b'] })
+    const e = base()
+    e.blocks[1].params = { time_cap_s: 600 }
+    expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
 })

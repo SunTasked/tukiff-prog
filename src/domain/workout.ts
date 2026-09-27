@@ -226,3 +226,19 @@ export function validateWorkout(w: WorkoutDraft): string | null {
   }
   return null
 }
+
+/** What a score depends on: title and notes excluded (fixing a typo keeps the scores). */
+const scoringSignature = (b: BlockDraft) => JSON.stringify([b.kind, b.format, b.params, b.items])
+
+/** Blocks of the original workout whose scores become invalid: scoring content changed, or removed. */
+export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): { changed: string[]; removed: string[] } {
+  const current = new Map(draft.blocks.map((b) => [b.id, b]))
+  const changed: string[] = []
+  const removed: string[] = []
+  for (const b of original.blocks) {
+    const now = current.get(b.id)
+    if (!now) removed.push(b.id)
+    else if (scoringSignature(now) !== scoringSignature(b)) changed.push(b.id)
+  }
+  return { changed, removed }
+}

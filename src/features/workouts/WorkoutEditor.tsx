@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { supabase } from '../../lib/supabase'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
 import {
+  BLOCK_KINDS,
   emptyItem,
+  invalidatedBlocks,
   newBlock,
   suggestedKind,
   validateWorkout,
@@ -26,12 +29,17 @@ export function WorkoutEditor() {
   const [draft, setDraft] = useState<WorkoutDraft | null>(
     id ? null : { title: '', notes: '', date: search.get('date'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
+  const [original, setOriginal] = useState<WorkoutDraft | null>(null)
   const [pick, setPick] = useState<PickTarget | null>(null)
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   useEffect(() => {
-    if (id) loadWorkout(id).then(setDraft)
+    if (id)
+      loadWorkout(id).then((w) => {
+        setDraft(w)
+        setOriginal(w)
+      })
   }, [id])
 
   if (!draft) return <Spinner />
@@ -62,14 +70,32 @@ export function WorkoutEditor() {
   async function save() {
     const invalid = validateWorkout(draft!)
     if (invalid) return setError(invalid)
+    const { changed, removed } = original ? invalidatedBlocks(original, draft!) : { changed: [], removed: [] }
+    if (!(await confirmScoreLoss([...changed, ...removed]))) return
     setSaving(true)
     try {
-      const savedId = await saveWorkout(draft!)
+      const savedId = await saveWorkout(draft!, changed)
       navigate(draft!.date ? `/calendar/workouts/${savedId}` : `/library/workouts/${savedId}`, { replace: true })
     } catch (e) {
       setError((e as Error).message)
       setSaving(false)
     }
+  }
+
+  /** Warns when saving deletes existing scores; true to proceed. */
+  async function confirmScoreLoss(blockIds: string[]) {
+    if (!blockIds.length) return true
+    const { data } = await supabase.from('results').select('block_id').in('block_id', blockIds)
+    if (!data?.length) return true
+    const counts = new Map<string, number>()
+    for (const r of data) counts.set(r.block_id, (counts.get(r.block_id) ?? 0) + 1)
+    const lines = original!.blocks
+      .map((b, i) => ({ b, i }))
+      .filter(({ b }) => counts.has(b.id))
+      .map(({ b, i }) => `• ${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]} : ${counts.get(b.id)} score(s)`)
+    return confirm(
+      `Attention : ces blocs ont été modifiés ou supprimés, leurs scores seront définitivement supprimés.\n\n${lines.join('\n')}\n\nEnregistrer quand même ?`,
+    )
   }
 
   return (
