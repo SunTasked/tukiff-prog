@@ -3,7 +3,7 @@
 //   node scripts/admin.mjs create-user <email> [--role coach|athlete] [--password <pwd>]
 //   node scripts/admin.mjs set-role <email> <coach|athlete|none>
 //   node scripts/admin.mjs login-link <email> [redirectUrl]   (no email sent)
-//   node scripts/admin.mjs delete-user <email>
+//   node scripts/admin.mjs delete-user <email>   (their programs go to the app owner)
 //   node scripts/admin.mjs list
 import { serviceKey, sql } from './lib.mjs'
 
@@ -27,12 +27,23 @@ async function auth(path, { method = 'GET', body } = {}) {
 
 const quote = (s) => `'${String(s).replaceAll("'", "''")}'`
 async function setRole(email, role) {
-  const value = role === 'none' ? 'null' : quote(role)
-  const rows = await sql(
-    `update public.profiles p set role = ${value} from auth.users u
-     where u.id = p.id and u.email = ${quote(email)} returning p.id`,
+  if (!['coach', 'athlete', 'none'].includes(role)) throw new Error(`Rôle invalide : ${role}`)
+  const [p] = await sql(
+    `select p.id, p.role, p.is_app_owner from public.profiles p join auth.users u on u.id = p.id
+     where u.email = ${quote(email)}`,
   )
-  if (!rows.length) throw new Error(`Utilisateur introuvable : ${email}`)
+  if (!p) throw new Error(`Utilisateur introuvable : ${email}`)
+  if (p.is_app_owner && role !== 'coach') throw new Error('Le propriétaire de l’app ne peut pas être rétrogradé')
+  // A coach losing coach rights hands their programs to the app owner (same rule as in the app).
+  if (p.role === 'coach' && role !== 'coach') {
+    await sql(`select internal.hand_over_programs(${quote(p.id)}, (select id from public.profiles where is_app_owner))`)
+  }
+  const value = role === 'none' ? 'null' : quote(role)
+  // enrolled_at marks a real member: the nightly cleanup only removes accounts that never got a role.
+  await sql(
+    `update public.profiles set role = ${value}, is_admin = ${role === 'coach' ? 'is_admin' : 'false'},
+       enrolled_at = coalesce(enrolled_at, now()) where id = ${quote(p.id)}`,
+  )
 }
 
 switch (cmd) {

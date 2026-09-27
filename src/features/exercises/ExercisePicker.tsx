@@ -3,7 +3,7 @@ import { ErrorText } from '../../components/ui'
 import type { Exercise } from '../../lib/supabase'
 import { normalize, searchExercises } from './useExercises'
 
-/** Full-screen search sheet; can create a missing exercise on the fly. */
+/** Full-screen search sheet; can create a missing exercise on the fly (when onCreate is given). */
 export function ExercisePicker({
   exercises,
   onPick,
@@ -12,7 +12,7 @@ export function ExercisePicker({
 }: {
   exercises: Exercise[]
   onPick: (e: Exercise) => void
-  onCreate: (name: string) => Promise<Exercise>
+  onCreate?: (name: string) => Promise<Exercise>
   onClose: () => void
 }) {
   const [query, setQuery] = useState('')
@@ -22,7 +22,7 @@ export function ExercisePicker({
 
   async function create() {
     try {
-      onPick(await onCreate(query))
+      if (onCreate) onPick(await onCreate(query))
     } catch (e) {
       setError((e as Error).message)
     }
@@ -43,7 +43,7 @@ export function ExercisePicker({
         </button>
       </div>
       <ul className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-        {query.trim() && !exact && (
+        {onCreate && query.trim() && !exact && (
           <li>
             <button className="w-full px-4 py-3 text-left text-lime-400" onClick={create}>
               + Créer « {query.trim()} »

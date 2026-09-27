@@ -41,9 +41,16 @@ const emailOf = (name) => (name.includes('@') ? name : `${name}@${DOMAIN}`)
 // Clean previous seed -------------------------------------------------------------
 const seedUsers = await sql(`select id from auth.users where email like '%@${DOMAIN}'`)
 const ids = seedUsers.map((u) => q(u.id)).join(',')
-if (ids) await sql(`delete from public.workouts where created_by in (${ids})`)
-await sql(`delete from public.programs where name in (${Object.keys(PROGRAMS).map(q).join(',')})`)
-await sql(`delete from public.library_sections where name in (${Object.keys(SECTIONS).map(q).join(',')})`)
+// Only seed data: programs owned by test users, workouts they created, and seed sections left empty.
+// Never delete by name alone, real data can share these names.
+if (ids) {
+  await sql(`delete from public.workouts where created_by in (${ids})`)
+  await sql(`delete from public.programs where owner_id in (${ids})`)
+}
+await sql(
+  `delete from public.library_sections s where name in (${Object.keys(SECTIONS).map(q).join(',')})
+   and not exists (select 1 from public.workouts w where w.section_id = s.id)`,
+)
 for (const u of seedUsers) await admin.auth.admin.deleteUser(u.id)
 console.log(`Seed précédent supprimé (${seedUsers.length} utilisateurs).`)
 if (process.argv.includes('--clean')) process.exit(0)
@@ -165,7 +172,9 @@ for (const [title, blocks] of Object.entries(TEMPLATES)) {
 }
 
 for (const [name, titles] of Object.entries(SECTIONS)) {
-  const section = must(await c1.from('library_sections').insert({ name }).select().single())
+  // Reuse a real section with the same name if it exists.
+  const [existing] = await sql(`select id from public.library_sections where lower(trim(name)) = lower(trim(${q(name)}))`)
+  const section = existing ?? must(await c1.from('library_sections').insert({ name }).select().single())
   must(await c1.from('workouts').update({ section_id: section.id }).in('id', titles.map((t) => templateId[t])))
 }
 

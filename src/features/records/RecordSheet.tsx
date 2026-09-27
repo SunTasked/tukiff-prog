@@ -4,6 +4,7 @@ import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
 import { BENCHMARKS } from '../../domain/records'
 import { emptyScore, normalizeScore, validateScore, type Score } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
+import { isCoach, useAuth } from '../auth/AuthProvider'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { useExercises } from '../exercises/useExercises'
 import { today } from '../../domain/dates'
@@ -26,6 +27,7 @@ export function RecordSheet({
   onClose: () => void
   onSaved: () => void
 }) {
+  const { profile } = useAuth()
   const { exercises, nameOf, create } = useExercises()
   const [kind, setKind] = useState<keyof typeof KINDS>('load')
   const [exerciseId, setExerciseId] = useState<string | null>(initialExercise ?? null)
@@ -124,7 +126,7 @@ export function RecordSheet({
             setExerciseId(e.id)
             setPicking(false)
           }}
-          onCreate={(n) => create(n, 'load')}
+          onCreate={isCoach(profile) ? (n) => create(n, 'load') : undefined}
           onClose={() => setPicking(false)}
         />
       )}

@@ -53,9 +53,16 @@ export function ExerciseFormPage() {
     const { error } = await supabase.from('exercises').delete().eq('id', id!)
     if (!error) return back()
     if (error.code === '23503') {
-      const { data } = await supabase.from('block_items').select('workout_blocks(workout_id)').eq('exercise_id', id!)
+      const [{ data }, { count: records }] = await Promise.all([
+        supabase.from('block_items').select('workout_blocks(workout_id)').eq('exercise_id', id!),
+        supabase.from('personal_records').select('id', { count: 'exact', head: true }).eq('exercise_id', id!),
+      ])
       const n = new Set((data ?? []).map((r) => r.workout_blocks?.workout_id)).size
-      setError(`Impossible : exercice utilisé dans ${n} séance${n > 1 ? 's' : ''}.`)
+      const uses = [
+        n > 0 && `${n} séance${n > 1 ? 's' : ''}`,
+        records && `${records} record${records > 1 ? 's' : ''} d’athlète`,
+      ].filter(Boolean)
+      setError(`Impossible : exercice utilisé dans ${uses.join(' et ') || 'des données existantes'}.`)
     } else setError(error.message)
   }
 
