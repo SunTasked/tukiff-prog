@@ -19,3 +19,18 @@ select,
 textarea {
   font-size: 16px;
 }
+
+/* Tailwind 4 leaves buttons with the default cursor: show the hand on everything clickable. */
+@layer base {
+  button:not(:disabled),
+  [role='button'],
+  select,
+  summary,
+  input[type='checkbox'],
+  input[type='radio'] {
+    cursor: pointer;
+  }
+  button:disabled {
+    cursor: not-allowed;
+  }
+}
