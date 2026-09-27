@@ -70,11 +70,16 @@ export function AthletesPage() {
             <Button className="flex-1" onClick={() => create('single')}>
               Usage unique
             </Button>
-            <Button variant="secondary" className="flex-1" onClick={() => create('day')}>
-              Valable 24 h
-            </Button>
+            {role === 'athlete' && (
+              <Button variant="secondary" className="flex-1" onClick={() => create('day')}>
+                Valable 24 h
+              </Button>
+            )}
           </div>
-          <p className="mt-2 text-xs text-zinc-500">Usage unique : 1 personne, valable 7 jours. 24 h : plusieurs personnes.</p>
+          <p className="mt-2 text-xs text-zinc-500">
+            Usage unique : 1 personne, valable 7 jours.{role === 'athlete' && ' 24 h : plusieurs personnes.'}
+            {role === 'coach' && ' Les liens coach sont toujours à usage unique.'}
+          </p>
           {invitations.length > 0 && (
             <ul className="mt-4 flex flex-col gap-3">
               {invitations.map((inv) => (
