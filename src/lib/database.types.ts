@@ -605,6 +605,10 @@ export type Database = {
       }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
+      move_workout: {
+        Args: { p_date: string; p_id: string }
+        Returns: undefined
+      }
       my_role: { Args: never; Returns: string }
       my_workouts: {
         Args: { p_from: string; p_to: string }
