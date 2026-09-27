@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { invitationStatus, invitationUrl } from './invitations'
+import { invitationStatus, invitationUrl, invitationValues } from './invitations'
 
 const now = new Date('2026-01-10T12:00:00Z')
 const base = { expires_at: '2026-01-17T12:00:00Z', revoked_at: null, max_uses: null, uses: 0 }
@@ -22,4 +22,13 @@ describe('invitationStatus', () => {
 
 it('builds the join url', () => {
   expect(invitationUrl('https://x.app', 'abc')).toBe('https://x.app/join/abc')
+})
+
+describe('invitationValues', () => {
+  it('single use lasts 7 days', () => {
+    expect(invitationValues('single', now)).toEqual({ max_uses: 1, expires_at: '2026-01-17T12:00:00.000Z' })
+  })
+  it('day link is unlimited for 24 h', () => {
+    expect(invitationValues('day', now)).toEqual({ max_uses: null, expires_at: '2026-01-11T12:00:00.000Z' })
+  })
 })

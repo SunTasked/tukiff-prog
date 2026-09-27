@@ -15,3 +15,14 @@ export function invitationStatus(inv: InvitationLike, now = new Date()): Invitat
 }
 
 export const invitationUrl = (origin: string, code: string) => `${origin}/join/${code}`
+
+export type InvitationValidity = 'single' | 'day'
+
+const DAY_MS = 24 * 60 * 60 * 1000
+
+/** single: one account, valid 7 days. day: unlimited accounts for 24 h. */
+export function invitationValues(validity: InvitationValidity, now = new Date()) {
+  return validity === 'single'
+    ? { max_uses: 1, expires_at: new Date(now.getTime() + 7 * DAY_MS).toISOString() }
+    : { max_uses: null, expires_at: new Date(now.getTime() + DAY_MS).toISOString() }
+}

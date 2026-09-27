@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
-import { invitationStatus, invitationUrl } from '../../domain/invitations'
+import { invitationStatus, invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { supabase, type Invitation, type Profile } from '../../lib/supabase'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
@@ -10,6 +10,7 @@ export function AthletesPage() {
   const [invitations, setInvitations] = useState<Invitation[]>([])
   const [error, setError] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
+  const [role, setRole] = useState<'athlete' | 'coach'>('athlete')
 
   const load = useCallback(async () => {
     const [m, i] = await Promise.all([
@@ -25,9 +26,8 @@ export function AthletesPage() {
     load()
   }, [load])
 
-  async function create(role: 'athlete' | 'coach') {
-    // Athlete links are reusable for 7 days; coach links are single-use.
-    const { error } = await supabase.from('invitations').insert({ role, max_uses: role === 'coach' ? 1 : null })
+  async function create(validity: InvitationValidity) {
+    const { error } = await supabase.from('invitations').insert({ role, ...invitationValues(validity) })
     if (error) setError(error.message)
     load()
   }
@@ -55,20 +55,34 @@ export function AthletesPage() {
       <div className="flex flex-col gap-4">
         <Card>
           <h2 className="mb-3 font-semibold">Inviter</h2>
+          <div className="mb-3 grid grid-cols-2 rounded-xl bg-zinc-800 p-1 text-sm">
+            {(['athlete', 'coach'] as const).map((r) => (
+              <button
+                key={r}
+                className={`rounded-lg py-2 font-semibold ${role === r ? 'bg-zinc-950 text-lime-400' : 'text-zinc-400'}`}
+                onClick={() => setRole(r)}
+              >
+                {r === 'athlete' ? 'Athlète' : 'Coach'}
+              </button>
+            ))}
+          </div>
           <div className="flex gap-2">
-            <Button className="flex-1" onClick={() => create('athlete')}>
-              Lien athlète
+            <Button className="flex-1" onClick={() => create('single')}>
+              Usage unique
             </Button>
-            <Button variant="secondary" className="flex-1" onClick={() => create('coach')}>
-              Lien coach
+            <Button variant="secondary" className="flex-1" onClick={() => create('day')}>
+              Valable 24 h
             </Button>
           </div>
+          <p className="mt-2 text-xs text-zinc-500">Usage unique : 1 personne, valable 7 jours. 24 h : plusieurs personnes.</p>
           {invitations.length > 0 && (
             <ul className="mt-4 flex flex-col gap-3">
               {invitations.map((inv) => (
                 <li key={inv.id} className="rounded-xl border border-zinc-800 p-3">
                   <div className="flex items-baseline justify-between text-sm">
-                    <span className="font-semibold">{inv.role === 'coach' ? 'Coach (usage unique)' : 'Athlète'}</span>
+                    <span className="font-semibold">
+                      {inv.role === 'coach' ? 'Coach' : 'Athlète'} · {inv.max_uses === 1 ? 'usage unique' : '24 h'}
+                    </span>
                     <span className="text-zinc-400">
                       expire le {dateFmt.format(new Date(inv.expires_at))} · {inv.uses} utilisé
                       {inv.uses > 1 ? 's' : ''}
