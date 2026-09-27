@@ -32,7 +32,8 @@ const SECTIONS = {
   Haltéro: ['Haltéro : clean & jerk'],
 }
 
-if (target === 'prod') throw new Error('seed-dev ne tourne jamais sur la prod')
+// On prod only --clean is allowed (removes *@tkf.test accounts and their data).
+if (target === 'prod' && !process.argv.includes('--clean')) throw new Error('seed-dev ne crée jamais de données de test sur la prod')
 const admin = createClient(url, await serviceKey(), { auth: { persistSession: false } })
 const publishable = (await api('/api-keys?reveal=true')).find((k) => k.type === 'publishable').api_key
 const q = (s) => `'${String(s).replaceAll("'", "''")}'`
