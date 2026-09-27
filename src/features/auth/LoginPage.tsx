@@ -74,7 +74,7 @@ export function LoginPage({ inviteCode }: { inviteCode: string | null }) {
   return (
     <Centered>
       <h1 className="text-3xl font-bold">
-        Tukiff <span className="text-lime-400">Prog</span>
+        TKF <span className="text-lime-400">{import.meta.env.VITE_APP_NAME.replace(/^TKF /, '')}</span>
       </h1>
 
       {mode === 'sent' ? (
