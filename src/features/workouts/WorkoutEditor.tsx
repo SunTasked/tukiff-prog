@@ -4,10 +4,11 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
 import {
   BLOCK_KINDS,
-  emptyItem,
   invalidatedBlocks,
   newBlock,
+  prefilledItem,
   suggestedKind,
+  usedExercises,
   validateWorkout,
   type AltLevel,
   type BlockDraft,
@@ -80,7 +81,7 @@ export function WorkoutEditor() {
     const { block: bi, item: ii, level } = pick!
     const block = draft!.blocks[bi]
     let items
-    if (ii === null) items = [...block.items, emptyItem(ex.id)]
+    if (ii === null) items = [...block.items, prefilledItem(draft!, bi, ex.id)]
     else if (level) {
       items = block.items.map((it, j) =>
         j === ii ? { ...it, levels: { ...it.levels, [level]: { ...it.levels[level], exercise_id: ex.id } } } : it,
@@ -201,7 +202,14 @@ export function WorkoutEditor() {
       <div className="h-20 lg:col-span-2" />
 
       {pick && (
-        <ExercisePicker exercises={exercises} sections={exerciseSections} onPick={onPicked} onCreate={(n) => create(n)} onClose={() => setPick(null)} />
+        <ExercisePicker
+          exercises={exercises}
+          sections={exerciseSections}
+          used={usedExercises(draft, pick.block)}
+          onPick={onPicked}
+          onCreate={(n) => create(n)}
+          onClose={() => setPick(null)}
+        />
       )}
     </div>
   )

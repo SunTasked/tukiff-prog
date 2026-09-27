@@ -4,16 +4,21 @@ import { groupBySection } from '../../domain/sections'
 import type { Exercise } from '../../lib/supabase'
 import { normalize, searchExercises } from './useExercises'
 
-/** Full-screen search sheet, grouped by section until a search is typed; can create a missing exercise (when onCreate is given). */
+/**
+ * Full-screen search sheet, grouped by section until a search is typed; can create a missing exercise (when onCreate is given).
+ * `used`: exercises already in the workout, listed first.
+ */
 export function ExercisePicker({
   exercises,
   sections = [],
+  used = [],
   onPick,
   onCreate,
   onClose,
 }: {
   exercises: Exercise[]
   sections?: { id: string; name: string }[]
+  used?: string[]
   onPick: (e: Exercise) => void
   onCreate?: (name: string) => Promise<Exercise>
   onClose: () => void
@@ -21,7 +26,13 @@ export function ExercisePicker({
   const [query, setQuery] = useState('')
   const [error, setError] = useState('')
   const results = searchExercises(exercises, query)
-  const groups = query.trim() || !sections.length ? [{ id: null, name: '', items: results }] : groupBySection(results, sections)
+  const usedSet = new Set(used)
+  const usedItems = used.flatMap((id) => results.filter((e) => e.id === id))
+  const rest = results.filter((e) => !usedSet.has(e.id))
+  const groups = [
+    ...(usedItems.length ? [{ id: 'used', name: 'Dans la séance', items: usedItems }] : []),
+    ...(query.trim() || !sections.length ? [{ id: null, name: usedItems.length ? 'Autres' : '', items: rest }] : groupBySection(rest, sections)),
+  ]
   const exact = exercises.some((e) => normalize(e.name) === normalize(query))
 
   async function create() {

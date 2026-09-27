@@ -17,11 +17,12 @@ type Props = {
   nameOf: (id: string) => string | undefined
   onChange: (item: ItemDraft) => void
   onRemove: () => void
+  onDuplicate: () => void
   /** Opens the exercise picker for the item itself (level undefined) or a level substitution. */
   onPick: (level?: AltLevel) => void
 }
 
-export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }: Props) {
+export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onDuplicate, onPick }: Props) {
   const [expanded, setExpanded] = useState(false)
   const set = (patch: Partial<ItemDraft>) => onChange({ ...item, ...patch })
   const show = (m: Measure, value: unknown) => expanded || measure === m || value != null
@@ -45,6 +46,9 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }
         <button type="button" className="min-w-0 flex-1 truncate text-left font-semibold" onClick={() => onPick()}>
           {(item.exercise_id && nameOf(item.exercise_id)) || item.label || 'Choisir un exercice'}
         </button>
+        <button type="button" aria-label="Dupliquer" title="Dupliquer" className="-my-2 p-2 text-zinc-500" onClick={onDuplicate}>
+          ⧉
+        </button>
         <button type="button" aria-label="Retirer" className="-m-2 p-2 text-zinc-500" onClick={onRemove}>
           ✕
         </button>
@@ -55,8 +59,14 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }
           <SmallInput placeholder="21-15-9" value={item.reps} onChange={(e) => set({ reps: e.target.value })} />
         </Field>
         {show('load', item.load_kg) && (
-          <Field label="Charge (kg)">
+          <Field label={item.load_kg_f != null ? 'Charge H (kg)' : 'Charge (kg)'}>
             <NumberInput value={item.load_kg} onChange={(v) => set({ load_kg: v })} />
+          </Field>
+        )}
+        {/* Women's load, offered once an absolute load is set. */}
+        {(item.load_kg != null || item.load_kg_f != null) && (
+          <Field label="Charge F (kg)">
+            <NumberInput placeholder="idem" value={item.load_kg_f} onChange={(v) => set({ load_kg_f: v })} />
           </Field>
         )}
         {show('load', item.pct_1rm) && (
@@ -101,9 +111,14 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }
                   <Field label="Reps">
                     <SmallInput value={o.reps ?? ''} onChange={(e) => setOverride(level, { reps: e.target.value })} />
                   </Field>
-                  <Field label="Charge (kg)">
+                  <Field label={o.load_kg_f != null ? 'Charge H (kg)' : 'Charge (kg)'}>
                     <NumberInput value={o.load_kg} onChange={(v) => setOverride(level, { load_kg: v ?? undefined })} />
                   </Field>
+                  {(item.load_kg_f != null || o.load_kg_f != null) && (
+                    <Field label="Charge F (kg)">
+                      <NumberInput value={o.load_kg_f} onChange={(v) => setOverride(level, { load_kg_f: v ?? undefined })} />
+                    </Field>
+                  )}
                   {item.pct_1rm != null && (
                     <Field label="% 1RM">
                       <NumberInput value={o.pct_1rm} onChange={(v) => setOverride(level, { pct_1rm: v ?? undefined })} />

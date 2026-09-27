@@ -25,6 +25,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
             label: i.label ?? '',
             reps: i.reps ?? '',
             load_kg: i.load_kg,
+            load_kg_f: i.load_kg_f,
             pct_1rm: i.pct_1rm,
             distance_m: i.distance_m,
             calories: i.calories,

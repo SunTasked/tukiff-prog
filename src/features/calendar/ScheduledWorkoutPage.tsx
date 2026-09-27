@@ -90,12 +90,10 @@ export function ScheduledWorkoutPage() {
             <Button variant="secondary" className="flex-1 py-2 text-sm" onClick={() => setPublication(new Date().toISOString())}>
               Publier maintenant
             </Button>
+            <Button variant="secondary" className="flex-1 py-2 text-sm" disabled={!meta.publish_at} onClick={() => setPublication(null)}>
+              Brouillon
+            </Button>
           </div>
-          {meta.publish_at && (
-            <button className="text-sm text-zinc-400 underline" onClick={() => setPublication(null)}>
-              Repasser en brouillon
-            </button>
-          )}
         </Card>
 
         <Card className="flex flex-col gap-2">
