@@ -63,15 +63,16 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
-/** Library templates grouped in collapsible sections (collapsed state remembered on the device). */
+/** Library templates grouped in collapsible sections (collapsed by default; opened while searching). */
 function WorkoutList() {
   const { pathname } = useLocation()
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [query, setQuery] = useState('')
-  const [collapsed, setCollapsed] = useState<string[]>(() => {
+  // Sections are collapsed by default; the expanded ones are remembered on the device.
+  const [expanded, setExpanded] = useState<string[]>(() => {
     try {
-      return JSON.parse(getItem('librarySectionsCollapsed') ?? '[]')
+      return JSON.parse(getItem('librarySectionsExpanded') ?? '[]')
     } catch {
       return []
     }
@@ -93,9 +94,9 @@ function WorkoutList() {
   }, [load, pathname])
 
   const toggle = (key: string) => {
-    const next = collapsed.includes(key) ? collapsed.filter((k) => k !== key) : [...collapsed, key]
-    setItem('librarySectionsCollapsed', JSON.stringify(next))
-    setCollapsed(next)
+    const next = expanded.includes(key) ? expanded.filter((k) => k !== key) : [...expanded, key]
+    setItem('librarySectionsExpanded', JSON.stringify(next))
+    setExpanded(next)
   }
 
   async function run(p: PromiseLike<{ error: { message: string; code?: string } | null }>) {
@@ -140,7 +141,7 @@ function WorkoutList() {
 
       {groups.map((g) => {
         const key = g.id ?? 'none'
-        const open = query !== '' || !collapsed.includes(key)
+        const open = query !== '' || expanded.includes(key)
         const section = sections.find((s) => s.id === g.id)
         return (
           <section key={key} className="rounded-2xl bg-zinc-900">
