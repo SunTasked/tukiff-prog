@@ -273,6 +273,76 @@ export type Database = {
         }
         Relationships: []
       }
+      results: {
+        Row: {
+          athlete_id: string
+          block_id: string
+          capped: boolean
+          comment: string | null
+          created_at: string
+          id: string
+          level: string
+          load_kg: number | null
+          reps: number | null
+          rounds: number | null
+          time_s: number | null
+          updated_at: string
+          workout_id: string
+        }
+        Insert: {
+          athlete_id?: string
+          block_id: string
+          capped?: boolean
+          comment?: string | null
+          created_at?: string
+          id?: string
+          level?: string
+          load_kg?: number | null
+          reps?: number | null
+          rounds?: number | null
+          time_s?: number | null
+          updated_at?: string
+          workout_id: string
+        }
+        Update: {
+          athlete_id?: string
+          block_id?: string
+          capped?: boolean
+          comment?: string | null
+          created_at?: string
+          id?: string
+          level?: string
+          load_kg?: number | null
+          reps?: number | null
+          rounds?: number | null
+          time_s?: number | null
+          updated_at?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "results_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "workout_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "results_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_assignments: {
         Row: {
           athlete_id: string | null
@@ -441,6 +511,7 @@ export type Database = {
         Args: { p_date: string; p_template: string }
         Returns: string
       }
+      shares_scores: { Args: { p_user: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never
