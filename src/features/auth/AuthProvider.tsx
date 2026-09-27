@@ -7,6 +7,7 @@ type AuthState = {
   profile: Profile | null
   loading: boolean
   refreshProfile: () => Promise<void>
+  refreshSession: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -43,9 +44,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     refreshProfile()
   }, [refreshProfile])
 
+  const refreshSession = useCallback(async () => {
+    const { data } = await supabase.auth.getSession()
+    setSession(data.session)
+  }, [])
+
   const loading = !sessionLoaded || !profileLoaded
   return (
-    <AuthContext.Provider value={{ session, profile, loading, refreshProfile }}>{children}</AuthContext.Provider>
+    <AuthContext.Provider value={{ session, profile, loading, refreshProfile, refreshSession }}>{children}</AuthContext.Provider>
   )
 }
 
@@ -56,3 +62,6 @@ export function useAuth() {
 }
 
 export const isCoach = (p: Profile | null) => p?.role === 'coach'
+
+/** UI flag set when the user chose a password (onboarding / reset); not a security check. */
+export const hasPassword = (s: Session | null) => s?.user.user_metadata?.password_set === true

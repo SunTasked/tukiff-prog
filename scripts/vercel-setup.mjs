@@ -24,8 +24,6 @@ const publishable = keys.find((k) => k.type === 'publishable').api_key
 const env = [
   { key: 'VITE_SUPABASE_URL', value: process.env.SUPABASE_URL, target: ['production', 'preview', 'development'] },
   { key: 'VITE_SUPABASE_ANON_KEY', value: publishable, target: ['production', 'preview', 'development'] },
-  // Password login for test accounts: previews only.
-  { key: 'VITE_DEV_LOGIN', value: '1', target: ['preview'] },
 ]
 for (const e of env) {
   await vercel(`/v10/projects/${project}/env?upsert=true`, { method: 'POST', body: { ...e, type: 'plain' } })

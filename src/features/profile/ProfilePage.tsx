@@ -2,6 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { Button, Card, ErrorText, Input, PageTitle } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
+import { PasswordForm } from '../auth/ResetPasswordPage'
 
 export function ProfilePage() {
   const { session, profile, refreshProfile } = useAuth()
@@ -46,7 +47,7 @@ export function ProfilePage() {
 
         <Card>
           <form onSubmit={saveName} className="flex flex-col gap-3">
-            <Input label="Prénom" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
+            <Input label="Pseudo" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
             <Button variant="secondary">Enregistrer</Button>
           </form>
         </Card>
@@ -64,6 +65,15 @@ export function ProfilePage() {
               onChange={(e) => update({ share_scores: e.target.checked })}
             />
           </label>
+        </Card>
+
+        <Card>
+          <details>
+            <summary className="cursor-pointer">Changer mon mot de passe</summary>
+            <div className="mt-3">
+              <PasswordForm submitLabel="Changer le mot de passe" onDone={() => setSaved(true)} />
+            </div>
+          </details>
         </Card>
 
         {saved && <p className="text-sm text-lime-400">Enregistré.</p>}

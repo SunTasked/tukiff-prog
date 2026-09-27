@@ -2,118 +2,122 @@ import { useState, type FormEvent } from 'react'
 import { Button, Centered, ErrorText, Input } from '../../components/ui'
 import { supabase } from '../../lib/supabase'
 
-const devLogin = import.meta.env.VITE_DEV_LOGIN === '1'
-
 function translate(message: string) {
   if (message === 'invalid_invitation') return 'Lien d’invitation invalide, expiré ou déjà utilisé.'
+  if (/invalid login credentials/i.test(message)) return 'Email ou mot de passe incorrect.'
   if (/signups not allowed/i.test(message)) return 'Compte inconnu : demande un lien d’invitation à ton coach.'
-  if (/rate limit/i.test(message)) return 'Trop de demandes d’email. Réessaie dans un moment.'
-  if (/expired|invalid/i.test(message)) return 'Code invalide ou expiré.'
+  if (/rate limit|security purposes/i.test(message)) return 'Trop de demandes d’email. Réessaie dans un moment.'
   return message
 }
 
+type Mode = 'password' | 'forgot' | 'sent'
+
 export function LoginPage({ inviteCode }: { inviteCode: string | null }) {
   const [email, setEmail] = useState('')
-  const [code, setCode] = useState('')
   const [password, setPassword] = useState('')
-  const [step, setStep] = useState<'email' | 'code' | 'password'>('email')
+  const [mode, setMode] = useState<Mode>('password')
+  // Existing members opening an invitation (e.g. athlete promoted to coach) sign in with their password.
+  const [existing, setExisting] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
-  async function run(fn: () => Promise<{ error: { message: string } | null }>, next?: typeof step) {
+  async function run(fn: () => Promise<{ error: { message: string } | null }>, next?: Mode) {
     setBusy(true)
     setError('')
     const { error } = await fn()
     setBusy(false)
     if (error) setError(translate(error.message))
-    else if (next) setStep(next)
+    else if (next) setMode(next)
   }
 
-  const sendCode = (e: FormEvent) => {
+  // Invitation: the join function creates the account, then a magic link is sent.
+  // The link comes back to /join/<code> so the invitation is applied even in another browser.
+  const join = (e: FormEvent) => {
     e.preventDefault()
     run(async () => {
-      // Sign-up is closed: with an invitation, the join function creates the account first.
-      if (inviteCode) {
-        const { error } = await supabase.functions.invoke('join', { body: { code: inviteCode, email: email.trim() } })
-        if (error) return { error: { message: 'invalid_invitation' } }
-      }
+      const { error } = await supabase.functions.invoke('join', { body: { code: inviteCode, email: email.trim() } })
+      if (error) return { error: { message: 'invalid_invitation' } }
       return supabase.auth.signInWithOtp({
         email: email.trim(),
-        options: { shouldCreateUser: false, emailRedirectTo: window.location.origin },
+        options: { shouldCreateUser: false, emailRedirectTo: `${window.location.origin}/join/${inviteCode}` },
       })
-    }, 'code')
+    }, 'sent')
   }
 
-  const verifyCode = (e: FormEvent) => {
-    e.preventDefault()
-    run(() => supabase.auth.verifyOtp({ email: email.trim(), token: code.trim(), type: 'email' }))
-  }
-
-  const passwordLogin = (e: FormEvent) => {
+  const login = (e: FormEvent) => {
     e.preventDefault()
     run(() => supabase.auth.signInWithPassword({ email: email.trim(), password }))
   }
+
+  const forgot = (e: FormEvent) => {
+    e.preventDefault()
+    run(
+      () =>
+        supabase.auth.resetPasswordForEmail(email.trim(), {
+          redirectTo: `${window.location.origin}/reset-password`,
+        }),
+      'sent',
+    )
+  }
+
+  const emailInput = (
+    <Input
+      label="Email"
+      type="email"
+      autoComplete="email"
+      required
+      value={email}
+      onChange={(e) => setEmail(e.target.value)}
+    />
+  )
 
   return (
     <Centered>
       <h1 className="text-3xl font-bold">
         Tukiff <span className="text-lime-400">Prog</span>
       </h1>
-      {inviteCode && <p className="text-zinc-300">Tu as été invité ! Connecte-toi pour rejoindre le groupe.</p>}
 
-      {step === 'email' && (
-        <form onSubmit={sendCode} className="flex flex-col gap-3">
-          <Input
-            label="Email"
-            type="email"
-            autoComplete="email"
-            required
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-          <Button disabled={busy}>Recevoir un code de connexion</Button>
-          {devLogin && (
-            <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setStep('password')}>
-              Connexion par mot de passe (dev)
-            </button>
-          )}
-        </form>
-      )}
-
-      {step === 'code' && (
-        <form onSubmit={verifyCode} className="flex flex-col gap-3">
-          <p className="text-sm text-zinc-400">
-            Un email a été envoyé à <b className="text-zinc-200">{email}</b>. Ouvre le lien qu’il contient, ou
-            saisis le code s’il y en a un.
+      {mode === 'sent' ? (
+        <>
+          <p className="text-zinc-300">
+            Un email a été envoyé à <b>{email}</b>. Ouvre le lien qu’il contient pour continuer.
           </p>
-          <Input
-            label="Code"
-            inputMode="numeric"
-            autoComplete="one-time-code"
-            required
-            value={code}
-            onChange={(e) => setCode(e.target.value)}
-          />
-          <Button disabled={busy}>Se connecter</Button>
-          <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setStep('email')}>
-            Changer d’email
+          <button className="text-sm text-zinc-500 underline" onClick={() => setMode('password')}>
+            Retour
+          </button>
+        </>
+      ) : inviteCode && !existing ? (
+        <form onSubmit={join} className="flex flex-col gap-3">
+          <p className="text-zinc-300">Tu as été invité ! Saisis ton email pour recevoir un lien d’inscription.</p>
+          {emailInput}
+          <Button disabled={busy}>Recevoir le lien</Button>
+          <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setExisting(true)}>
+            Déjà un compte ? Se connecter
           </button>
         </form>
-      )}
-
-      {step === 'password' && (
-        <form onSubmit={passwordLogin} className="flex flex-col gap-3">
-          <Input label="Email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} />
+      ) : mode === 'forgot' ? (
+        <form onSubmit={forgot} className="flex flex-col gap-3">
+          <p className="text-zinc-300">Saisis ton email : tu recevras un lien pour choisir un nouveau mot de passe.</p>
+          {emailInput}
+          <Button disabled={busy}>Envoyer le lien</Button>
+          <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setMode('password')}>
+            Retour
+          </button>
+        </form>
+      ) : (
+        <form onSubmit={login} className="flex flex-col gap-3">
+          {emailInput}
           <Input
             label="Mot de passe"
             type="password"
+            autoComplete="current-password"
             required
             value={password}
             onChange={(e) => setPassword(e.target.value)}
           />
           <Button disabled={busy}>Se connecter</Button>
-          <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setStep('email')}>
-            Retour
+          <button type="button" className="text-sm text-zinc-500 underline" onClick={() => setMode('forgot')}>
+            Mot de passe oublié ?
           </button>
         </form>
       )}

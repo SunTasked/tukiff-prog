@@ -39,6 +39,10 @@ await api('/config/auth', {
     ].join(','),
     disable_signup: true, // accounts are created only by the join Edge Function
     mailer_otp_length: 6,
+    // 8+ chars with lower, upper, digit and symbol (Supabase only accepts these exact rule strings).
+    password_min_length: 8,
+    password_required_characters:
+      'abcdefghijklmnopqrstuvwxyz:ABCDEFGHIJKLMNOPQRSTUVWXYZ:0123456789:!@#$%^&*()_+-=[]{};\'\\\\:"|<>?,./`~',
     mailer_otp_exp: 3600,
     ...smtp,
   },

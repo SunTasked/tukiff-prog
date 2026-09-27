@@ -3,10 +3,11 @@ import { Navigate, Route, Routes, useLocation, useNavigate } from 'react-router'
 import { Layout } from './components/Layout'
 import { Spinner } from './components/ui'
 import { AthletesPage } from './features/athletes/AthletesPage'
-import { isCoach, useAuth } from './features/auth/AuthProvider'
+import { hasPassword, isCoach, useAuth } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
 import { OnboardingPage } from './features/auth/OnboardingPage'
 import { PendingPage } from './features/auth/PendingPage'
+import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { ExerciseFormPage } from './features/exercises/ExerciseFormPage'
 import { HomePage } from './features/home/HomePage'
 import { LibraryPage } from './features/library/LibraryPage'
@@ -45,8 +46,9 @@ export default function App() {
   if (loading) return <Spinner />
   if (!session) return <LoginPage inviteCode={pendingInvite} />
   if (pendingInvite) return <Spinner />
+  if (location.pathname === '/reset-password') return <ResetPasswordPage onDone={() => navigate('/', { replace: true })} />
   if (!profile?.role) return <PendingPage error={inviteError} />
-  if (!profile.display_name) return <OnboardingPage />
+  if (!profile.display_name || !hasPassword(session)) return <OnboardingPage />
 
   return (
     <Routes>
