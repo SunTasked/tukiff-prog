@@ -1,4 +1,4 @@
-import { DurationInput, NumberInput } from '../../components/inputs'
+import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
 import {
   BLOCK_KINDS,
@@ -75,20 +75,20 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
               <Field label="Rounds">
                 <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
               </Field>
-              <Field label="Cap (min)">
-                <DurationInput value={p.time_cap_s} onChange={(v) => setParams({ time_cap_s: v ?? undefined })} />
+              <Field label="Time cap" className="col-span-2">
+                <DurationPicker value={p.time_cap_s} onChange={(v) => setParams({ time_cap_s: v ?? undefined })} />
               </Field>
             </>
           )}
           {block.format === 'amrap' && (
-            <Field label="Durée (min)">
-              <DurationInput value={p.duration_s} onChange={(v) => setParams({ duration_s: v ?? undefined })} />
+            <Field label="Durée" className="col-span-2">
+              <DurationPicker value={p.duration_s} onChange={(v) => setParams({ duration_s: v ?? undefined })} />
             </Field>
           )}
           {block.format === 'emom' && (
             <>
-              <Field label="Toutes les">
-                <DurationInput value={p.interval_s} onChange={(v) => setParams({ interval_s: v ?? undefined })} />
+              <Field label="Toutes les" className="col-span-2">
+                <DurationPicker value={p.interval_s} onChange={(v) => setParams({ interval_s: v ?? undefined })} />
               </Field>
               <Field label="Rounds">
                 <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
@@ -113,7 +113,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
               <NumberInput value={p.sets} onChange={(v) => setParams({ sets: int(v) })} />
             </Field>
           )}
-          <Field label="Titre (option)" className={block.format === 'tabata' ? 'col-span-3' : 'col-span-1'}>
+          <Field label="Titre (option)" className={['tabata', 'for_time', 'emom'].includes(block.format) ? 'col-span-3' : 'col-span-1'}>
             <SmallInput placeholder="Fran…" value={block.title} onChange={(e) => set({ title: e.target.value })} />
           </Field>
         </div>

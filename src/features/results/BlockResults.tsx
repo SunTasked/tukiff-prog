@@ -55,6 +55,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
       {open && (
         <ScoreSheet
+          timeCap={block.params.time_cap_s}
           workoutId={workoutId}
           blockId={block.id}
           blockLabel={blockLabel}

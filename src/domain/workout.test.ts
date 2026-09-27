@@ -6,7 +6,6 @@ import {
   invalidatedBlocks,
   itemSummary,
   newBlock,
-  parseDuration,
   parseNumber,
   resolveItem,
   shortDuration,
@@ -15,17 +14,6 @@ import {
 } from './workout'
 
 describe('durations', () => {
-  it('parses minutes or mm:ss', () => {
-    expect(parseDuration('12')).toBe(720)
-    expect(parseDuration('1:30')).toBe(90)
-    expect(parseDuration('0:45')).toBe(45)
-    expect(parseDuration('1,30')).toBe(90)
-    expect(parseDuration('2.05')).toBe(125)
-    expect(parseDuration('1,5')).toBeNull()
-    expect(parseDuration(' ')).toBeNull()
-    expect(parseDuration('1:75')).toBeNull()
-    expect(parseDuration('abc')).toBeNull()
-  })
   it('formats', () => {
     expect(formatDuration(720)).toBe('12:00')
     expect(formatDuration(95)).toBe('1:35')

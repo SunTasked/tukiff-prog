@@ -126,18 +126,6 @@ export function suggestedKind(index: number): BlockKind {
 
 // Durations ---------------------------------------------------------------------
 
-/**
- * "12" -> 720 (minutes), "1:30" -> 90, "0:45" -> 45. Returns null if invalid.
- * "," and "." are accepted as separators (iOS numeric pads have no ":").
- */
-export function parseDuration(input: string): number | null {
-  const s = input.trim()
-  if (!s) return null
-  const m = s.match(/^(\d+)(?:[:.,]([0-5]\d))?$/)
-  if (!m) return null
-  return m[2] === undefined ? Number(m[1]) * 60 : Number(m[1]) * 60 + Number(m[2])
-}
-
 /** 720 -> "12:00", 90 -> "1:30". */
 export function formatDuration(seconds: number): string {
   const m = Math.floor(seconds / 60)

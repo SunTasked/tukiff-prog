@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DurationInput, NumberInput } from '../../components/inputs'
+import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Textarea } from '../../components/ui'
 import { emptyScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
 import { LEVELS, type Level } from '../../domain/workout'
@@ -8,6 +8,8 @@ import { supabase } from '../../lib/supabase'
 import type { ResultRow } from './useWorkoutResults'
 
 type Props = {
+  /** Time cap in seconds, bounds the minutes picker. */
+  timeCap?: number
   workoutId: string
   blockId: string
   blockLabel: string
@@ -19,7 +21,8 @@ type Props = {
 
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
-export function ScoreSheet({ workoutId, blockId, blockLabel, type, existing, onClose, onSaved }: Props) {
+
+export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, existing, onClose, onSaved }: Props) {
   const [score, setScore] = useState<Score>(existing ?? emptyScore())
   const [level, setLevel] = useState<Level>(
     (existing?.level as Level) ?? ((getItem('level') as Level) in LEVELS ? (getItem('level') as Level) : 'rx'),
@@ -28,6 +31,7 @@ export function ScoreSheet({ workoutId, blockId, blockLabel, type, existing, onC
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (patch: Partial<Score>) => setScore({ ...score, ...patch })
+  const maxMinutes = timeCap ? Math.ceil(timeCap / 60) : 99
 
   async function save() {
     const invalid = validateScore(type, score)
@@ -50,7 +54,7 @@ export function ScoreSheet({ workoutId, blockId, blockLabel, type, existing, onC
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950/95 pt-[env(safe-area-inset-top)]">
+    <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)]">
       <div className="flex items-center justify-between border-b border-zinc-800 p-3">
         <span className="font-semibold">Mon score · {blockLabel}</span>
         <button className="px-2 text-zinc-400" onClick={onClose}>
@@ -76,8 +80,8 @@ export function ScoreSheet({ workoutId, blockId, blockLabel, type, existing, onC
                 <NumberInput value={score.reps} onChange={(v) => set({ reps: int(v) })} />
               </Field>
             ) : (
-              <Field label="Temps (mm:ss, ex. 7,32)">
-                <DurationInput value={score.time_s} onChange={(v) => set({ time_s: v })} placeholder="mm:ss" />
+              <Field label="Temps">
+                <DurationPicker value={score.time_s} onChange={(v) => set({ time_s: v })} size="lg" maxMinutes={maxMinutes} />
               </Field>
             )}
           </>

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DurationInput, NumberInput } from '../../components/inputs'
+import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Field, SmallInput } from '../../components/ui'
 import {
   ALT_LEVELS,
@@ -75,8 +75,8 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onPick }
           </Field>
         )}
         {show('time', item.duration_s) && (
-          <Field label="Durée">
-            <DurationInput value={item.duration_s} onChange={(v) => set({ duration_s: v })} />
+          <Field label="Durée" className="col-span-2">
+            <DurationPicker value={item.duration_s} onChange={(v) => set({ duration_s: v })} />
           </Field>
         )}
       </div>
