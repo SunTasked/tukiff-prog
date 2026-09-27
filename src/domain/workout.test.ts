@@ -8,10 +8,13 @@ import {
   itemSummary,
   newBlock,
   parseNumber,
+  prefilledItem,
   resolveItem,
   shortDuration,
   suggestedKind,
+  usedExercises,
   validateWorkout,
+  type WorkoutDraft,
 } from './workout'
 
 describe('durations', () => {
@@ -64,6 +67,37 @@ describe('items', () => {
     const row = { ...emptyItem(null, 'Row'), calories: 20, levels: { scaled: { calories: 15 }, foundation: { distance_m: 500 } } }
     expect(itemSummary(resolveItem(row, 'scaled'), lookup)).toBe('15 cal Row')
     expect(itemSummary(resolveItem(row, 'foundation'), lookup)).toBe('500 m Row')
+  })
+
+  it('shows the women\'s load when it differs', () => {
+    const ohs = { ...emptyItem('t'), reps: '21', load_kg: 43, load_kg_f: 29 }
+    expect(itemSummary(ohs, lookup)).toBe('21 Thruster @ 43/29 kg')
+    expect(itemSummary({ ...ohs, load_kg_f: 43 }, lookup)).toBe('21 Thruster @ 43 kg')
+    const levels = { scaled: { load_kg: 30 }, foundation: { load_kg_f: 15 } }
+    expect(resolveItem({ ...ohs, levels }, 'scaled')).toMatchObject({ load_kg: 30, load_kg_f: null })
+    expect(resolveItem({ ...ohs, levels }, 'foundation')).toMatchObject({ load_kg: 43, load_kg_f: 15 })
+  })
+})
+
+describe('faster entry', () => {
+  const ohs = { ...emptyItem('ohs'), reps: '21', load_kg: 43, load_kg_f: 29, levels: { scaled: { load_kg: 30, reps: '15' } } }
+  const w: WorkoutDraft = {
+    title: 'Josh',
+    notes: '',
+    blocks: [
+      { ...newBlock('warmup', 'a'), items: [emptyItem('row'), emptyItem('pu')] },
+      { ...newBlock('metcon', 'b'), items: [ohs, { ...emptyItem('pu'), reps: '42' }] },
+    ],
+  }
+
+  it('lists exercises of the workout, current block and latest first', () => {
+    expect(usedExercises(w, 1)).toEqual(['pu', 'ohs', 'row'])
+    expect(usedExercises(w, 0)).toEqual(['pu', 'row', 'ohs'])
+  })
+
+  it('prefills loads from the nearest use, not the reps', () => {
+    expect(prefilledItem(w, 1, 'ohs')).toEqual({ ...emptyItem('ohs'), load_kg: 43, load_kg_f: 29, levels: { scaled: { load_kg: 30 } } })
+    expect(prefilledItem(w, 1, 'new')).toEqual(emptyItem('new'))
   })
 })
 

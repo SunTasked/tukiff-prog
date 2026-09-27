@@ -47,6 +47,7 @@ export type FormatParams = {
 export type LevelOverride = {
   reps?: string
   load_kg?: number
+  load_kg_f?: number
   pct_1rm?: number
   distance_m?: number
   calories?: number
@@ -59,7 +60,10 @@ export type ItemDraft = {
   exercise_id: string | null
   label: string
   reps: string
+  /** Absolute load; for everyone, or men when load_kg_f is set. */
   load_kg: number | null
+  /** Women's absolute load; null = same as load_kg. */
+  load_kg_f: number | null
   pct_1rm: number | null
   distance_m: number | null
   calories: number | null
@@ -123,6 +127,7 @@ export function emptyItem(exercise_id: string | null = null, label = ''): ItemDr
     label,
     reps: '',
     load_kg: null,
+    load_kg_f: null,
     pct_1rm: null,
     distance_m: null,
     calories: null,
@@ -206,6 +211,8 @@ export function resolveItem(item: ItemDraft, level: Level): ItemDraft {
     exercise_id: o.exercise_id ?? item.exercise_id,
     reps: o.reps ?? item.reps,
     load_kg: o.load_kg ?? item.load_kg,
+    // A level load given without a women's load applies to everyone.
+    load_kg_f: o.load_kg_f ?? (o.load_kg !== undefined ? null : item.load_kg_f),
     pct_1rm: o.pct_1rm ?? item.pct_1rm,
     distance_m: q(o.distance_m, item.distance_m),
     calories: q(o.calories, item.calories),
@@ -213,6 +220,10 @@ export function resolveItem(item: ItemDraft, level: Level): ItemDraft {
     notes: o.note ?? item.notes,
   }
 }
+
+/** "43" or, with a different women's load, "43/29". */
+export const formatLoad = (kg: number, kgF: number | null) =>
+  kgF != null && kgF !== kg ? `${formatNumber(kg)}/${formatNumber(kgF)}` : formatNumber(kg)
 
 /** One-line text: "21-15-9 Thruster @ 43 kg". */
 export function itemSummary(item: ItemDraft, exerciseName: (id: string) => string | undefined): string {
@@ -224,7 +235,7 @@ export function itemSummary(item: ItemDraft, exerciseName: (id: string) => strin
   if (item.duration_s != null) parts.push(shortDuration(item.duration_s))
   parts.push(name)
   const loads: string[] = []
-  if (item.load_kg != null) loads.push(`${formatNumber(item.load_kg)} kg`)
+  if (item.load_kg != null) loads.push(`${formatLoad(item.load_kg, item.load_kg_f)} kg`)
   if (item.pct_1rm != null) loads.push(`${formatNumber(item.pct_1rm)} %`)
   return loads.length ? `${parts.join(' ')} @ ${loads.join(' / ')}` : parts.join(' ')
 }
@@ -260,4 +271,36 @@ export function blockLevels(block: BlockDraft): Level[] {
   return (Object.keys(LEVELS) as Level[]).filter(
     (l) => l === 'rx' || block.items.some((i) => hasOverride(i.levels[l as AltLevel])),
   )
+}
+
+// Faster entry ------------------------------------------------------------------
+
+/** Items of the workout, those of the given block first, most recent first. */
+function itemsNearest(w: WorkoutDraft, blockIndex: number): ItemDraft[] {
+  const current = w.blocks[blockIndex]?.items ?? []
+  const others = w.blocks.filter((_, i) => i !== blockIndex).flatMap((b) => b.items)
+  return [...current].reverse().concat([...others].reverse())
+}
+
+/** Exercises already in the workout (likely reused), nearest first. */
+export function usedExercises(w: WorkoutDraft, blockIndex: number): string[] {
+  const ids = itemsNearest(w, blockIndex).flatMap((i) => (i.exercise_id ? [i.exercise_id] : []))
+  return [...new Set(ids)]
+}
+
+/** New item for an exercise, with the loads (and level loads) of its nearest use in the workout: only the reps change. */
+export function prefilledItem(w: WorkoutDraft, blockIndex: number, exerciseId: string): ItemDraft {
+  const prev = itemsNearest(w, blockIndex).find((i) => i.exercise_id === exerciseId)
+  if (!prev) return emptyItem(exerciseId)
+  const levels: ItemDraft['levels'] = {}
+  for (const l of ALT_LEVELS) {
+    const o = prev.levels[l]
+    if (!o) continue
+    const { exercise_id, load_kg, load_kg_f, pct_1rm } = o
+    const kept = Object.fromEntries(
+      Object.entries({ exercise_id, load_kg, load_kg_f, pct_1rm }).filter(([, v]) => v !== undefined),
+    ) as LevelOverride
+    if (hasOverride(kept)) levels[l] = kept
+  }
+  return { ...emptyItem(exerciseId), load_kg: prev.load_kg, load_kg_f: prev.load_kg_f, pct_1rm: prev.pct_1rm, levels }
 }

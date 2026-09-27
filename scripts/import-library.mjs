@@ -7,8 +7,8 @@
 //   "templates": [{ "title", "section", "notes", "blocks": [{
 //     "kind": "warmup|strength|skill|metcon|accessory|cooldown", "format": "for_time|amrap|emom|tabata|sets_reps|none",
 //     "title", "notes", "params": { "time_cap_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets" },
-//     "items": [{ "exercise" | "label", "reps": "21-15-9", "load_kg", "pct_1rm", "distance_m", "calories", "duration_s",
-//                 "notes", "levels": { "elite|scaled|foundation": { "exercise", "reps", "load_kg", "pct_1rm", "distance_m",
+//     "items": [{ "exercise" | "label", "reps": "21-15-9", "load_kg", "load_kg_f", "pct_1rm", "distance_m", "calories", "duration_s",
+//                 "notes", "levels": { "elite|scaled|foundation": { "exercise", "reps", "load_kg", "load_kg_f", "pct_1rm", "distance_m",
 //                 "calories", "duration_s", "note" } } }] }] }] }
 import { readFileSync } from 'node:fs'
 import { sql, target } from './lib.mjs'
@@ -24,7 +24,7 @@ const KINDS = ['warmup', 'strength', 'skill', 'metcon', 'accessory', 'cooldown']
 const FORMATS = ['for_time', 'amrap', 'emom', 'tabata', 'sets_reps', 'none']
 const MEASURES = ['reps', 'load', 'distance', 'time', 'calories']
 const PARAMS = ['time_cap_s', 'duration_s', 'interval_s', 'rounds', 'work_s', 'rest_s', 'sets']
-const NUMBERS = ['load_kg', 'pct_1rm', 'distance_m', 'calories', 'duration_s']
+const NUMBERS = ['load_kg', 'load_kg_f', 'pct_1rm', 'distance_m', 'calories', 'duration_s']
 const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', 'levels', ...NUMBERS]
 const LEVELS = ['elite', 'scaled', 'foundation']
 const LEVEL_KEYS = ['exercise', 'reps', 'note', ...NUMBERS]

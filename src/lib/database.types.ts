@@ -25,6 +25,7 @@ export type Database = {
           label: string | null
           levels: Json
           load_kg: number | null
+          load_kg_f: number | null
           notes: string | null
           pct_1rm: number | null
           position: number
@@ -40,6 +41,7 @@ export type Database = {
           label?: string | null
           levels?: Json
           load_kg?: number | null
+          load_kg_f?: number | null
           notes?: string | null
           pct_1rm?: number | null
           position: number
@@ -55,6 +57,7 @@ export type Database = {
           label?: string | null
           levels?: Json
           load_kg?: number | null
+          load_kg_f?: number | null
           notes?: string | null
           pct_1rm?: number | null
           position?: number

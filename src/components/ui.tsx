@@ -1,5 +1,7 @@
 import type React from 'react'
+import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
+import { pendingRequests } from '../lib/supabase'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
 
@@ -119,4 +121,26 @@ export function Field({ label, children, className = '' }: { label: string; chil
 
 export function SmallInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={smallInput} {...props} />
+}
+
+/**
+ * Blocks the screen while a write is slow to answer, so taps don't pile up.
+ * Appears after a short delay: quick saves show nothing.
+ */
+export function BusyOverlay() {
+  const pending = useSyncExternalStore(pendingRequests.subscribe, pendingRequests.count)
+  const busy = pending > 0
+  const [visible, setVisible] = useState(false)
+  useEffect(() => {
+    if (!busy) return setVisible(false)
+    const t = setTimeout(() => setVisible(true), 300)
+    return () => clearTimeout(t)
+  }, [busy])
+  if (!busy) return null
+  // Invisible until the delay: still swallows taps (double-submits) from the first millisecond.
+  return (
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center ${visible ? 'bg-black/40' : ''}`} aria-busy="true">
+      {visible && <div className="size-10 animate-spin rounded-full border-2 border-zinc-700 border-t-lime-400" />}
+    </div>
+  )
 }

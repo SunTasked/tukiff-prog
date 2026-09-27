@@ -126,6 +126,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             nameOf={nameOf}
             onChange={(it) => set({ items: block.items.map((x, j) => (j === i ? it : x)) })}
             onRemove={() => set({ items: block.items.filter((_, j) => j !== i) })}
+            onDuplicate={() => set({ items: block.items.toSpliced(i + 1, 0, structuredClone(item)) })}
             onPick={(level) => onPick(i, level)}
           />
         ))}
