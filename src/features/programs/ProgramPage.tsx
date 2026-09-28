@@ -5,7 +5,7 @@ import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 
 /**
- * Program detail. Owner: rename, archive, contributor coaches. Owner + contributors: athletes with access.
+ * Program detail. Owner: rename, archive, contributor coaches, emoji reactions and leaderboard on/off. Owner + contributors: athletes with access.
  */
 export function ProgramPage() {
   const { id } = useParams()
@@ -126,6 +126,23 @@ export function ProgramPage() {
             >
               Renommer
             </Button>
+          </Card>
+        )}
+        {isOwner && (
+          <Card>
+            {check(
+              program.reactions_enabled,
+              () => run(supabase.from('programs').update({ reactions_enabled: !program.reactions_enabled }).eq('id', id!)),
+              'Réactions emoji sur les blocs',
+            )}
+            {check(
+              program.leaderboard_enabled,
+              () => run(supabase.from('programs').update({ leaderboard_enabled: !program.leaderboard_enabled }).eq('id', id!)),
+              'Classement des scores',
+            )}
+            <p className="text-xs text-zinc-500">
+              Décoché : emojis masqués pour tous ; sans classement, chaque athlète ne voit que son score (les coachs voient tout).
+            </p>
           </Card>
         )}
         {isOwner && otherCoaches.length > 0 && (

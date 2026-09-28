@@ -27,9 +27,18 @@ export function WorkoutWithResults({
   const { nameOf, byId } = useExercises()
   const { results, loaded, reload } = useWorkoutResults(workout.id)
   const [reactions, setReactions] = useState<Reaction[] | null>(null)
+  // Reactions and leaderboard can be turned off per program (athletes then only see their own score).
+  const [reactionsOn, setReactionsOn] = useState(false)
+  const [boardOn, setBoardOn] = useState(true)
   const reloadReactions = useCallback(async () => {
-    const { data } = await supabase.from('block_reactions').select('block_id, user_id, emoji').eq('workout_id', workout.id!)
-    setReactions(data ?? [])
+    const [w, r] = await Promise.all([
+      supabase.from('workouts').select('programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single(),
+      supabase.from('block_reactions').select('block_id, user_id, emoji').eq('workout_id', workout.id!),
+    ])
+    const on = w.data?.programs?.reactions_enabled ?? true
+    setReactionsOn(on)
+    setBoardOn(w.data?.programs?.leaderboard_enabled ?? true)
+    setReactions(on ? (r.data ?? []) : [])
   }, [workout.id])
   useEffect(() => {
     reloadReactions()
@@ -58,14 +67,16 @@ export function WorkoutWithResults({
       oneRmOf={canLog ? (id) => oneRms.get(id) : undefined}
       blockFooter={(block, label) => (
         <>
-        <BlockReactions
-          workoutId={workout.id!}
-          blockId={block.id}
-          reactions={(reactions ?? []).filter((r) => r.block_id === block.id)}
-          me={me}
-          canReact={canLog}
-          onChange={reloadReactions}
-        />
+        {reactionsOn && (
+          <BlockReactions
+            workoutId={workout.id!}
+            blockId={block.id}
+            reactions={(reactions ?? []).filter((r) => r.block_id === block.id)}
+            me={me}
+            canReact={canLog}
+            onChange={reloadReactions}
+          />
+        )}
         <BlockResults
           workoutId={workout.id!}
           block={block}
@@ -74,6 +85,7 @@ export function WorkoutWithResults({
           me={me}
           canLog={canLog}
           skipped={skips?.has(block.id) ?? false}
+          showBoard={boardOn || !canLog}
           onChange={() => {
             reload()
             reloadSkips()

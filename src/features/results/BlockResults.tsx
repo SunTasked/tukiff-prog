@@ -15,6 +15,8 @@ type Props = {
   canLog: boolean
   /** I marked this block "Je passe"; entering a score clears it. */
   skipped: boolean
+  /** Other athletes' scores (off when the program's leaderboard is disabled, for athletes). */
+  showBoard: boolean
   onChange: () => void
 }
 
@@ -22,7 +24,7 @@ const MEDALS = ['🥇', '🥈', '🥉']
 const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 
 /** "My score" / "Je passe" buttons + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately. */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, onChange }: Props) {
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const type = scoreType(block.format, block.params)
@@ -69,7 +71,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           </div>
         ))}
 
-      {boards.map(({ gender, rows }) => (
+      {showBoard && boards.map(({ gender, rows }) => (
         <div key={gender} className="mt-3">
           <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{BOARD_TITLES[gender]}</p>
           <ol className="flex flex-col gap-1">
