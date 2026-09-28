@@ -146,7 +146,7 @@ export function ProfilePage() {
             <input
               type="checkbox"
               className="size-6 accent-lime-400"
-              checked={profile?.share_scores ?? false}
+              checked={profile?.share_scores ?? true}
               onChange={(e) => update({ share_scores: e.target.checked })}
             />
           </label>
