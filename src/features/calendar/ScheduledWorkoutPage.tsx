@@ -21,6 +21,7 @@ export function ScheduledWorkoutPage() {
   const [meta, setMeta] = useState<Meta | null>(null)
   const [publishAt, setPublishAt] = useState('')
   const [otherDate, setOtherDate] = useState('')
+  const [otherProgram, setOtherProgram] = useState('')
   const [error, setError] = useState('')
   const [missing, setMissing] = useState<string[] | null>(null)
 
@@ -35,6 +36,7 @@ export function ScheduledWorkoutPage() {
       setMeta(data)
       setPublishAt(data.publish_at ? toLocalInput(data.publish_at) : `${data.date}T07:00`)
       setOtherDate((d) => d || data.date)
+      setOtherProgram((p) => p || data.program_id)
       setMissing(await missingMembers(id!, data.program_id))
     }
   }, [id])
@@ -56,7 +58,7 @@ export function ScheduledWorkoutPage() {
 
   async function duplicate() {
     const days = Math.round((new Date(otherDate).getTime() - new Date(meta!.date).getTime()) / 86_400_000)
-    const { error } = await supabase.rpc('duplicate_workouts', { p_ids: [id!], p_days: days })
+    const { error } = await supabase.rpc('duplicate_workouts', { p_ids: [id!], p_days: days, p_program: otherProgram })
     if (error) return setError(error.message)
     navigate(`/calendar?week=${mondayOf(otherDate)}`)
   }
@@ -124,8 +126,15 @@ export function ScheduledWorkoutPage() {
         <Button onClick={() => navigate(`/library/workouts/${id}/edit`)}>Modifier le contenu</Button>
 
         <Card className="flex flex-col gap-2">
-          <h2 className="font-semibold">Autre date</h2>
+          <h2 className="font-semibold">Dupliquer ou déplacer</h2>
           <input type="date" className={input} value={otherDate} onChange={(e) => setOtherDate(e.target.value)} />
+          <select className={input} value={otherProgram} onChange={(e) => setOtherProgram(e.target.value)} aria-label="Programmation de la copie">
+            {(programs ?? []).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.id === meta.program_id ? `${p.name} (même programmation)` : p.name}
+              </option>
+            ))}
+          </select>
           <div className="flex gap-2">
             <Button variant="secondary" className="flex-1 py-2 text-sm" disabled={!otherDate} onClick={duplicate}>
               Dupliquer
@@ -133,7 +142,7 @@ export function ScheduledWorkoutPage() {
             <Button
               variant="secondary"
               className="flex-1 py-2 text-sm"
-              disabled={!otherDate || otherDate === meta.date}
+              disabled={!otherDate || otherDate === meta.date || otherProgram !== meta.program_id}
               onClick={() =>
                 run(
                   supabase.rpc('move_workouts', {

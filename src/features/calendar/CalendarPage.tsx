@@ -304,6 +304,7 @@ export function CalendarPage() {
       {selected.size > 0 && (
         <SelectionBar
           rows={rows.filter((r) => selected.has(r.id))}
+          programs={programs ?? []}
           onClear={() => setSelected(new Set())}
           onOpen={(id) => navigate(`/calendar/workouts/${id}`)}
           onDone={() => load()}
@@ -322,15 +323,18 @@ export function CalendarPage() {
 }
 
 type Action = 'publish' | 'duplicate' | null
+type DuplicateMode = 'same' | 'other'
 
 /** Actions on the selected workouts. Every action opens a panel that can be cancelled. */
 function SelectionBar({
   rows,
+  programs,
   onClear,
   onOpen,
   onDone,
 }: {
   rows: Row[]
+  programs: EditableProgram[]
   onClear: () => void
   onOpen: (id: string) => void
   onDone: () => void
@@ -342,6 +346,10 @@ function SelectionBar({
   const first = rows.map((r) => r.date).sort()[0]
   const [publishAt, setPublishAt] = useState(`${mondayOf(first)}T07:00`)
   const [target, setTarget] = useState(addDays(first, 7))
+  const [mode, setMode] = useState<DuplicateMode>('same')
+  const sourceIds = [...new Set(rows.map((r) => r.program_id))]
+  const others = programs.filter((p) => p.id !== sourceIds[0])
+  const [targetProgram, setTargetProgram] = useState('')
   const drafts = rows.filter((r) => !r.publish_at).length
 
   async function run(p: PromiseLike<{ error: { message: string } | null }>) {
@@ -359,6 +367,20 @@ function SelectionBar({
     await run(supabase.from('workouts').delete().in('id', ids))
     onClear()
   }
+
+  const chooseMode = (m: DuplicateMode) => {
+    setMode(m)
+    setTarget(m === 'same' ? addDays(first, 7) : first)
+    setTargetProgram(m === 'other' ? (others[0]?.id ?? '') : '')
+  }
+  const duplicate = () =>
+    run(
+      supabase.rpc('duplicate_workouts', {
+        p_ids: ids,
+        p_days: daysBetween(first, target),
+        ...(mode === 'other' ? { p_program: targetProgram } : {}),
+      }),
+    )
 
   const panel = 'flex flex-wrap items-center gap-2 border-t border-zinc-800 pt-3'
   const input = 'rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2'
@@ -408,10 +430,44 @@ function SelectionBar({
           </div>
         )}
 
-        {action === 'duplicate' && (
+        {action === 'duplicate' && sourceIds.length > 1 && (
           <div className={panel}>
             <span className="text-sm text-zinc-400">
-              Copier en commençant le (la 1ʳᵉ séance du {formatDay(first)} y sera placée, les autres gardent leur écart)
+              Sélectionne des séances d’une seule programmation pour les dupliquer.
+            </span>
+            <Button variant="secondary" className="px-3 py-2 text-sm" onClick={() => setAction(null)}>
+              Annuler
+            </Button>
+          </div>
+        )}
+
+        {action === 'duplicate' && sourceIds.length === 1 && (
+          <div className={panel}>
+            <div className="flex w-full gap-1.5">
+              {(['same', 'other'] as const).map((m) => (
+                <button
+                  key={m}
+                  className={`rounded-full px-3 py-1.5 text-sm font-semibold ${mode === m ? 'bg-lime-400 text-zinc-950' : 'bg-zinc-800 text-zinc-300'}`}
+                  onClick={() => chooseMode(m)}
+                >
+                  {m === 'same' ? 'Même programmation' : 'Autre programmation'}
+                </button>
+              ))}
+            </div>
+            {mode === 'other' &&
+              (others.length ? (
+                <select className={input} value={targetProgram} onChange={(e) => setTargetProgram(e.target.value)}>
+                  {others.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      {p.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <span className="text-sm text-zinc-400">Aucune autre programmation modifiable.</span>
+              ))}
+            <span className="w-full text-sm text-zinc-400">
+              À partir du (la 1ʳᵉ séance du {formatDay(first)} y sera placée, les autres gardent leur écart)
             </span>
             <input type="date" className={input} value={target} onChange={(e) => setTarget(e.target.value)} />
             <span className="text-xs text-zinc-500">
@@ -419,8 +475,8 @@ function SelectionBar({
             </span>
             <Button
               className="px-3 py-2 text-sm"
-              disabled={!target || busy}
-              onClick={() => run(supabase.rpc('duplicate_workouts', { p_ids: ids, p_days: daysBetween(first, target) }))}
+              disabled={!target || busy || (mode === 'other' && !targetProgram)}
+              onClick={duplicate}
             >
               Dupliquer
             </Button>

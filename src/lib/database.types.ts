@@ -677,7 +677,7 @@ export type Database = {
       }
       delete_my_account: { Args: never; Returns: undefined }
       duplicate_workouts: {
-        Args: { p_days: number; p_ids: string[] }
+        Args: { p_days: number; p_ids: string[]; p_program?: string }
         Returns: number
       }
       is_admin: { Args: never; Returns: boolean }
