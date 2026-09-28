@@ -162,12 +162,10 @@ export function boardPlaces<R extends { rank: number; level: Level }>(rows: R[])
   return rows.map((row) => firstOfLevel.get(row.level)! + row.rank)
 }
 
-export type WeeklyPlace = { place: number; missed: boolean }
-
 /**
- * Weekly leaderboard, CrossFit Open style, one per gender: on each scored block of the week an athlete gets their
- * place in the block's board (levels stacked), a block they didn't score counts as last place + 1, lowest total wins.
- * Blocks without score, or that nobody of this gender scored, don't count.
+ * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their place in the block's board
+ * (levels stacked). Blocks they didn't score are ignored: the lowest average place wins, ties go to whoever scored more
+ * blocks. Blocks without score, or that nobody of this gender scored, don't count.
  */
 export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
   blocks: { type: ScoreType; results: T[] }[],
@@ -184,17 +182,17 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
         const places = boardPlaces(rows)
         return new Map(rows.map((row, i) => [row.result.athlete_id, places[i]]))
       })
-      const totals = [...athletes.values()].map((athlete) => {
-        const places: WeeklyPlace[] = placesByBoard.map((byAthlete) => {
-          const place = byAthlete.get(athlete.athlete_id)
-          return place == null ? { place: byAthlete.size + 1, missed: true } : { place, missed: false }
-        })
-        return { athlete, places, total: places.reduce((sum, p) => sum + p.place, 0) }
+      const scored = [...athletes.values()].map((athlete) => {
+        /** null: block not scored by this athlete. */
+        const places = placesByBoard.map((byAthlete) => byAthlete.get(athlete.athlete_id) ?? null)
+        const done = places.filter((p) => p != null)
+        return { athlete, places, done: done.length, average: done.reduce((sum, p) => sum + p, 0) / done.length }
       })
-      totals.sort((a, b) => a.total - b.total)
-      const rows = totals.map((row, i) => {
+      const compare = (a: (typeof scored)[number], b: (typeof scored)[number]) => a.average - b.average || b.done - a.done
+      scored.sort(compare)
+      const rows = scored.map((row, i) => {
         let rank = i + 1
-        while (rank > 1 && totals[rank - 2].total === row.total) rank--
+        while (rank > 1 && compare(scored[rank - 2], row) === 0) rank--
         return { ...row, rank }
       })
       return { gender, blocks: boards.length, rows }

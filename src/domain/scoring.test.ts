@@ -128,7 +128,7 @@ describe('compact and weekly boards', () => {
     expect(boardPlaces(rows)).toEqual([1, 2, 2, 4])
   })
 
-  it('sums places, missed block = last + 1, per gender, lowest wins', () => {
+  it('averages places on the blocks done, per gender, lowest wins, then most blocks', () => {
     const boards = weeklyLeaderboards([
       { type: 'reps', results: [r('a', 'rx', { reps: 30 }), r('b', 'rx', { reps: 20 }), r('f', 'rx', { reps: 1 }, 'female')] },
       { type: 'time', results: [r('b', 'rx', { time_s: 100 }), r('c', 'rx', { time_s: 200 })] },
@@ -137,9 +137,17 @@ describe('compact and weekly boards', () => {
     const men = boards[0]
     expect(men.gender).toBe('male')
     expect(men.blocks).toBe(2)
-    // a: 1 + (2 + 1) = 4, b: 2 + 1 = 3, c: (2 + 1) + 2 = 5; d only did a block without score.
-    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:3', '2:a:4', '3:c:5'])
-    expect(men.rows[1].places).toEqual([{ place: 1, missed: false }, { place: 3, missed: true }])
-    expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 1, rank: 1 }] })
+    // a: 1 (1 block), b: (2 + 1) / 2 = 1.5, c: 2; d only did a block without score.
+    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.average}`)).toEqual(['1:a:1', '2:b:1.5', '3:c:2'])
+    expect(men.rows[0].places).toEqual([1, null])
+    expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ average: 1, rank: 1 }] })
+  })
+
+  it('breaks average ties with the number of blocks done', () => {
+    const [men] = weeklyLeaderboards([
+      { type: 'reps', results: [r('a', 'rx', { reps: 30 }), r('b', 'rx', { reps: 30 })] },
+      { type: 'reps', results: [r('a', 'rx', { reps: 30 })] },
+    ])
+    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}`)).toEqual(['1:a', '2:b'])
   })
 })
