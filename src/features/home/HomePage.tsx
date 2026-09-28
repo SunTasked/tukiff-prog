@@ -1,6 +1,6 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
-import { programColor } from '../../components/ProgramBadges'
+import { programColor, programPanelColor } from '../../components/ProgramBadges'
 import { groupByProgram } from '../../domain/grouping'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
@@ -126,7 +126,7 @@ function ProgramPanel({
   const accent = programColor(label)
 
   return (
-    <section className="mb-4 rounded-2xl border border-zinc-800">
+    <section className={`mb-4 rounded-2xl border ${programPanelColor(label)}`}>
       <button className="flex w-full items-center justify-between gap-2 p-3" onClick={toggle} aria-expanded={open}>
         <span className={`rounded-full px-3 py-1 text-sm font-bold ${accent}`}>{label}</span>
         <span className="text-zinc-400">{open ? '▾' : '▸'}</span>
