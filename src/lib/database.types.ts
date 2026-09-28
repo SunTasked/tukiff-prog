@@ -401,7 +401,6 @@ export type Database = {
           is_admin: boolean
           is_app_owner: boolean
           role: string | null
-          share_scores: boolean
         }
         Insert: {
           avatar_url?: string | null
@@ -413,7 +412,6 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           role?: string | null
-          share_scores?: boolean
         }
         Update: {
           avatar_url?: string | null
@@ -425,7 +423,6 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           role?: string | null
-          share_scores?: boolean
         }
         Relationships: []
       }
@@ -819,7 +816,6 @@ export type Database = {
         Args: { p_role: string; p_user: string }
         Returns: undefined
       }
-      shares_scores: { Args: { p_user: string }; Returns: boolean }
       track_usage: {
         Args: { p_key?: string; p_kind: string; p_ms?: number }
         Returns: undefined
