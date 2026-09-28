@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
 import { firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { useOnResume } from '../../lib/resume'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatLongDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
@@ -45,11 +46,23 @@ export function HomePage() {
 
   const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
 
+  const loadWeek = useCallback(
+    () =>
+      supabase
+        .rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) })
+        // Same rows: keep the previous array so the open sessions aren't reloaded for nothing.
+        .then(({ data }) => setWeek((prev) => (JSON.stringify(prev) === JSON.stringify(data ?? []) ? prev : ((data ?? []) as Row[])))),
+    [monday],
+  )
   useEffect(() => {
-    supabase
-      .rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) })
-      .then(({ data }) => setWeek((data ?? []) as Row[]))
-  }, [monday])
+    loadWeek()
+  }, [loadWeek])
+  // On return: re-render so "today" follows the clock (overnight), and fetch sessions published meanwhile.
+  const [, setResumes] = useState(0)
+  useOnResume(() => {
+    setResumes((n) => n + 1)
+    loadWeek()
+  })
 
   const [weekBoard, setWeekBoard] = useState<{ key: string; label: string } | null>(null)
   // Programs of the week with the leaderboard turned off: no link to their weekly board.

@@ -214,8 +214,7 @@ export function AthletesPage() {
                 <Link to={`/athletes/${m.id}`} className="flex items-center justify-between py-2">
                   <span>{m.display_name ?? '—'}</span>
                   <span className="text-xs text-zinc-400">
-                    {roleLabel(m)}
-                    {m.share_scores ? ' · scores partagés' : ''} ›
+                    {roleLabel(m)} ›
                   </span>
                 </Link>
               </li>

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Gender } from '../../domain/profile'
+import { useOnResume } from '../../lib/resume'
 import { supabase, type Result } from '../../lib/supabase'
 
 export type ResultRow = Result & {
@@ -21,6 +22,8 @@ export function useWorkoutResults(workoutId: string | undefined) {
   useEffect(() => {
     reload()
   }, [reload])
+  // Other athletes' scores come in while the app sits in the background.
+  useOnResume(reload)
 
   return { results, loaded, reload }
 }
