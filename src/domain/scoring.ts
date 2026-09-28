@@ -1,10 +1,32 @@
 // Score types, formatting and leaderboard ranking. Levels and genders are never mixed: rank within one level.
 import { GENDERS, type Gender } from './profile'
-import { LEVELS, formatDuration, type Format, type Level } from './workout'
+import { LEVELS, formatDuration, type Format, type FormatParams, type Level } from './workout'
 
 export type ScoreType = 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
 
-export function scoreType(format: Format): ScoreType {
+export const SCORE_TYPES: Record<ScoreType, string> = {
+  time: 'Temps',
+  rounds_reps: 'Rounds + reps',
+  reps: 'Reps totales',
+  load: 'Charge max',
+  none: 'Aucun',
+}
+
+/** What the athlete enters, shown on the block and in the score sheet. */
+export const SCORE_HINTS: Record<ScoreType, string> = {
+  time: 'Ton temps final, ou les reps faites si le time cap est atteint.',
+  rounds_reps: 'Les rounds complets, puis les reps faites dans le round entamé.',
+  reps: 'Le total de reps faites sur tout le bloc.',
+  load: 'La charge la plus lourde réussie.',
+  none: 'Pas de score : indique juste que c’est fait.',
+}
+
+/** The coach's choice for the block, else the format's default. */
+export function scoreType(format: Format, params: FormatParams = {}): ScoreType {
+  return params.score ?? defaultScoreType(format)
+}
+
+export function defaultScoreType(format: Format): ScoreType {
   switch (format) {
     case 'for_time':
       return 'time'

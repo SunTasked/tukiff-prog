@@ -4,6 +4,7 @@ import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
 import {
   BLOCK_KINDS,
+  addItem,
   invalidatedBlocks,
   newBlock,
   prefilledItem,
@@ -21,7 +22,7 @@ import { loadWorkout, saveWorkout } from './api'
 import { BlockEditor } from './BlockEditor'
 import { WorkoutView } from './WorkoutView'
 
-type PickTarget = { block: number; item: number | null; level?: AltLevel }
+type PickTarget = { block: number; item: number | null; level?: AltLevel; group?: number | null }
 
 export function WorkoutEditor() {
   const { id } = useParams()
@@ -78,10 +79,10 @@ export function WorkoutEditor() {
   }
 
   function onPicked(ex: Exercise) {
-    const { block: bi, item: ii, level } = pick!
+    const { block: bi, item: ii, level, group } = pick!
     const block = draft!.blocks[bi]
     let items
-    if (ii === null) items = [...block.items, prefilledItem(draft!, bi, ex.id)]
+    if (ii === null) items = addItem(block, prefilledItem(draft!, bi, ex.id), group)
     else if (level) {
       items = block.items.map((it, j) =>
         j === ii ? { ...it, levels: { ...it.levels, [level]: { ...it.levels[level], exercise_id: ex.id } } } : it,
@@ -164,7 +165,7 @@ export function WorkoutEditor() {
             onChange={(nb) => updateBlock(i, nb)}
             onMove={(d) => moveBlock(i, d)}
             onRemove={() => setBlocks(draft.blocks.filter((_, j) => j !== i))}
-            onPick={(item, level) => setPick({ block: i, item, level })}
+            onPick={(item, level, group) => setPick({ block: i, item, level, group })}
           />
         ))}
         <Button

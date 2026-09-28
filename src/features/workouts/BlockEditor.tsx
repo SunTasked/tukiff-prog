@@ -1,10 +1,13 @@
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
+import { SCORE_TYPES, defaultScoreType, scoreType, type ScoreType } from '../../domain/scoring'
 import {
   BLOCK_KINDS,
   DEFAULT_FORMAT,
   FORMATS,
   defaultParams,
+  itemRuns,
+  removeGroup,
   type AltLevel,
   type BlockDraft,
   type BlockKind,
@@ -24,7 +27,8 @@ type Props = {
   onChange: (b: BlockDraft) => void
   onMove: (delta: -1 | 1) => void
   onRemove: () => void
-  onPick: (itemIndex: number | null, level?: AltLevel) => void
+  /** itemIndex null = new item, appended to the block or to sub-block `group`. */
+  onPick: (itemIndex: number | null, level?: AltLevel, group?: number | null) => void
 }
 
 const int = (v: number | null) => (v == null ? undefined : Math.round(v))
@@ -42,6 +46,23 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
   }
   const setFormat = (format: Format) => set({ format, params: defaultParams(format) })
   const p = block.params
+  // Stored only when it differs from the format's default.
+  const setScore = (score: ScoreType) => setParams({ score: score === defaultScoreType(block.format) ? undefined : score })
+  const setGroup = (g: number, patch: Partial<BlockDraft['groups'][number]>) =>
+    set({ groups: block.groups.map((x, i) => (i === g ? { ...x, ...patch } : x)) })
+
+  const itemEditor = (item: BlockDraft['items'][number], i: number) => (
+    <ItemEditor
+      key={i}
+      item={item}
+      measure={item.exercise_id ? (byId.get(item.exercise_id)?.measure as Measure) : undefined}
+      nameOf={nameOf}
+      onChange={(it) => set({ items: block.items.map((x, j) => (j === i ? it : x)) })}
+      onRemove={() => set({ items: block.items.filter((_, j) => j !== i) })}
+      onDuplicate={() => set({ items: block.items.toSpliced(i + 1, 0, structuredClone(item)) })}
+      onPick={(level) => onPick(i, level)}
+    />
+  )
 
   return (
     <section className="rounded-2xl bg-zinc-900 p-3">
@@ -118,25 +139,84 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
           </Field>
         </div>
 
-        {block.items.map((item, i) => (
-          <ItemEditor
-            key={i}
-            item={item}
-            measure={item.exercise_id ? (byId.get(item.exercise_id)?.measure as Measure) : undefined}
-            nameOf={nameOf}
-            onChange={(it) => set({ items: block.items.map((x, j) => (j === i ? it : x)) })}
-            onRemove={() => set({ items: block.items.filter((_, j) => j !== i) })}
-            onDuplicate={() => set({ items: block.items.toSpliced(i + 1, 0, structuredClone(item)) })}
-            onPick={(level) => onPick(i, level)}
-          />
-        ))}
-        <button
-          type="button"
-          className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-          onClick={() => onPick(null)}
-        >
-          + Mouvement
-        </button>
+        <div>
+          <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
+          <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
+        </div>
+
+        {itemRuns(block).map((run) =>
+          run.group === null ? (
+            run.items.map(({ item, index }) => itemEditor(item, index))
+          ) : (
+            <div key={`g${run.group}`} className="flex flex-col gap-2 rounded-xl border border-lime-400/40 p-2">
+              <div className="flex items-center gap-2">
+                <SmallInput
+                  placeholder="Sous-bloc (ex. DB DT)"
+                  value={block.groups[run.group].title}
+                  onChange={(e) => setGroup(run.group!, { title: e.target.value })}
+                />
+                <button
+                  type="button"
+                  aria-label="Retirer le sous-bloc"
+                  title="Retirer le sous-bloc (garde les mouvements)"
+                  className="p-2 text-zinc-500"
+                  onClick={() => set(removeGroup(block, run.group!))}
+                >
+                  ✕
+                </button>
+              </div>
+              {run.items.map(({ item, index }) => itemEditor(item, index))}
+              <button
+                type="button"
+                className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+                onClick={() => onPick(null, undefined, run.group)}
+              >
+                + Mouvement dans le sous-bloc
+              </button>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Rounds au 1er tour">
+                  <NumberInput
+                    placeholder="1"
+                    value={block.groups[run.group].start}
+                    onChange={(v) => setGroup(run.group!, { start: int(v) })}
+                  />
+                </Field>
+                <Field label="Rounds ajoutés par tour">
+                  <NumberInput
+                    placeholder="0"
+                    value={block.groups[run.group].step}
+                    onChange={(v) => setGroup(run.group!, { step: int(v) })}
+                  />
+                </Field>
+              </div>
+              <Field label="Ce qui change à chaque tour">
+                <textarea
+                  rows={2}
+                  placeholder="Tour 1 : 1 round, tour 2 : 2 rounds…"
+                  className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 outline-none focus:border-lime-400"
+                  value={block.groups[run.group].note}
+                  onChange={(e) => setGroup(run.group!, { note: e.target.value })}
+                />
+              </Field>
+            </div>
+          ),
+        )}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            type="button"
+            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+            onClick={() => onPick(null)}
+          >
+            + Mouvement
+          </button>
+          <button
+            type="button"
+            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+            onClick={() => set({ groups: [...block.groups, { title: '', note: '' }] })}
+          >
+            + Sous-bloc
+          </button>
+        </div>
 
         <Field label="Notes du bloc">
           <textarea

@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
+  addItem,
   blockLevels,
+  itemRuns,
+  removeGroup,
   emptyItem,
   formatDuration,
   formatSummary,
@@ -149,4 +152,23 @@ it('offers only RX and the levels defined in the block', () => {
   b.items[0] = { ...emptyItem('t'), levels: { elite: { load_kg: 60 }, scaled: {} } }
   expect(blockLevels(b)).toEqual(['elite', 'rx', 'foundation'])
   expect(blockLevels(newBlock('warmup', 'w'))).toEqual(['rx'])
+})
+
+describe('sub-blocks', () => {
+  const g = (id: string, group: number | null) => ({ ...emptyItem(id), group })
+  const block = { ...newBlock('metcon', 'b'), groups: [{ title: 'DB DT', note: '' }, { title: 'Vide', note: '' }], items: [g('dl', 0), g('pc', 0), g('bbjo', null)] }
+
+  it('groups consecutive items, empty sub-blocks last', () => {
+    expect(itemRuns(block).map((r) => [r.group, r.items.map((i) => i.index)])).toEqual([[0, [0, 1]], [null, [2]], [1, []]])
+  })
+  it('adds an item at the end of its sub-block', () => {
+    expect(addItem(block, emptyItem('pj'), 0).map((i) => i.exercise_id)).toEqual(['dl', 'pc', 'pj', 'bbjo'])
+    expect(addItem(block, emptyItem('x'), 1).at(-1)).toMatchObject({ exercise_id: 'x', group: 1 })
+    expect(addItem(block, emptyItem('y')).at(-1)).toMatchObject({ exercise_id: 'y', group: null })
+  })
+  it('removing a sub-block keeps its items', () => {
+    const r = removeGroup({ ...block, items: [...block.items, g('x', 1)] }, 0)
+    expect(r.groups.map((x) => x.title)).toEqual(['Vide'])
+    expect(r.items.map((i) => i.group)).toEqual([null, null, null, 0])
+  })
 })

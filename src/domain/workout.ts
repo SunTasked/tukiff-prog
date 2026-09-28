@@ -42,6 +42,8 @@ export type FormatParams = {
   work_s?: number // tabata
   rest_s?: number // tabata
   sets?: number // sets_reps
+  /** Score type chosen by the coach; absent = the format's default (see scoring.ts). */
+  score?: 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
 }
 
 export type LevelOverride = {
@@ -70,7 +72,15 @@ export type ItemDraft = {
   duration_s: number | null
   notes: string
   levels: Partial<Record<AltLevel, LevelOverride>>
+  /** Index of the sub-block (BlockDraft.groups) the item belongs to; null = directly in the block. */
+  group: number | null
 }
+
+/**
+ * Sub-block: movements repeated together ("DB DT"), with what changes each round underneath.
+ * start/step: rounds of the sub-block in the n-th round of the block = start + (n - 1) × step (default 1 and 0: once).
+ */
+export type GroupDraft = { title: string; note: string; start?: number; step?: number }
 
 export type BlockDraft = {
   id: string
@@ -80,6 +90,7 @@ export type BlockDraft = {
   params: FormatParams
   notes: string
   items: ItemDraft[]
+  groups: GroupDraft[]
 }
 
 /** date / program_id: null = library template; set = scheduled workout (only used when creating). */
@@ -134,12 +145,13 @@ export function emptyItem(exercise_id: string | null = null, label = ''): ItemDr
     duration_s: null,
     notes: '',
     levels: {},
+    group: null,
   }
 }
 
 export function newBlock(kind: BlockKind, id: string): BlockDraft {
   const format = DEFAULT_FORMAT[kind]
-  return { id, kind, title: '', format, params: defaultParams(format), notes: '', items: [] }
+  return { id, kind, title: '', format, params: defaultParams(format), notes: '', items: [], groups: [] }
 }
 
 /** Kind suggested for the n-th block (0-based) of a typical CrossFit class. */
@@ -303,4 +315,34 @@ export function prefilledItem(w: WorkoutDraft, blockIndex: number, exerciseId: s
     if (hasOverride(kept)) levels[l] = kept
   }
   return { ...emptyItem(exerciseId), load_kg: prev.load_kg, load_kg_f: prev.load_kg_f, pct_1rm: prev.pct_1rm, levels }
+}
+
+// Sub-blocks --------------------------------------------------------------------
+
+export type ItemRun = { group: number | null; items: { item: ItemDraft; index: number }[] }
+
+/** Consecutive items of the same sub-block, in order; sub-blocks without items come last, empty. */
+export function itemRuns(block: BlockDraft): ItemRun[] {
+  const runs: ItemRun[] = []
+  block.items.forEach((item, index) => {
+    const last = runs.at(-1)
+    if (last && last.group === item.group) last.items.push({ item, index })
+    else runs.push({ group: item.group, items: [{ item, index }] })
+  })
+  for (const [g] of block.groups.entries()) if (!runs.some((r) => r.group === g)) runs.push({ group: g, items: [] })
+  return runs
+}
+
+/** Adds an item at the end of the block, or at the end of a sub-block (its items stay together). */
+export function addItem(block: BlockDraft, item: ItemDraft, group: number | null = null): ItemDraft[] {
+  const it = { ...item, group }
+  if (group === null) return [...block.items, it]
+  const last = block.items.findLastIndex((i) => i.group === group)
+  return block.items.toSpliced(last === -1 ? block.items.length : last + 1, 0, it)
+}
+
+/** Removes a sub-block; its items stay in the block. */
+export function removeGroup(block: BlockDraft, group: number): Pick<BlockDraft, 'items' | 'groups'> {
+  const shift = (g: number | null) => (g === null || g < group ? g : g === group ? null : g - 1)
+  return { groups: block.groups.filter((_, i) => i !== group), items: block.items.map((i) => ({ ...i, group: shift(i.group) })) }
 }

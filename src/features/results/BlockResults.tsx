@@ -21,7 +21,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 /** "My score" button + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately. */
 export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, onChange }: Props) {
   const [open, setOpen] = useState(false)
-  const type = scoreType(block.format)
+  const type = scoreType(block.format, block.params)
   const mine = results.find((r) => r.athlete_id === me)
   const boards = leaderboards(
     type,
@@ -73,6 +73,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           blockId={block.id}
           blockLabel={blockLabel}
           type={type}
+          block={block}
           levels={blockLevels(block)}
           existing={mine}
           onClose={() => setOpen(false)}
