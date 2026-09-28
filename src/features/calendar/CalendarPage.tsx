@@ -158,7 +158,7 @@ export function CalendarPage() {
       <>
         <PageTitle>Programmation</PageTitle>
         <p className="text-zinc-400">
-          Tu n’as encore aucune programmation. Crée-en une dans l’onglet <b>Athlètes</b> → Programmes.
+          Tu n’as encore aucune programmation. Crée-en une dans l’onglet <b>Communauté</b>.
         </p>
       </>
     )
