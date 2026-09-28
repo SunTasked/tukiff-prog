@@ -52,7 +52,7 @@ export function WorkoutView({
     <div className="flex flex-col gap-4">
       {workout.notes && <p className="whitespace-pre-line text-zinc-300">{workout.notes}</p>}
       {workout.blocks.map((b, i) => (
-        <section key={b.id} className="rounded-2xl bg-zinc-900 p-4">
+        <section key={b.id} id={`block-${b.id}`} className="scroll-mt-4 rounded-2xl bg-zinc-900 p-4">
           <div className="flex items-center justify-between gap-2">
             <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
               {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
