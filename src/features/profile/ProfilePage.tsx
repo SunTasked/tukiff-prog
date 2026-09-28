@@ -32,7 +32,7 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string; share_scores?: boolean; gender?: Gender }) {
+  async function update(values: { display_name?: string; gender?: Gender }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
@@ -134,23 +134,6 @@ export function ProfilePage() {
             <span className="font-semibold">Mes records</span>
             <span className="text-zinc-400">1RM, benchmarks ›</span>
           </Link>
-        </Section>
-
-        <Section title="Confidentialité">
-        <Card>
-          <label className="flex items-center justify-between gap-4">
-            <span>
-              <span className="block">Partager mes scores</span>
-              <span className="block text-sm text-zinc-400">Les autres athlètes voient mes résultats. Le coach les voit toujours.</span>
-            </span>
-            <input
-              type="checkbox"
-              className="size-6 accent-lime-400"
-              checked={profile?.share_scores ?? true}
-              onChange={(e) => update({ share_scores: e.target.checked })}
-            />
-          </label>
-        </Card>
         </Section>
 
         <Section title="Sécurité">

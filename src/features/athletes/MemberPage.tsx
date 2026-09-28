@@ -84,7 +84,6 @@ export function MemberPage() {
       <p className="-mt-3 mb-4 text-sm text-zinc-400">
         {roleLabel(member)}
         {member.is_app_owner ? ' · propriétaire de l’app' : ''}
-        {member.share_scores ? ' · scores partagés' : ''}
       </p>
       <div className="mb-4">
         <Chips options={TABS} value={tab} onChange={setTab} />
