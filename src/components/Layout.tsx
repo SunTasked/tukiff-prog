@@ -1,8 +1,10 @@
-import { NavLink, Outlet } from 'react-router'
+import { useEffect } from 'react'
+import { NavLink, Outlet, useLocation } from 'react-router'
 import { isAdmin, isCoach, useAuth } from '../features/auth/AuthProvider'
+import { startUsageTracking, trackView } from '../lib/usage'
 import { InstallBanner } from './InstallBanner'
 
-type Tab = { to: string; label: string; icon: string; coachOnly?: boolean; longLabel?: string }
+type Tab = { to: string; label: string; icon: string; coachOnly?: boolean; adminOnly?: boolean; longLabel?: string }
 
 // Coaches are athletes too: they get the athlete tabs plus coach tabs.
 const tabs: Tab[] = [
@@ -28,13 +30,24 @@ const tabs: Tab[] = [
     // Group: one member in front, two behind.
     icon: 'M15.5 8a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0zM5.5 21a6.5 6.5 0 0 1 13 0zM8 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM21 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM5.8 19H1.5a4.5 4.5 0 0 1 7.2-3.6M18.2 19h4.3a4.5 4.5 0 0 0-7.2-3.6',
   },
+  {
+    to: '/admin',
+    label: 'Stats',
+    longLabel: 'Statistiques',
+    adminOnly: true,
+    icon: 'M3 3v18h18M8 17v-5M13 17V8M18 17v-9',
+  },
   { to: '/profile', label: 'Profil', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0' },
 ]
 
 export function Layout() {
   const { profile } = useAuth()
+  const { pathname } = useLocation()
+  useEffect(() => startUsageTracking(), [])
+  useEffect(() => trackView(pathname), [pathname])
+
   const visible = tabs
-    .filter((t) => !t.coachOnly || isCoach(profile))
+    .filter((t) => (!t.coachOnly || isCoach(profile)) && (!t.adminOnly || isAdmin(profile)))
     .map((t) => (t.to === '/athletes' && isAdmin(profile) ? { ...t, label: 'Membres', longLabel: 'Membres' } : t))
 
   const icon = (t: Tab) => (

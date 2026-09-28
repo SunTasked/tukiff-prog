@@ -8,7 +8,7 @@ import { CalendarPage } from './features/calendar/CalendarPage'
 import { ScheduledWorkoutPage } from './features/calendar/ScheduledWorkoutPage'
 import { AthleteWorkoutPage } from './features/home/AthleteWorkoutPage'
 import { ProgramPage } from './features/programs/ProgramPage'
-import { hasPassword, isCoach, useAuth } from './features/auth/AuthProvider'
+import { hasPassword, isAdmin, isCoach, useAuth } from './features/auth/AuthProvider'
 import { LoginPage } from './features/auth/LoginPage'
 import { OnboardingPage } from './features/auth/OnboardingPage'
 import { PendingPage } from './features/auth/PendingPage'
@@ -18,11 +18,13 @@ import { HomePage } from './features/home/HomePage'
 import { LibraryPage } from './features/library/LibraryPage'
 import { WorkoutEditor } from './features/workouts/WorkoutEditor'
 import { WorkoutPage } from './features/workouts/WorkoutPage'
+import { AdminStatsPage } from './features/admin/AdminStatsPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { RecordsPage } from './features/records/RecordsPage'
 import { TimerPage } from './features/timer/TimerPage'
 import { getItem, setItem } from './lib/storage'
 import { supabase } from './lib/supabase'
+import { skipLoadTiming } from './lib/usage'
 
 const INVITE_KEY = 'pendingInvite'
 
@@ -54,6 +56,7 @@ export default function App() {
   }, [session, pendingInvite])
 
   if (loading) return <Spinner />
+  if (!session || !profile?.role || !profile.display_name || !hasPassword(session)) skipLoadTiming()
   if (!session) return <LoginPage inviteCode={pendingInvite} />
   if (pendingInvite) return <Spinner />
   if (location.pathname === '/reset-password') return <ResetPasswordPage onDone={() => navigate('/', { replace: true })} />
@@ -84,6 +87,7 @@ export default function App() {
             </Route>
           </>
         )}
+        {isAdmin(profile) && <Route path="admin" element={<AdminStatsPage />} />}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Route>
     </Routes>

@@ -554,6 +554,64 @@ export type Database = {
           },
         ]
       }
+      usage_events: {
+        Row: {
+          at: string
+          id: number
+          key: string
+          kind: string
+          ms: number | null
+          user_id: string
+        }
+        Insert: {
+          at?: string
+          id?: never
+          key?: string
+          kind: string
+          ms?: number | null
+          user_id: string
+        }
+        Update: {
+          at?: string
+          id?: never
+          key?: string
+          kind?: string
+          ms?: number | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_events_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_last_seen: {
+        Row: {
+          last_at: string
+          user_id: string
+        }
+        Insert: {
+          last_at?: string
+          user_id: string
+        }
+        Update: {
+          last_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_last_seen_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_blocks: {
         Row: {
           format: string
@@ -662,6 +720,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
+      admin_usage: { Args: never; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
@@ -710,6 +769,10 @@ export type Database = {
         Returns: undefined
       }
       shares_scores: { Args: { p_user: string }; Returns: boolean }
+      track_usage: {
+        Args: { p_key?: string; p_kind: string; p_ms?: number }
+        Returns: undefined
+      }
       transfer_program: {
         Args: { p_new_owner: string; p_program: string }
         Returns: undefined
