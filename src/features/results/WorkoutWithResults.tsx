@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { WorkoutDraft } from '../../domain/workout'
+import { useOnResume } from '../../lib/resume'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { useExercises } from '../exercises/useExercises'
@@ -53,6 +54,10 @@ export function WorkoutWithResults({
   useEffect(() => {
     reloadSkips()
   }, [reloadSkips])
+  useOnResume(() => {
+    reloadReactions()
+    reloadSkips()
+  })
   useEffect(() => {
     if (!onDone || !loaded || !reactions || !skips) return
     onDone(new Set([...skips, ...results.filter((r) => r.athlete_id === me).map((r) => r.block_id)]))
