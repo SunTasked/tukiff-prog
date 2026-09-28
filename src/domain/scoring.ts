@@ -201,3 +201,8 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
     })
     .filter((b) => b.rows.length > 0)
 }
+
+/** The viewer's own gender board first (women see the women's board first), the others keep their order. */
+export function myGenderFirst<B extends { gender: Gender }>(boards: B[], mine: string | null | undefined): B[] {
+  return [...boards].sort((a, b) => Number(b.gender === mine) - Number(a.gender === mine))
+}

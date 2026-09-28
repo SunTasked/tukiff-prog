@@ -3,7 +3,7 @@ import { Avatar } from '../../components/Avatar'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatWeek, mondayOf, publicationStatus } from '../../domain/dates'
 import type { Gender } from '../../domain/profile'
-import { scoreType, weeklyLeaderboards } from '../../domain/scoring'
+import { myGenderFirst, scoreType, weeklyLeaderboards } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { loadWorkout } from '../workouts/api'
@@ -27,7 +27,7 @@ export function WeeklyBoardSheet({
   week: string
   onClose: () => void
 }) {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const me = session?.user.id
   const [monday, setMonday] = useState(mondayOf(week))
   const [enabled, setEnabled] = useState(true)
@@ -119,7 +119,7 @@ export function WeeklyBoardSheet({
             <p className="text-zinc-400">Aucun score cette semaine.</p>
           </Card>
         ) : (
-          boards.map(({ gender, blocks, rows }) => (
+          myGenderFirst(boards, profile?.gender).map(({ gender, blocks, rows }) => (
             <div key={gender} className="mb-5">
               <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
                 {BOARD_TITLES[gender]} · {blocks} bloc{blocks > 1 ? 's' : ''}

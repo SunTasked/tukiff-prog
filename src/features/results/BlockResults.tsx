@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import type { Gender } from '../../domain/profile'
-import { compactRows, formatScore, leaderboards, scoreType, type ScoreType } from '../../domain/scoring'
+import { compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../auth/AuthProvider'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
 
@@ -35,9 +36,13 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const [full, setFull] = useState(false)
   const type = scoreType(block.format, block.params)
   const mine = results.find((r) => r.athlete_id === me)
-  const boards = leaderboards(
-    type,
-    results.map((r) => ({ ...r, gender: r.profiles?.gender ?? null })),
+  const { profile } = useAuth()
+  const boards = myGenderFirst(
+    leaderboards(
+      type,
+      results.map((r) => ({ ...r, gender: r.profiles?.gender ?? null })),
+    ),
+    profile?.gender,
   )
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
