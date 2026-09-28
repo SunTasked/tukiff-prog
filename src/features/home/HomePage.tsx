@@ -1,7 +1,7 @@
-import { useEffect, useState, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
-import { groupByProgram } from '../../domain/grouping'
+import { firstPendingBlock, groupByProgram } from '../../domain/grouping'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatLongDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
@@ -27,6 +27,21 @@ export function HomePage() {
   const [week, setWeek] = useState<Row[] | null>(null)
   const [workouts, setWorkouts] = useState<(WorkoutDraft & Row)[] | null>(null)
 
+  // Auto-scroll, once per day shown, to the first block of the open panels I neither scored nor skipped.
+  const done = useRef(new Map<string, Set<string>>())
+  const scrolledDay = useRef<string | null>(null)
+  const report = (workoutId: string, blockIds: Set<string>) => {
+    done.current.set(workoutId, blockIds)
+    if (!workouts || scrolledDay.current === day) return
+    const open = groupByProgram(workouts)
+      .filter((p) => getItem(panelStorageKey(p.key)) !== '1')
+      .flatMap((p) => p.items)
+    if (!open.every((w) => done.current.has(w.id))) return
+    scrolledDay.current = day
+    const target = firstPendingBlock(open, done.current)
+    if (target) document.getElementById(`block-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
 
   useEffect(() => {
@@ -38,6 +53,7 @@ export function HomePage() {
   useEffect(() => {
     if (!week) return
     setWorkouts(null)
+    done.current = new Map()
     const rows = week.filter((r) => r.date === day)
     Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
       setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
@@ -109,7 +125,10 @@ export function HomePage() {
                       <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
                     </p>
                   )}
-                  <WorkoutWithResults workout={w} canLog={published} />
+                  <WorkoutWithResults workout={w} canLog={published}
+                    // Unpublished: nothing to log, so never the auto-scroll target.
+                    onDone={(ids) => report(w.id, published ? ids : new Set(w.blocks.map((b) => b.id)))}
+                  />
                 </div>
               )
             })}
@@ -119,6 +138,8 @@ export function HomePage() {
     </>
   )
 }
+
+const panelStorageKey = (panelKey: string) => `panel-collapsed:${panelKey}`
 
 /** Collapsible panel for one program; the collapsed state is remembered on the device. */
 function ProgramPanel({
@@ -130,7 +151,7 @@ function ProgramPanel({
   label: string
   children: ReactNode
 }) {
-  const storageKey = `panel-collapsed:${panelKey}`
+  const storageKey = panelStorageKey(panelKey)
   const [open, setOpen] = useState(() => getItem(storageKey) !== '1')
   const toggle = () => {
     setItem(storageKey, open ? '1' : null)

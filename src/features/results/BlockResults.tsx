@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { formatScore, leaderboards, scoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
+import { supabase } from '../../lib/supabase'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
 
@@ -12,32 +13,61 @@ type Props = {
   results: ResultRow[]
   me: string | undefined
   canLog: boolean
+  /** I marked this block "Je passe"; entering a score clears it. */
+  skipped: boolean
   onChange: () => void
 }
 
 const MEDALS = ['🥇', '🥈', '🥉']
 const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 
-/** "My score" button + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately. */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, onChange }: Props) {
+/** "My score" / "Je passe" buttons + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately. */
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, onChange }: Props) {
   const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
   const type = scoreType(block.format, block.params)
   const mine = results.find((r) => r.athlete_id === me)
   const boards = leaderboards(
     type,
     results.map((r) => ({ ...r, gender: r.profiles?.gender ?? null })),
   )
+  const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
+
+  async function skip() {
+    setBusy(true)
+    await supabase.from('block_skips').insert({ workout_id: workoutId, block_id: block.id })
+    setBusy(false)
+    onChange()
+  }
 
   return (
     <div className="mt-3 border-t border-zinc-800 pt-3">
-      {canLog && (
-        <button
-          className={`w-full rounded-xl py-2 text-sm font-semibold ${mine ? 'bg-zinc-800 text-zinc-100' : 'bg-lime-400 text-zinc-950'}`}
-          onClick={() => setOpen(true)}
-        >
-          {mine ? `Mon score : ${formatScore(type, mine)} · ${LEVELS[mine.level as Level]} ✎` : type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'}
-        </button>
-      )}
+      {canLog &&
+        (mine ? (
+          <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
+            Mon score : {formatScore(type, mine)} · {LEVELS[mine.level as Level]} ✎
+          </button>
+        ) : skipped ? (
+          <div className="flex items-center gap-2">
+            <span className="shrink-0 rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-400">⏭ Passé</span>
+            <button className="flex-1 rounded-xl border border-zinc-700 py-2 text-sm font-semibold text-zinc-200" onClick={() => setOpen(true)}>
+              {enterLabel}
+            </button>
+          </div>
+        ) : (
+          <div className="flex gap-2">
+            <button className="flex-1 rounded-xl bg-lime-400 py-2 text-sm font-semibold text-zinc-950" onClick={() => setOpen(true)}>
+              {enterLabel}
+            </button>
+            <button
+              className="shrink-0 rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-300"
+              disabled={busy}
+              onClick={skip}
+            >
+              Je passe
+            </button>
+          </div>
+        ))}
 
       {boards.map(({ gender, rows }) => (
         <div key={gender} className="mt-3">
@@ -77,8 +107,9 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           levels={blockLevels(block)}
           existing={mine}
           onClose={() => setOpen(false)}
-          onSaved={() => {
+          onSaved={async () => {
             setOpen(false)
+            if (skipped) await supabase.from('block_skips').delete().eq('block_id', block.id).eq('athlete_id', me!)
             onChange()
           }}
         />

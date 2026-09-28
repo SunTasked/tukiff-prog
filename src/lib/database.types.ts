@@ -126,6 +126,49 @@ export type Database = {
           },
         ]
       }
+      block_skips: {
+        Row: {
+          athlete_id: string
+          block_id: string
+          created_at: string
+          workout_id: string
+        }
+        Insert: {
+          athlete_id?: string
+          block_id: string
+          created_at?: string
+          workout_id: string
+        }
+        Update: {
+          athlete_id?: string
+          block_id?: string
+          created_at?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "block_skips_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_skips_block_id_fkey"
+            columns: ["block_id"]
+            isOneToOne: false
+            referencedRelation: "workout_blocks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "block_skips_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       exercise_sections: {
         Row: {
           created_at: string
