@@ -554,39 +554,59 @@ export type Database = {
           },
         ]
       }
-      usage_daily: {
+      usage_events: {
         Row: {
-          count: number
-          day: string
+          at: string
+          id: number
           key: string
           kind: string
-          last_at: string
-          total_ms: number
+          ms: number | null
           user_id: string
         }
         Insert: {
-          count?: number
-          day: string
+          at?: string
+          id?: never
           key?: string
           kind: string
-          last_at?: string
-          total_ms?: number
+          ms?: number | null
           user_id: string
         }
         Update: {
-          count?: number
-          day?: string
+          at?: string
+          id?: never
           key?: string
           kind?: string
-          last_at?: string
-          total_ms?: number
+          ms?: number | null
           user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "usage_daily_user_id_fkey"
+            foreignKeyName: "usage_events_user_id_fkey"
             columns: ["user_id"]
             isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      usage_last_seen: {
+        Row: {
+          last_at: string
+          user_id: string
+        }
+        Insert: {
+          last_at?: string
+          user_id: string
+        }
+        Update: {
+          last_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_last_seen_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
@@ -700,7 +720,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
-      admin_usage: { Args: { p_days?: number }; Returns: Json }
+      admin_usage: { Args: never; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }

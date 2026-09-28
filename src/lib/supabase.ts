@@ -14,18 +14,29 @@ export const pendingRequests = {
   count: () => pendingWrites,
 }
 
+/** All requests in flight (except usage counters), used to time how long a screen takes to load its data. */
+export const network = { inFlight: 0, lastEnd: 0 }
+
 const trackedFetch: typeof fetch = async (input, init) => {
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
   const url = input instanceof Request ? input.url : String(input)
-  // Reads and background usage counters never block the screen.
-  if (method === 'GET' || method === 'HEAD' || url.includes('/rpc/track_usage')) return fetch(input, init)
-  pendingWrites++
-  notify()
+  if (url.includes('/rpc/track_usage')) return fetch(input, init)
+  // Reads never block the screen.
+  const write = method !== 'GET' && method !== 'HEAD'
+  network.inFlight++
+  if (write) {
+    pendingWrites++
+    notify()
+  }
   try {
     return await fetch(input, init)
   } finally {
-    pendingWrites--
-    notify()
+    network.inFlight--
+    network.lastEnd = performance.now()
+    if (write) {
+      pendingWrites--
+      notify()
+    }
   }
 }
 
