@@ -9,16 +9,18 @@ export type ResultRow = Result & {
 /** Results of a workout visible to the current user (RLS: own, shared, or all for coaches). */
 export function useWorkoutResults(workoutId: string | undefined) {
   const [results, setResults] = useState<ResultRow[]>([])
+  const [loaded, setLoaded] = useState(false)
 
   const reload = useCallback(async () => {
     if (!workoutId) return
     const { data } = await supabase.from('results').select('*, profiles(display_name, gender, avatar_url)').eq('workout_id', workoutId)
     setResults((data ?? []) as ResultRow[])
+    setLoaded(true)
   }, [workoutId])
 
   useEffect(() => {
     reload()
   }, [reload])
 
-  return { results, reload }
+  return { results, loaded, reload }
 }
