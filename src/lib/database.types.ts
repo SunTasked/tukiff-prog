@@ -349,9 +349,11 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
           created_at: string
           display_name: string | null
           enrolled_at: string | null
+          gender: string | null
           id: string
           is_admin: boolean
           is_app_owner: boolean
@@ -359,9 +361,11 @@ export type Database = {
           share_scores: boolean
         }
         Insert: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           enrolled_at?: string | null
+          gender?: string | null
           id: string
           is_admin?: boolean
           is_app_owner?: boolean
@@ -369,9 +373,11 @@ export type Database = {
           share_scores?: boolean
         }
         Update: {
+          avatar_url?: string | null
           created_at?: string
           display_name?: string | null
           enrolled_at?: string | null
+          gender?: string | null
           id?: string
           is_admin?: boolean
           is_app_owner?: boolean

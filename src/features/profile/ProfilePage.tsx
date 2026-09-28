@@ -1,14 +1,18 @@
-import { useEffect, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
+import { Avatar } from '../../components/Avatar'
 import { programColor } from '../../components/ProgramBadges'
-import { Button, Card, ErrorText, Input, PageTitle } from '../../components/ui'
+import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../components/ui'
+import { GENDERS, type Gender } from '../../domain/profile'
+import { removeAvatar, uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
 import { roleLabel, useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
 
 export function ProfilePage() {
   const { session, profile, refreshProfile } = useAuth()
-  const [name, setName] = useState(profile?.display_name ?? '')
+  const [editingName, setEditingName] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [programs, setPrograms] = useState<string[] | null>(null)
@@ -28,17 +32,40 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string; share_scores?: boolean }) {
+  async function update(values: { display_name?: string; share_scores?: boolean; gender?: Gender }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
-    if (error) return setError(error.message)
+    if (error) {
+      setError(error.message)
+      return false
+    }
     await refreshProfile()
     setSaved(true)
+    return true
+  }
+
+  async function changePhoto(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (!file) return
+    setError('')
+    setSaved(false)
+    const err = await uploadAvatar(profile!.id, file).catch(() => 'Image illisible : essaie une autre photo (JPEG ou PNG).')
+    if (err) return setError(err)
+    await refreshProfile()
+  }
+
+  async function deletePhoto() {
+    if (!confirm('Retirer ta photo de profil ?')) return
+    const err = await removeAvatar(profile!.id)
+    if (err) return setError(err)
+    await refreshProfile()
   }
 
   async function deleteAccount() {
     if (!confirm('Supprimer définitivement ton compte et tous tes scores ? Cette action est irréversible.')) return
+    if (profile?.avatar_url) await removeAvatar(profile.id)
     const { error } = await supabase.rpc('delete_my_account')
     if (error) {
       setError(
@@ -53,18 +80,37 @@ export function ProfilePage() {
     await supabase.auth.signOut()
   }
 
-  const saveName = (e: FormEvent) => {
-    e.preventDefault()
-    update({ display_name: name.trim() })
-  }
-
   return (
     <>
       <PageTitle>Profil</PageTitle>
       <div className="flex flex-col gap-4">
         <Card className="flex flex-col gap-3">
+          <div className="flex items-center gap-4">
+            <Avatar url={profile?.avatar_url} name={profile?.display_name} className="size-16 text-xl" />
+            <div className="flex flex-col items-start gap-1 text-sm">
+              <button className="font-semibold text-lime-400" onClick={() => fileInput.current?.click()}>
+                {profile?.avatar_url ? 'Changer la photo' : 'Ajouter une photo'}
+              </button>
+              {profile?.avatar_url && (
+                <button className="text-zinc-400" onClick={deletePhoto}>
+                  Retirer
+                </button>
+              )}
+            </div>
+            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={changePhoto} />
+          </div>
           <Row label="Email">{session?.user.email}</Row>
-          <Row label="Pseudo">{profile?.display_name}</Row>
+          <Row label="Pseudo">
+            <span className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">{profile?.display_name}</span>
+              <button className="shrink-0 rounded-lg bg-zinc-800 px-3 py-1 text-sm" onClick={() => setEditingName(true)}>
+                Modifier
+              </button>
+            </span>
+          </Row>
+          <Row label="Genre">
+            <Chips options={GENDERS} value={(profile?.gender as Gender | null) ?? null} onChange={(gender) => update({ gender })} />
+          </Row>
           <Row label="Rôle">{roleLabel(profile)}</Row>
           <Row label="Programmes">
             {programs === null ? (
@@ -88,15 +134,6 @@ export function ProfilePage() {
             <span className="font-semibold">Mes records</span>
             <span className="text-zinc-400">1RM, benchmarks ›</span>
           </Link>
-        </Section>
-
-        <Section title="Modifier mon pseudo">
-          <Card>
-            <form onSubmit={saveName} className="flex flex-col gap-3">
-              <Input label="Pseudo (visible par le groupe)" required maxLength={40} value={name} onChange={(e) => setName(e.target.value)} />
-              <Button variant="secondary">Enregistrer</Button>
-            </form>
-          </Card>
         </Section>
 
         <Section title="Confidentialité">
@@ -138,6 +175,16 @@ export function ProfilePage() {
           Supprimer mon compte
         </button>
       </div>
+
+      {editingName && (
+        <NameDialog
+          initial={profile?.display_name ?? ''}
+          onCancel={() => setEditingName(false)}
+          onSave={async (display_name) => {
+            if (await update({ display_name })) setEditingName(false)
+          }}
+        />
+      )}
     </>
   )
 }
@@ -161,5 +208,31 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
       <SectionTitle>{title}</SectionTitle>
       {children}
     </section>
+  )
+}
+
+function NameDialog({ initial, onCancel, onSave }: { initial: string; onCancel: () => void; onSave: (name: string) => void }) {
+  const [name, setName] = useState(initial)
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    onSave(name.trim())
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onCancel}>
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl"
+      >
+        <h2 className="font-semibold">Modifier mon pseudo</h2>
+        <Input label="Pseudo (visible par le groupe)" required maxLength={40} autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
+            Annuler
+          </Button>
+          <Button className="flex-1">Enregistrer</Button>
+        </div>
+      </form>
+    </div>
   )
 }

@@ -85,7 +85,7 @@ export function Chips<T extends string>({
   onChange,
 }: {
   options: Record<T, string>
-  value: T
+  value: T | null
   onChange: (v: T) => void
 }) {
   return (
