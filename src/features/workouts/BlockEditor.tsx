@@ -173,6 +173,22 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
               >
                 + Mouvement dans le sous-bloc
               </button>
+              <div className="grid grid-cols-2 gap-2">
+                <Field label="Rounds au 1er tour">
+                  <NumberInput
+                    placeholder="1"
+                    value={block.groups[run.group].start}
+                    onChange={(v) => setGroup(run.group!, { start: int(v) })}
+                  />
+                </Field>
+                <Field label="Rounds ajoutés par tour">
+                  <NumberInput
+                    placeholder="0"
+                    value={block.groups[run.group].step}
+                    onChange={(v) => setGroup(run.group!, { step: int(v) })}
+                  />
+                </Field>
+              </div>
               <Field label="Ce qui change à chaque tour">
                 <textarea
                   rows={2}

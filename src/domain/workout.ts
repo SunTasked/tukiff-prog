@@ -76,8 +76,11 @@ export type ItemDraft = {
   group: number | null
 }
 
-/** Sub-block: movements repeated together ("DB DT"), with what changes each round underneath. */
-export type GroupDraft = { title: string; note: string }
+/**
+ * Sub-block: movements repeated together ("DB DT"), with what changes each round underneath.
+ * start/step: rounds of the sub-block in the n-th round of the block = start + (n - 1) × step (default 1 and 0: once).
+ */
+export type GroupDraft = { title: string; note: string; start?: number; step?: number }
 
 export type BlockDraft = {
   id: string

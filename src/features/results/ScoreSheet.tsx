@@ -2,9 +2,10 @@ import { useState } from 'react'
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Textarea } from '../../components/ui'
 import { SCORE_HINTS, emptyScore, formatScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
-import { LEVELS, type Level } from '../../domain/workout'
+import { LEVELS, type BlockDraft, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
+import { RepCounter } from './RepCounter'
 import type { ResultRow } from './useWorkoutResults'
 
 type Props = {
@@ -14,6 +15,8 @@ type Props = {
   blockId: string
   blockLabel: string
   type: ScoreType
+  /** The block, for the reps counter of AMRAPs scored in reps. */
+  block?: BlockDraft
   /** Levels offered for this block (RX + those defined by the coach). */
   levels: Level[]
   existing: ResultRow | undefined
@@ -24,7 +27,7 @@ type Props = {
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
 
-export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, levels, existing, onClose, onSaved }: Props) {
+export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, block, levels, existing, onClose, onSaved }: Props) {
   const [score, setScore] = useState<Score>(existing ?? emptyScore())
   const [level, setLevel] = useState<Level>(() => {
     const preferred = (existing?.level ?? getItem('level')) as Level | null
@@ -112,6 +115,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, leve
             <NumberInput value={score.load_kg} onChange={(v) => set({ load_kg: v })} />
           </Field>
         )}
+        {type === 'reps' && block?.format === 'amrap' && <RepCounter block={block} onTotal={(reps) => set({ reps })} />}
         {type === 'reps' && (
           <Field label="Reps totales">
             <NumberInput value={score.reps} onChange={(v) => set({ reps: int(v) })} />

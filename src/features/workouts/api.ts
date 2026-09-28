@@ -22,7 +22,7 @@ function fromStored(params: StoredParams) {
   }
   return {
     params: rest as FormatParams,
-    groups: groups.map(({ title, note }) => ({ title, note })),
+    groups: groups.map(({ title, note, start, step }) => ({ title, note, start, step })),
     groupOf,
   }
 }

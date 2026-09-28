@@ -73,6 +73,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           blockId={block.id}
           blockLabel={blockLabel}
           type={type}
+          block={block}
           levels={blockLevels(block)}
           existing={mine}
           onClose={() => setOpen(false)}
