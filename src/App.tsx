@@ -58,7 +58,7 @@ export default function App() {
   if (pendingInvite) return <Spinner />
   if (location.pathname === '/reset-password') return <ResetPasswordPage onDone={() => navigate('/', { replace: true })} />
   if (!profile?.role) return <PendingPage error={inviteError} />
-  if (!profile.display_name || !hasPassword(session)) return <OnboardingPage />
+  if (!profile.display_name || !profile.gender || !hasPassword(session)) return <OnboardingPage />
 
   return (
     <Routes>

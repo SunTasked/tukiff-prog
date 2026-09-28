@@ -62,17 +62,23 @@ it('gives ties the same rank (1, 2, 2, 4)', () => {
   expect(rankResults('time', list).map((r) => r.rank)).toEqual([1, 2, 2, 4])
 })
 
-it('never mixes levels: one board per level, in level order', () => {
+it('one board per gender, levels stacked in level order, ranked within each level', () => {
   const list = [
-    { name: 'scaled-fast', level: 'scaled', ...s({ time_s: 200 }) },
-    { name: 'rx-slow', level: 'rx', ...s({ time_s: 600 }) },
-    { name: 'rx-fast', level: 'rx', ...s({ time_s: 400 }) },
-    { name: 'elite', level: 'elite', ...s({ time_s: 500 }) },
+    { name: 'scaled-fast', level: 'scaled', gender: 'male' as const, ...s({ time_s: 200 }) },
+    { name: 'rx-slow', level: 'rx', gender: 'male' as const, ...s({ time_s: 600 }) },
+    { name: 'rx-fast', level: 'rx', gender: null, ...s({ time_s: 400 }) },
+    { name: 'elite', level: 'elite', gender: 'male' as const, ...s({ time_s: 500 }) },
+    { name: 'f-rx', level: 'rx', gender: 'female' as const, ...s({ time_s: 300 }) },
   ]
   const boards = leaderboards('time', list)
-  expect(boards.map((b) => b.level)).toEqual(['elite', 'rx', 'scaled'])
-  expect(names(boards[1].rows)).toEqual(['1:rx-fast', '2:rx-slow'])
-  expect(names(boards[2].rows)).toEqual(['1:scaled-fast'])
+  expect(boards.map((b) => b.gender)).toEqual(['male', 'female'])
+  expect(boards[0].rows.map((r) => `${r.level}:${r.rank}:${r.result.name}`)).toEqual([
+    'elite:1:elite',
+    'rx:1:rx-fast',
+    'rx:2:rx-slow',
+    'scaled:1:scaled-fast',
+  ])
+  expect(names(boards[1].rows)).toEqual(['1:f-rx'])
 })
 
 describe('format, validate, normalize', () => {

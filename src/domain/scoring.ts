@@ -1,4 +1,5 @@
-// Score types, formatting and leaderboard ranking. Levels are never mixed: rank within one level.
+// Score types, formatting and leaderboard ranking. Levels and genders are never mixed: rank within one level.
+import { GENDERS, type Gender } from './profile'
 import { LEVELS, formatDuration, type Format, type Level } from './workout'
 
 export type ScoreType = 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
@@ -105,9 +106,17 @@ export function rankResults<T extends Score>(type: ScoreType, list: T[]): { resu
   })
 }
 
-/** One leaderboard per level, in LEVELS order, skipping empty levels. */
-export function leaderboards<T extends Score & { level: string }>(type: ScoreType, list: T[]) {
-  return (Object.keys(LEVELS) as Level[])
-    .map((level) => ({ level, rows: rankResults(type, list.filter((r) => r.level === level)) }))
+/**
+ * One leaderboard per gender (men first, skipping empty ones). Within a board, levels stay stacked in LEVELS order
+ * (every elite above every RX, ...) and each row keeps its rank within its level.
+ */
+export function leaderboards<T extends Score & { level: string; gender: Gender | null }>(type: ScoreType, list: T[]) {
+  return (Object.keys(GENDERS) as Gender[])
+    .map((gender) => ({
+      gender,
+      rows: (Object.keys(LEVELS) as Level[]).flatMap((level) =>
+        rankResults(type, list.filter((r) => r.level === level && (r.gender ?? 'male') === gender)).map((row) => ({ ...row, level })),
+      ),
+    }))
     .filter((b) => b.rows.length > 0)
 }
