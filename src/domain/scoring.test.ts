@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { boardPlaces, compactRows, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { boardPlaces, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
 const names = <T extends { name: string }>(rows: { result: T; rank: number }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
@@ -141,5 +141,14 @@ describe('compact and weekly boards', () => {
     expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:3', '2:a:4', '3:c:5'])
     expect(men.rows[1].places).toEqual([{ place: 1, missed: false }, { place: 3, missed: true }])
     expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 1, rank: 1 }] })
+  })
+})
+
+describe('myGenderFirst', () => {
+  const boards = [{ gender: 'male' as const }, { gender: 'female' as const }]
+  it('puts the viewer gender first', () => {
+    expect(myGenderFirst(boards, 'female').map((b) => b.gender)).toEqual(['female', 'male'])
+    expect(myGenderFirst(boards, 'male').map((b) => b.gender)).toEqual(['male', 'female'])
+    expect(myGenderFirst(boards, null).map((b) => b.gender)).toEqual(['male', 'female'])
   })
 })
