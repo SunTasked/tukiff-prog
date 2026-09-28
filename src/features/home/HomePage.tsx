@@ -4,13 +4,18 @@ import { programColor, programPanelColor } from '../../components/ProgramBadges'
 import { groupByProgram } from '../../domain/grouping'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
-import { addDays, formatLongDay, fromISODate, mondayOf, today, weekDays } from '../../domain/dates'
+import { addDays, formatLongDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
+import { StatusBadge } from '../calendar/StatusBadge'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
 
-type Row = { id: string; title: string; date: string; program_id: string; program_name: string }
+type Row = { id: string; title: string; date: string; program_id: string; program_name: string; publish_at: string | null }
+
+/** Diagonal stripes marking a workout athletes can't see yet (only its program's coaches get it). */
+const HATCHED =
+  'rounded-xl bg-[repeating-linear-gradient(135deg,rgb(255_255_255/0.05)_0_10px,transparent_10px_20px)] p-2 outline outline-1 outline-dashed outline-amber-400/40'
 
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
@@ -94,12 +99,20 @@ export function HomePage() {
       ) : (
         groupByProgram(workouts).map((panel) => (
           <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
-            {panel.items.map((w) => (
-              <div key={w.id}>
-                <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
-                <WorkoutWithResults workout={w} canLog />
-              </div>
-            ))}
+            {panel.items.map((w) => {
+              const published = publicationStatus(w.publish_at) === 'published'
+              return (
+                <div key={w.id} className={published ? '' : HATCHED}>
+                  <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
+                  {!published && (
+                    <p className="-mt-1 mb-2">
+                      <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
+                    </p>
+                  )}
+                  <WorkoutWithResults workout={w} canLog={published} />
+                </div>
+              )
+            })}
           </ProgramPanel>
         ))
       )}

@@ -754,6 +754,7 @@ export type Database = {
           id: string
           program_id: string
           program_name: string
+          publish_at: string
           title: string
         }[]
       }
