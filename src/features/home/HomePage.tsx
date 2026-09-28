@@ -8,6 +8,7 @@ import { addDays, formatLongDay, fromISODate, mondayOf, publicationStatus, today
 import { StatusBadge } from '../calendar/StatusBadge'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
+import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
 
@@ -49,6 +50,19 @@ export function HomePage() {
       .rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) })
       .then(({ data }) => setWeek((data ?? []) as Row[]))
   }, [monday])
+
+  const [weekBoard, setWeekBoard] = useState<{ key: string; label: string } | null>(null)
+  // Programs of the week with the leaderboard turned off: no link to their weekly board.
+  const [boardOff, setBoardOff] = useState<Set<string>>(new Set())
+  const programIds = [...new Set((week ?? []).map((r) => r.program_id))].sort().join(',')
+  useEffect(() => {
+    if (!programIds) return
+    supabase
+      .from('programs')
+      .select('id, leaderboard_enabled')
+      .in('id', programIds.split(','))
+      .then(({ data }) => setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id))))
+  }, [programIds])
 
   useEffect(() => {
     if (!week) return
@@ -115,6 +129,11 @@ export function HomePage() {
       ) : (
         groupByProgram(workouts).map((panel) => (
           <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
+            {!boardOff.has(panel.key) && (
+              <button className="-mb-3 self-start text-sm text-lime-400" onClick={() => setWeekBoard(panel)}>
+                🏆 Classement de la semaine ›
+              </button>
+            )}
             {panel.items.map((w) => {
               const published = publicationStatus(w.publish_at) === 'published'
               return (
@@ -134,6 +153,9 @@ export function HomePage() {
             })}
           </ProgramPanel>
         ))
+      )}
+      {weekBoard && (
+        <WeeklyBoardSheet programId={weekBoard.key} programName={weekBoard.label} week={monday} onClose={() => setWeekBoard(null)} />
       )}
     </>
   )

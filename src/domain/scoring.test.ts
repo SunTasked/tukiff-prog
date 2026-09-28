@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareScores, emptyScore, formatScore, leaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { boardPlaces, compactRows, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
 const names = <T extends { name: string }>(rows: { result: T; rank: number }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
@@ -105,5 +105,41 @@ describe('format, validate, normalize', () => {
   it('drops irrelevant fields', () => {
     expect(normalizeScore('time', s({ capped: true, reps: 30, time_s: 999 }))).toEqual(s({ capped: true, reps: 30 }))
     expect(normalizeScore('rounds_reps', s({ rounds: 4, load_kg: 50 }))).toEqual(s({ rounds: 4, reps: 0 }))
+  })
+})
+
+describe('compact and weekly boards', () => {
+  const r = (athlete_id: string, level: string, v: Partial<Score>, gender: 'male' | 'female' = 'male') => ({
+    ...s(v),
+    athlete_id,
+    level,
+    gender,
+  })
+
+  it('keeps the top 3 of each level plus me', () => {
+    const list = ['a', 'b', 'c', 'd', 'e'].map((id, i) => r(id, 'rx', { reps: 100 - i }))
+    const rows = leaderboards('reps', [...list, r('x', 'scaled', { reps: 1 })])[0].rows
+    expect(compactRows(rows, 'e').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'e', 'x'])
+    expect(compactRows(rows, 'b').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'x'])
+  })
+
+  it('places levels one after the other', () => {
+    const rows = leaderboards('reps', [r('a', 'elite', { reps: 5 }), r('b', 'rx', { reps: 50 }), r('c', 'rx', { reps: 50 }), r('d', 'rx', { reps: 10 })])[0].rows
+    expect(boardPlaces(rows)).toEqual([1, 2, 2, 4])
+  })
+
+  it('sums places, missed block = last + 1, per gender, lowest wins', () => {
+    const boards = weeklyLeaderboards([
+      { type: 'reps', results: [r('a', 'rx', { reps: 30 }), r('b', 'rx', { reps: 20 }), r('f', 'rx', { reps: 1 }, 'female')] },
+      { type: 'time', results: [r('b', 'rx', { time_s: 100 }), r('c', 'rx', { time_s: 200 })] },
+      { type: 'none', results: [r('d', 'rx', {})] },
+    ])
+    const men = boards[0]
+    expect(men.gender).toBe('male')
+    expect(men.blocks).toBe(2)
+    // a: 1 + (2 + 1) = 4, b: 2 + 1 = 3, c: (2 + 1) + 2 = 5; d only did a block without score.
+    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:3', '2:a:4', '3:c:5'])
+    expect(men.rows[1].places).toEqual([{ place: 1, missed: false }, { place: 3, missed: true }])
+    expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 1, rank: 1 }] })
   })
 })
