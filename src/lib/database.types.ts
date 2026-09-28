@@ -554,6 +554,44 @@ export type Database = {
           },
         ]
       }
+      usage_daily: {
+        Row: {
+          count: number
+          day: string
+          key: string
+          kind: string
+          last_at: string
+          total_ms: number
+          user_id: string
+        }
+        Insert: {
+          count?: number
+          day: string
+          key?: string
+          kind: string
+          last_at?: string
+          total_ms?: number
+          user_id: string
+        }
+        Update: {
+          count?: number
+          day?: string
+          key?: string
+          kind?: string
+          last_at?: string
+          total_ms?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "usage_daily_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       workout_blocks: {
         Row: {
           format: string
@@ -662,6 +700,7 @@ export type Database = {
     }
     Functions: {
       accept_invitation: { Args: { p_code: string }; Returns: string }
+      admin_usage: { Args: { p_days?: number }; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
@@ -710,6 +749,10 @@ export type Database = {
         Returns: undefined
       }
       shares_scores: { Args: { p_user: string }; Returns: boolean }
+      track_usage: {
+        Args: { p_key?: string; p_kind: string; p_ms?: number }
+        Returns: undefined
+      }
       transfer_program: {
         Args: { p_new_owner: string; p_program: string }
         Returns: undefined

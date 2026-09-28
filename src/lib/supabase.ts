@@ -16,7 +16,9 @@ export const pendingRequests = {
 
 const trackedFetch: typeof fetch = async (input, init) => {
   const method = (init?.method ?? (input instanceof Request ? input.method : 'GET')).toUpperCase()
-  if (method === 'GET' || method === 'HEAD') return fetch(input, init)
+  const url = input instanceof Request ? input.url : String(input)
+  // Reads and background usage counters never block the screen.
+  if (method === 'GET' || method === 'HEAD' || url.includes('/rpc/track_usage')) return fetch(input, init)
   pendingWrites++
   notify()
   try {
