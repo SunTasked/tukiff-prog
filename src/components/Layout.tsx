@@ -25,7 +25,7 @@ const tabs: Tab[] = [
   },
   {
     to: '/athletes',
-    label: 'Athlètes',
+    label: 'Communauté',
     coachOnly: true,
     // Group: one member in front, two behind.
     icon: 'M15.5 8a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0zM5.5 21a6.5 6.5 0 0 1 13 0zM8 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM21 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM5.8 19H1.5a4.5 4.5 0 0 1 7.2-3.6M18.2 19h4.3a4.5 4.5 0 0 0-7.2-3.6',
@@ -48,7 +48,6 @@ export function Layout() {
 
   const visible = tabs
     .filter((t) => (!t.coachOnly || isCoach(profile)) && (!t.adminOnly || isAdmin(profile)))
-    .map((t) => (t.to === '/athletes' && isAdmin(profile) ? { ...t, label: 'Membres', longLabel: 'Membres' } : t))
 
   const icon = (t: Tab) => (
     <svg viewBox="0 0 24 24" className="size-6 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

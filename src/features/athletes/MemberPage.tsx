@@ -78,7 +78,7 @@ export function MemberPage() {
   return (
     <>
       <Link to="/athletes" className="text-sm text-zinc-400">
-        ‹ Athlètes
+        ‹ Communauté
       </Link>
       <PageTitle>{member.display_name ?? '—'}</PageTitle>
       <p className="-mt-3 mb-4 text-sm text-zinc-400">

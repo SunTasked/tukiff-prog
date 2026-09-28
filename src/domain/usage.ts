@@ -18,7 +18,7 @@ const pages: Record<string, string> = {
   '/workouts/:id': 'Séance (athlète)',
   '/records': 'Records',
   '/timer': 'Timer',
-  '/athletes': 'Athlètes / Membres',
+  '/athletes': 'Communauté',
   '/athletes/:id': 'Fiche membre',
   '/programs/:id': 'Programme',
   '/calendar': 'Planning',

@@ -83,7 +83,7 @@ export function ProgramPage() {
   return (
     <>
       <Link to="/athletes" className="text-sm text-zinc-400">
-        ‹ Athlètes
+        ‹ Communauté
       </Link>
       <PageTitle>{program.name}</PageTitle>
       <p className="-mt-3 mb-4 text-sm text-zinc-400">
