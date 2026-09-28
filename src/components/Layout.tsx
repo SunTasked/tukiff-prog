@@ -25,7 +25,8 @@ const tabs: Tab[] = [
     to: '/athletes',
     label: 'Athlètes',
     coachOnly: true,
-    icon: 'M16 11a4 4 0 1 0-8 0 4 4 0 0 0 8 0zM4 21a8 8 0 0 1 16 0',
+    // Group: one member in front, two behind.
+    icon: 'M15.5 8a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0zM5.5 21a6.5 6.5 0 0 1 13 0zM8 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM21 10a2.5 2.5 0 1 1-5 0 2.5 2.5 0 0 1 5 0zM5.8 19H1.5a4.5 4.5 0 0 1 7.2-3.6M18.2 19h4.3a4.5 4.5 0 0 0-7.2-3.6',
   },
   { to: '/profile', label: 'Profil', icon: 'M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8zm-8 9a8 8 0 0 1 16 0' },
 ]
