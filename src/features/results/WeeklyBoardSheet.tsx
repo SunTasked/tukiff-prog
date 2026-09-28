@@ -105,7 +105,7 @@ export function WeeklyBoardSheet({
         </div>
         <p className="mb-4 text-xs text-zinc-500">
           Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Un bloc
-          non noté est ignoré : la plus petite moyenne de places gagne, à égalité celui qui a noté le plus de blocs.
+          non noté compte comme dernière place + 1. Le plus petit total gagne.
         </p>
 
         {!enabled ? (
@@ -125,7 +125,7 @@ export function WeeklyBoardSheet({
                 {BOARD_TITLES[gender]} · {blocks} bloc{blocks > 1 ? 's' : ''}
               </p>
               <ol className="flex flex-col gap-1">
-                {rows.map(({ athlete: a, rank, average, places }) => (
+                {rows.map(({ athlete: a, rank, total, places }) => (
                   <li
                     key={a.athlete_id}
                     className={`rounded-lg px-2 py-1.5 text-sm ${a.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}
@@ -134,13 +134,13 @@ export function WeeklyBoardSheet({
                       <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>
                       <Avatar url={a.profiles?.avatar_url} name={a.profiles?.display_name} className="size-6 text-[10px]" />
                       <span className="min-w-0 flex-1 truncate">{a.profiles?.display_name ?? '—'}</span>
-                      <span className="shrink-0 font-semibold tabular-nums">moy. {String(Math.round(average * 10) / 10).replace('.', ',')}</span>
+                      <span className="shrink-0 font-semibold tabular-nums">{total} pts</span>
                     </div>
                     <p className="mt-0.5 pl-16 text-xs text-zinc-500 tabular-nums">
                       {places.map((p, i) => (
-                        <span key={i} className={p == null ? 'text-zinc-600' : ''}>
+                        <span key={i} className={p.missed ? 'text-zinc-600' : ''}>
                           {i > 0 && ' · '}
-                          {p ?? '–'}
+                          {p.missed ? `(${p.place})` : p.place}
                         </span>
                       ))}
                     </p>
@@ -151,7 +151,7 @@ export function WeeklyBoardSheet({
           ))
         )}
         {enabled && boards && boards.length > 0 && (
-          <p className="text-xs text-zinc-600">Places bloc par bloc, – : bloc non noté.</p>
+          <p className="text-xs text-zinc-600">Places bloc par bloc, entre parenthèses : bloc non noté.</p>
         )}
       </div>
     </div>
