@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
+import { DateField, DateTimeField } from '../../components/DatePicker'
 import { ProgramBadge, programColor } from '../../components/ProgramBadges'
 import { Button, ErrorText, PageTitle } from '../../components/ui'
 import {
@@ -387,7 +388,7 @@ function SelectionBar({
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-20 px-3 lg:bottom-4 lg:left-56 lg:px-8">
-      <div className="mx-auto flex max-w-4xl flex-col gap-3 rounded-2xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl shadow-black backdrop-blur">
+      <div className="mx-auto flex max-h-[75dvh] max-w-4xl flex-col gap-3 overflow-y-auto rounded-2xl border border-zinc-700 bg-zinc-900/95 p-3 shadow-2xl shadow-black backdrop-blur">
         <div className="flex flex-wrap items-center gap-2">
           <span className="mr-auto font-semibold">
             {ids.length} sélectionnée{ids.length > 1 ? 's' : ''}
@@ -414,7 +415,7 @@ function SelectionBar({
         {action === 'publish' && (
           <div className={panel}>
             <span className="text-sm text-zinc-400">Publier le</span>
-            <input type="datetime-local" className={input} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
+            <DateTimeField value={publishAt} onChange={setPublishAt} />
             <Button className="px-3 py-2 text-sm" disabled={!publishAt || busy} onClick={() => publish(fromLocalInput(publishAt))}>
               Programmer
             </Button>
@@ -469,7 +470,7 @@ function SelectionBar({
             <span className="w-full text-sm text-zinc-400">
               À partir du (la 1ʳᵉ séance du {formatDay(first)} y sera placée, les autres gardent leur écart)
             </span>
-            <input type="date" className={input} value={target} onChange={(e) => setTarget(e.target.value)} />
+            <DateField value={target} onChange={setTarget} />
             <span className="text-xs text-zinc-500">
               {target ? `décalage de ${daysBetween(first, target)} jour(s)` : ''}
             </span>

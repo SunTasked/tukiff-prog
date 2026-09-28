@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
+import { addDays, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
 
 describe('weeks', () => {
   it('finds the Monday of a week', () => {
@@ -29,4 +29,21 @@ it('computes publication status', () => {
   expect(publicationStatus(null, now)).toBe('draft')
   expect(publicationStatus('2026-09-28T07:00:00Z', now)).toBe('published')
   expect(publicationStatus('2026-09-29T07:00:00Z', now)).toBe('scheduled')
+})
+
+describe('month grid', () => {
+  it('starts on Monday and covers the whole month', () => {
+    const g = monthGrid('2026-09-15')
+    expect(g[0][0]).toBe('2026-08-31')
+    expect(g.at(-1)!.at(-1)).toBe('2026-10-04')
+    expect(g).toHaveLength(5)
+  })
+  it('handles a month starting on Monday and February', () => {
+    expect(monthGrid('2027-02-10')).toHaveLength(4) // Feb 2027 starts on Monday
+    expect(monthGrid('2026-06-01')[0][0]).toBe('2026-06-01')
+  })
+  it('moves by months', () => {
+    expect(addMonths('2026-01-31', 1)).toBe('2026-02-01')
+    expect(addMonths('2026-01-15', -1)).toBe('2025-12-01')
+  })
 })

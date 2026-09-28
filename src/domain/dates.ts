@@ -26,12 +26,32 @@ export const weekDays = (monday: string) => Array.from({ length: 7 }, (_, i) => 
 
 export const today = () => toISODate(new Date())
 
+/** First day of the month containing the date. */
+export const monthOf = (iso: string) => `${iso.slice(0, 7)}-01`
+
+export function addMonths(iso: string, months: number): string {
+  const d = fromISODate(monthOf(iso))
+  d.setMonth(d.getMonth() + months)
+  return toISODate(d)
+}
+
+/** Weeks (Monday first) covering the month of the date, including overflow days of adjacent months. */
+export function monthGrid(iso: string): string[][] {
+  const first = monthOf(iso)
+  const next = addMonths(first, 1)
+  const weeks: string[][] = []
+  for (let monday = mondayOf(first); monday < next; monday = addDays(monday, 7)) weeks.push(weekDays(monday))
+  return weeks
+}
+
 const dayFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' })
 const longFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })
 const timeFmt = new Intl.DateTimeFormat('fr-FR', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })
 
 export const formatDay = (iso: string) => dayFmt.format(fromISODate(iso))
 export const formatLongDay = (iso: string) => longFmt.format(fromISODate(iso))
+const monthFmt = new Intl.DateTimeFormat('fr-FR', { month: 'long', year: 'numeric' })
+export const formatMonth = (iso: string) => monthFmt.format(fromISODate(iso))
 export const formatDateTime = (ts: string) => timeFmt.format(new Date(ts))
 
 export function formatWeek(monday: string): string {

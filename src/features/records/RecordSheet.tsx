@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { DateField } from '../../components/DatePicker'
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
 import { BENCHMARKS } from '../../domain/records'
@@ -112,9 +113,10 @@ export function RecordSheet({
           </>
         )}
 
-        <Field label="Date">
-          <input type="date" className={input} value={date} max={today()} onChange={(e) => setDate(e.target.value)} />
-        </Field>
+        <div>
+          <span className="mb-0.5 block text-xs text-zinc-500">Date</span>
+          <DateField value={date} max={today()} onChange={setDate} />
+        </div>
         <Input label="Note" maxLength={300} value={notes} onChange={(e) => setNotes(e.target.value)} />
         <ErrorText>{error}</ErrorText>
         <Button onClick={save}>Enregistrer</Button>

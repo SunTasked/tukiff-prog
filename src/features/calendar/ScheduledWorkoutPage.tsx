@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
+import { DateField, DateTimeField } from '../../components/DatePicker'
 import { Button, Card, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import { formatLongDay, fromLocalInput, mondayOf, toLocalInput } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
@@ -84,7 +85,7 @@ export function ScheduledWorkoutPage() {
             <h2 className="font-semibold">Publication</h2>
             <StatusBadge publishAt={meta.publish_at} />
           </div>
-          <input type="datetime-local" className={input} value={publishAt} onChange={(e) => setPublishAt(e.target.value)} />
+          <DateTimeField value={publishAt} onChange={setPublishAt} />
           <div className="flex gap-2">
             <Button className="flex-1 py-2 text-sm" disabled={!publishAt} onClick={() => setPublication(fromLocalInput(publishAt))}>
               Programmer
@@ -127,7 +128,7 @@ export function ScheduledWorkoutPage() {
 
         <Card className="flex flex-col gap-2">
           <h2 className="font-semibold">Dupliquer ou déplacer</h2>
-          <input type="date" className={input} value={otherDate} onChange={(e) => setOtherDate(e.target.value)} />
+          <DateField value={otherDate} onChange={setOtherDate} />
           <select className={input} value={otherProgram} onChange={(e) => setOtherProgram(e.target.value)} aria-label="Programmation de la copie">
             {(programs ?? []).map((p) => (
               <option key={p.id} value={p.id}>
