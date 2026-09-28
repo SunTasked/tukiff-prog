@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { formatScore, leaderboards, scoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
+import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
@@ -32,6 +33,22 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
     results.map((r) => ({ ...r, gender: r.profiles?.gender ?? null })),
   )
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
+  const checkable = type === 'none'
+
+  // Blocks without score: one tap on the "Fait" box, the sheet stays available for level and comment.
+  async function toggleDone() {
+    setBusy(true)
+    if (mine) await supabase.from('results').delete().eq('id', mine.id)
+    else {
+      const levels = blockLevels(block)
+      const preferred = getItem('level') as Level | null
+      const level = preferred && levels.includes(preferred) ? preferred : 'rx'
+      const { error } = await supabase.from('results').insert({ workout_id: workoutId, block_id: block.id, level })
+      if (!error && skipped) await supabase.from('block_skips').delete().eq('block_id', block.id).eq('athlete_id', me!)
+    }
+    setBusy(false)
+    onChange()
+  }
 
   async function skip() {
     setBusy(true)
@@ -42,7 +59,44 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
   return (
     <div className="mt-3 border-t border-zinc-800 pt-3">
+      {canLog && checkable && (
+        <div className="flex gap-2">
+          <button
+            className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold ${
+              mine ? 'bg-lime-400 text-zinc-950' : 'border border-zinc-700 text-zinc-200'
+            }`}
+            disabled={busy}
+            aria-pressed={!!mine}
+            onClick={toggleDone}
+          >
+            <span
+              className={`flex size-5 items-center justify-center rounded-md border-2 text-xs ${
+                mine ? 'border-zinc-950 bg-zinc-950 text-lime-400' : 'border-zinc-500'
+              }`}
+            >
+              {mine ? '✓' : ''}
+            </span>
+            Fait
+          </button>
+          {mine ? (
+            <button className="shrink-0 rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-300" onClick={() => setOpen(true)}>
+              Commenter ✎
+            </button>
+          ) : skipped ? (
+            <span className="shrink-0 rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-400">⏭ Passé</span>
+          ) : (
+            <button
+              className="shrink-0 rounded-xl bg-zinc-800 px-3 py-2 text-sm font-semibold text-zinc-300"
+              disabled={busy}
+              onClick={skip}
+            >
+              Je passe
+            </button>
+          )}
+        </div>
+      )}
       {canLog &&
+        !checkable &&
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
             Mon score : {formatScore(type, mine)} · {LEVELS[mine.level as Level]} ✎
