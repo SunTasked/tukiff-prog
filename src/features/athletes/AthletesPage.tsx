@@ -55,6 +55,47 @@ export function AthletesPage() {
   // Admins first, then coaches, then athletes; alphabetical within each group.
   const staff = [...members.filter(isAdmin).sort(byName), ...members.filter((m) => !isAdmin(m) && isCoach(m)).sort(byName)]
   const athletes = members.filter((m) => !isAdmin(m) && !isCoach(m)).sort(byName)
+  const owned = allPrograms.filter((p) => p.owner_id === me)
+  const contributed = programs.filter((p) => p.owner_id !== me)
+  const others = allPrograms.filter((p) => p.owner_id !== me && !programs.includes(p))
+  const ownerName = (p: ProgramRow) => members.find((m) => m.id === p.owner_id)?.display_name ?? '—'
+
+  const programGroup = (title: string, list: ProgramRow[], linked: boolean) => (
+    <section>
+      <h3 className="text-sm font-semibold text-zinc-400">
+        {title} ({list.length})
+      </h3>
+      <ul className="mt-1 divide-y divide-zinc-800">
+        {list.map((p) => {
+          const count = p.program_members[0]?.count ?? 0
+          const content = (
+            <>
+              <span className="min-w-0 truncate">
+                {p.name}
+                {p.owner_id !== me && <span className="ml-1 text-xs text-zinc-500">· {ownerName(p)}</span>}
+              </span>
+              <span className="shrink-0 text-xs text-zinc-400">
+                {count} athlète{count > 1 ? 's' : ''}
+                {linked && ' ›'}
+              </span>
+            </>
+          )
+          return (
+            <li key={p.id}>
+              {linked ? (
+                <Link to={`/programs/${p.id}`} className="flex justify-between gap-2 py-2">
+                  {content}
+                </Link>
+              ) : (
+                <div className="flex justify-between gap-2 py-2">{content}</div>
+              )}
+            </li>
+          )
+        })}
+      </ul>
+    </section>
+  )
+
   const pending = (role: 'athlete' | 'coach') => invitations.filter((inv) => inv.role === role).length
 
   const group = (title: string, list: Profile[], role: 'athlete' | 'coach', canInvite: boolean) => (
@@ -109,53 +150,32 @@ export function AthletesPage() {
           {group('Athlètes', athletes, 'athlete', true)}
         </Card>
 
-        <div className="flex flex-col gap-4">
-          <Card>
-            <h2 className="mb-3 font-semibold">Mes programmations ({programs.length})</h2>
-            <ul className="divide-y divide-zinc-800">
-              {programs.map((p) => (
-                <li key={p.id}>
-                  <Link to={`/programs/${p.id}`} className="flex justify-between py-2">
-                    <span>
-                      {p.name}
-                      {p.owner_id !== me && <span className="ml-1 text-xs text-zinc-500">(contributeur)</span>}
-                    </span>
-                    <span className="text-xs text-zinc-400">
-                      {p.program_members[0]?.count ?? 0} athlète{(p.program_members[0]?.count ?? 0) > 1 ? 's' : ''} ›
-                    </span>
-                  </Link>
-                </li>
-              ))}
-            </ul>
-            <form onSubmit={createProgram} className="mt-2 flex gap-2">
-              <input
-                placeholder="Nouvelle programmation"
-                maxLength={60}
-                required
-                className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 outline-none focus:border-lime-400"
-                value={newProgram}
-                onChange={(e) => setNewProgram(e.target.value)}
-              />
-              <Button className="py-2">Créer</Button>
-            </form>
-          </Card>
-          {admin && (
-            <Card>
-              <h2 className="mb-1 font-semibold">Toutes les programmations</h2>
-              <p className="mb-2 text-xs text-zinc-500">Vue admin : nom et propriétaire.</p>
-              <ul className="divide-y divide-zinc-800">
-                {allPrograms.map((p) => (
-                  <li key={p.id} className="flex justify-between gap-2 py-2 text-sm">
-                    <span className="truncate">{p.name}</span>
-                    <span className="shrink-0 text-zinc-400">
-                      {members.find((m) => m.id === p.owner_id)?.display_name ?? '—'}
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            </Card>
+        <Card className="flex flex-col gap-4">
+          {programGroup('Mes programmations', owned, true)}
+          <form onSubmit={createProgram} className="-mt-2 flex gap-2">
+            <input
+              placeholder="Nouvelle programmation"
+              maxLength={60}
+              required
+              className="min-w-0 flex-1 rounded-xl border border-zinc-800 bg-zinc-950 px-3 py-2 outline-none focus:border-lime-400"
+              value={newProgram}
+              onChange={(e) => setNewProgram(e.target.value)}
+            />
+            <Button className="py-2">Créer</Button>
+          </form>
+          {contributed.length > 0 && (
+            <>
+              <hr className="border-zinc-700" />
+              {programGroup('Contributeur', contributed, true)}
+            </>
           )}
-        </div>
+          {admin && others.length > 0 && (
+            <>
+              <hr className="border-zinc-700" />
+              {programGroup('Autres programmations', others, false)}
+            </>
+          )}
+        </Card>
         <ErrorText>{error}</ErrorText>
       </div>
       {inviting && (
