@@ -500,6 +500,7 @@ export type Database = {
           id: string
           name: string
           owner_id: string | null
+          reactions_enabled: boolean
         }
         Insert: {
           archived_at?: string | null
@@ -508,6 +509,7 @@ export type Database = {
           id?: string
           name: string
           owner_id?: string | null
+          reactions_enabled?: boolean
         }
         Update: {
           archived_at?: string | null
@@ -516,6 +518,7 @@ export type Database = {
           id?: string
           name?: string
           owner_id?: string | null
+          reactions_enabled?: boolean
         }
         Relationships: [
           {
