@@ -132,7 +132,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
         <Textarea label="Commentaire" maxLength={500} value={comment} onChange={(e) => setComment(e.target.value)} />
         <ErrorText>{error}</ErrorText>
         <Button disabled={busy} onClick={save}>
-          {type === 'none' ? 'Marquer comme fait' : 'Enregistrer'}
+          {type === 'none' && !existing ? 'Marquer comme fait' : 'Enregistrer'}
         </Button>
         {existing && (
           <button className="py-2 text-sm text-red-400 underline" onClick={remove}>
