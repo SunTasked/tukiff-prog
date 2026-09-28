@@ -83,7 +83,14 @@ export function AthletesPage() {
           <li key={m.id}>
             <Link to={`/athletes/${m.id}`} className="flex items-center gap-3 py-2">
               <Avatar url={m.avatar_url} name={m.display_name} />
-              <span className="min-w-0 flex-1 truncate">{m.display_name ?? '—'}</span>
+              <span className="min-w-0 truncate">{m.display_name ?? '—'}</span>
+              {m.gender && (
+                <span
+                  className={`size-2 shrink-0 rounded-full ${m.gender === 'female' ? 'bg-pink-400' : 'bg-sky-400'}`}
+                  aria-label={m.gender === 'female' ? 'Femme' : 'Homme'}
+                />
+              )}
+              <span className="flex-1" />
               <span className="text-xs text-zinc-400">{m.is_admin ? `${roleLabel(m)} ›` : '›'}</span>
             </Link>
           </li>
