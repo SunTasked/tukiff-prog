@@ -10,11 +10,13 @@ const siteUrl = process.argv[2]
 if (!siteUrl) throw new Error('Usage: node scripts/auth-config.mjs <siteUrl>')
 
 const smtpUser = process.env.SMTP_USER || 'guillaume.kheng@gmail.com'
+// Link only: the app never asks for the OTP code (signup goes through the link back to /join/<code>).
 const template = `<h2>${appName}</h2>
-<p>Ton code de connexion :</p>
-<p style="font-size:28px;font-weight:bold;letter-spacing:4px">{{ .Token }}</p>
-<p>Saisis-le dans l’application. Il expire dans 1 heure.</p>
-<p>Ou <a href="{{ .ConfirmationURL }}">connecte-toi avec ce lien</a> (il s’ouvre dans le navigateur, pas dans l’app installée sur l’écran d’accueil).</p>`
+<p>Pour finaliser ton inscription, <a href="{{ .ConfirmationURL }}">ouvre ce lien</a>.</p>
+<p>Il expire dans 1 heure.</p>`
+const recoveryTemplate = `<h2>${appName}</h2>
+<p>Pour choisir un nouveau mot de passe, <a href="{{ .ConfirmationURL }}">ouvre ce lien</a>.</p>
+<p>Il expire dans 1 heure. Si tu n’as rien demandé, ignore cet email.</p>`
 
 const smtp = process.env.SMTP_PASSWORD && {
   smtp_host: 'smtp.gmail.com',
@@ -24,10 +26,12 @@ const smtp = process.env.SMTP_PASSWORD && {
   smtp_admin_email: smtpUser,
   smtp_sender_name: appName,
   rate_limit_email_sent: 30,
-  mailer_subjects_magic_link: `Ton code de connexion ${appName}`,
+  mailer_subjects_magic_link: `Ton lien d’inscription ${appName}`,
   mailer_templates_magic_link_content: template,
-  mailer_subjects_confirmation: `Ton code de connexion ${appName}`,
+  mailer_subjects_confirmation: `Ton lien d’inscription ${appName}`,
   mailer_templates_confirmation_content: template,
+  mailer_subjects_recovery: `Nouveau mot de passe ${appName}`,
+  mailer_templates_recovery_content: recoveryTemplate,
 }
 
 await api('/config/auth', {
