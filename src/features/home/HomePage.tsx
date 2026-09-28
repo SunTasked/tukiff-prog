@@ -50,6 +50,18 @@ export function HomePage() {
       .then(({ data }) => setWeek((data ?? []) as Row[]))
   }, [monday])
 
+  // Programs of the week with the leaderboard turned off: no link to their weekly board.
+  const [boardOff, setBoardOff] = useState<Set<string>>(new Set())
+  const programIds = [...new Set((week ?? []).map((r) => r.program_id))].sort().join(',')
+  useEffect(() => {
+    if (!programIds) return
+    supabase
+      .from('programs')
+      .select('id, leaderboard_enabled')
+      .in('id', programIds.split(','))
+      .then(({ data }) => setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id))))
+  }, [programIds])
+
   useEffect(() => {
     if (!week) return
     setWorkouts(null)
@@ -115,6 +127,14 @@ export function HomePage() {
       ) : (
         groupByProgram(workouts).map((panel) => (
           <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
+            {!boardOff.has(panel.key) && (
+              <Link
+                to={`/leaderboard/${panel.key}${monday === mondayOf(today()) ? '' : `?week=${monday}`}`}
+                className="-mb-3 self-start text-sm text-lime-400"
+              >
+                🏆 Classement de la semaine ›
+              </Link>
+            )}
             {panel.items.map((w) => {
               const published = publicationStatus(w.publish_at) === 'published'
               return (

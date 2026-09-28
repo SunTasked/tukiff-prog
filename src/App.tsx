@@ -22,6 +22,7 @@ import { AdminStatsPage } from './features/admin/AdminStatsPage'
 import { ProfilePage } from './features/profile/ProfilePage'
 import { RecordsPage } from './features/records/RecordsPage'
 import { TimerPage } from './features/timer/TimerPage'
+import { WeeklyBoardPage } from './features/results/WeeklyBoardPage'
 import { getItem, setItem } from './lib/storage'
 import { supabase } from './lib/supabase'
 import { skipLoadTiming } from './lib/usage'
@@ -71,6 +72,7 @@ export default function App() {
         <Route path="workouts/:id" element={narrow(<AthleteWorkoutPage />)} />
         <Route path="records" element={narrow(<RecordsPage />)} />
         <Route path="timer" element={narrow(<TimerPage />)} />
+        <Route path="leaderboard/:programId" element={narrow(<WeeklyBoardPage />)} />
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />
