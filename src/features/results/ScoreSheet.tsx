@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Textarea } from '../../components/ui'
-import { emptyScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
+import { SCORE_HINTS, emptyScore, formatScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
 import { LEVELS, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
@@ -73,6 +73,8 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, leve
           />
         )}
 
+        {type !== 'none' && <p className="text-sm text-zinc-400">{SCORE_HINTS[type]}</p>}
+
         {type === 'time' && (
           <>
             <label className="flex items-center gap-3">
@@ -115,7 +117,13 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, leve
             <NumberInput value={score.reps} onChange={(v) => set({ reps: int(v) })} />
           </Field>
         )}
-        {type === 'none' && <p className="text-sm text-zinc-400">Pas de score pour ce bloc : indique juste que c’est fait.</p>}
+        {type === 'none' ? (
+          <p className="text-sm text-zinc-400">{SCORE_HINTS.none}</p>
+        ) : (
+          <p className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-zinc-400">
+            Ton score s’affichera : <span className="font-semibold text-zinc-100">{formatScore(type, normalizeScore(type, score))}</span>
+          </p>
+        )}
 
         <Textarea label="Commentaire" maxLength={500} value={comment} onChange={(e) => setComment(e.target.value)} />
         <ErrorText>{error}</ErrorText>

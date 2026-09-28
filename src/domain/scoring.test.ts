@@ -13,6 +13,10 @@ describe('scoreType', () => {
     expect(scoreType('emom')).toBe('none')
     expect(scoreType('none')).toBe('none')
   })
+  it('keeps the coach choice', () => {
+    expect(scoreType('amrap', { score: 'reps' })).toBe('reps')
+    expect(scoreType('emom', { interval_s: 90, score: 'load' })).toBe('load')
+  })
 })
 
 describe('For Time', () => {
