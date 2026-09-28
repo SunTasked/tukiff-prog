@@ -80,7 +80,7 @@ export function TimerPage() {
         ▶ Démarrer
       </Button>
       <p className="text-xs text-zinc-500">
-        10 s de décompte avant le départ. Sur iPhone, les bips ne sortent pas si le mode silencieux est activé.
+        10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
       </p>
     </div>
   )
