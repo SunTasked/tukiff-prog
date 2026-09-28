@@ -498,6 +498,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          leaderboard_enabled: boolean
           name: string
           owner_id: string | null
           reactions_enabled: boolean
@@ -507,6 +508,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          leaderboard_enabled?: boolean
           name: string
           owner_id?: string | null
           reactions_enabled?: boolean
@@ -516,6 +518,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          leaderboard_enabled?: boolean
           name?: string
           owner_id?: string | null
           reactions_enabled?: boolean
@@ -788,6 +791,7 @@ export type Database = {
       is_admin: { Args: never; Returns: boolean }
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
+      leaderboard_on: { Args: { p_workout: string }; Returns: boolean }
       move_workouts: {
         Args: { p_days: number; p_ids: string[] }
         Returns: undefined
