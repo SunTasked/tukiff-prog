@@ -56,7 +56,7 @@ Variables d'environnement :
 | `node scripts/migrate.mjs [--dry-run]` | applique les migrations `supabase/migrations/*.sql` pas encore passées |
 | `node scripts/gen-types.mjs` | régénère `src/lib/database.types.ts` depuis le schéma |
 | `node scripts/deploy-functions.mjs [nom]` | déploie les Edge Functions (`join`) |
-| `node scripts/auth-config.mjs <siteUrl>` | configure Auth : URLs, code à 6 chiffres, politique de mot de passe, SMTP Gmail et emails en français |
+| `node scripts/auth-config.mjs <siteUrl>` | configure Auth : URLs, politique de mot de passe, SMTP Gmail et emails en français |
 | `node scripts/vercel-setup.mjs` | pousse les variables `VITE_SUPABASE_*` dans Vercel (prod → production, staging → previews) |
 | `node scripts/admin.mjs list \| create-user \| set-role \| login-link \| delete-user` | gestion ponctuelle des comptes |
 | `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a` ; sur la prod, seul `--clean` est accepté |
