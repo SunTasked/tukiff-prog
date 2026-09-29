@@ -60,6 +60,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const genderCounts = { male: boardOf('male').length, female: boardOf('female').length }
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
+  // Blocks without score have no leaderboard, only the athletes' comments.
+  const commented = results.filter((r) => r.comment?.trim())
 
   // Blocks without score: one tap on the "Fait" box, the sheet stays available for level and comment.
   async function toggleDone() {
@@ -150,20 +152,46 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           </div>
         ))}
 
-      {showBoard && boards.length > 0 && (
+      {showBoard && checkable && commented.length > 0 && (
+        <button className="mt-3 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
+          Voir les commentaires ({commented.length}) ›
+        </button>
+      )}
+
+      {showBoard && !checkable && boards.length > 0 && (
         <>
           {boards.map(({ gender, rows }) => (
             <Board key={gender} gender={gender} rows={compactRows(rows, me)} type={type} me={me} leaders={leaders} detail={detail} />
           ))}
-          {(type !== 'none' || boards.some(({ rows }) => compactRows(rows, me).length < rows.length)) && (
-            <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
-              Voir le classement complet ({results.length}) ›
-            </button>
-          )}
+          <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
+            Voir le classement complet ({results.length}) ›
+          </button>
         </>
       )}
 
-      {full && (
+      {full && checkable && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-3">
+            <span className="min-w-0 truncate font-semibold">Commentaires · {blockLabel}</span>
+            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
+              Fermer
+            </button>
+          </div>
+          <ol className="flex flex-1 flex-col gap-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {commented.map((r) => (
+              <li key={r.id} className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}>
+                <div className="flex items-center gap-2">
+                  <Avatar url={r.profiles?.avatar_url} name={r.profiles?.display_name} className="size-6 text-[10px]" />
+                  <span className="min-w-0 truncate">{r.profiles?.display_name ?? '—'}</span>
+                </div>
+                <p className="mt-0.5 pl-8 text-xs whitespace-pre-line text-zinc-400">{r.comment}</p>
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {full && !checkable && (
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Classement · {blockLabel}</span>
