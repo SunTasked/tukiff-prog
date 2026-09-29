@@ -302,7 +302,7 @@ export function CalendarPage() {
                               🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
                             </span>
                           )}
-                          <span className="mt-1 block">
+                          <span className="mt-1 block text-xs">
                             <StatusBadge publishAt={r.publish_at} />
                           </span>
                         </div>
