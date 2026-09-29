@@ -9,7 +9,7 @@ export type Person = {
   onRemove?: () => void
 }
 
-/** Bottom sheet listing athletes (who reacted, who clapped), a "−" on my row to remove my contribution. */
+/** Bottom sheet listing athletes (who reacted), a "−" on my row to remove my contribution. */
 export function PeopleSheet({
   title,
   people,

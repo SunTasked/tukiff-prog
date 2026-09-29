@@ -530,42 +530,6 @@ export type Database = {
           },
         ]
       }
-      result_claps: {
-        Row: {
-          created_at: string
-          from_user: string
-          result_id: string
-          workout_id: string
-        }
-        Insert: {
-          created_at?: string
-          from_user?: string
-          result_id: string
-          workout_id: string
-        }
-        Update: {
-          created_at?: string
-          from_user?: string
-          result_id?: string
-          workout_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "result_claps_result_id_fkey"
-            columns: ["result_id"]
-            isOneToOne: false
-            referencedRelation: "results"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "result_claps_workout_id_fkey"
-            columns: ["workout_id"]
-            isOneToOne: false
-            referencedRelation: "workouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       results: {
         Row: {
           athlete_id: string
@@ -740,7 +704,6 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string | null
-          days: number
           id: string
           notes: string | null
           program_id: string | null
@@ -753,7 +716,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
-          days?: number
           id?: string
           notes?: string | null
           program_id?: string | null
@@ -766,7 +728,6 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
-          days?: number
           id?: string
           notes?: string | null
           program_id?: string | null
@@ -810,13 +771,6 @@ export type Database = {
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
-      clap_counts: {
-        Args: { p_workout: string }
-        Returns: {
-          claps: number
-          result_id: string
-        }[]
-      }
       copy_workout: {
         Args: {
           p_date: string
@@ -844,7 +798,6 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: {
           date: string
-          days: number
           id: string
           program_id: string
           program_name: string
