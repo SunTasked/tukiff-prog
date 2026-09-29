@@ -15,8 +15,6 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.117.2",
-    "emoji-picker-element": "^1.29.1",
-    "emoji-picker-element-data": "^1.8.0",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-router": "^8.4.0"

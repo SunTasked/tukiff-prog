@@ -1,7 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
-import emojiData from 'emoji-picker-element-data/fr/emojibase/data.json?url'
+import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
-import { reactionCounts } from '../../domain/reactions'
+import { REACTION_EMOJIS, reactionCounts } from '../../domain/reactions'
 import { supabase } from '../../lib/supabase'
 
 export type Reaction = {
@@ -13,7 +12,7 @@ export type Reaction = {
 
 /**
  * Reactions right after the block title: one per member and block. Only emojis used at least once are shown;
- * tap one to see who reacted with what (and remove mine there), "+" (only while I haven't reacted) opens the full picker.
+ * tap one to see who reacted with what (and remove mine there), "+" (only while I haven't reacted) offers the club's faces.
  */
 export function BlockReactions({
   workoutId,
@@ -64,27 +63,28 @@ export function BlockReactions({
           <span className="text-xs font-semibold text-zinc-300">{count}</span>
         </button>
       ))}
-      {canReact && !mine && (
-        <button
-          aria-label="Ajouter une réaction"
-          className="flex size-7 items-center justify-center rounded-full bg-zinc-950 text-lg leading-none text-zinc-400"
-          onClick={() => setPicking(true)}
-        >
-          +
-        </button>
-      )}
-
-      {picking && (
-        <Sheet onClose={() => setPicking(false)}>
-          <div className="flex items-center justify-between border-b border-zinc-800 p-3">
-            <span className="font-semibold">Réagir</span>
-            <button className="px-2 text-zinc-400" onClick={() => setPicking(false)}>
-              Fermer
+      {canReact &&
+        !mine &&
+        (picking ? (
+          <div className="flex items-center gap-0.5 rounded-full bg-zinc-800 px-1 py-0.5">
+            {REACTION_EMOJIS.map((emoji) => (
+              <button key={emoji} className="px-1 text-lg leading-none" onClick={() => react(emoji)}>
+                {emoji}
+              </button>
+            ))}
+            <button aria-label="Annuler" className="px-1.5 text-sm text-zinc-400" onClick={() => setPicking(false)}>
+              ✕
             </button>
           </div>
-          <EmojiPicker onPick={react} />
-        </Sheet>
-      )}
+        ) : (
+          <button
+            aria-label="Ajouter une réaction"
+            className="flex size-7 items-center justify-center rounded-full bg-zinc-950 text-lg leading-none text-zinc-400"
+            onClick={() => setPicking(true)}
+          >
+            +
+          </button>
+        ))}
 
       {who !== undefined && (
         <Sheet onClose={() => setWho(undefined)}>
@@ -114,42 +114,6 @@ function Sheet({ onClose, children }: { onClose: () => void; children: React.Rea
       </div>
     </div>
   )
-}
-
-/** Every emoji (emoji-picker-element, French names and search), loaded on first open; the data is cached by the browser. */
-function EmojiPicker({ onPick }: { onPick: (emoji: string) => void }) {
-  const box = useRef<HTMLDivElement>(null)
-  const pick = useRef(onPick)
-  useEffect(() => {
-    pick.current = onPick
-  })
-  useEffect(() => {
-    let picker: HTMLElement | undefined
-    let live = true
-    Promise.all([import('emoji-picker-element'), import('emoji-picker-element/i18n/fr')]).then(([{ Picker }, { default: fr }]) => {
-      if (!live || !box.current) return
-      const p = new Picker({ locale: 'fr', dataSource: emojiData, i18n: fr })
-      p.classList.add('dark')
-      p.style.width = '100%'
-      p.style.height = '22rem'
-      p.style.setProperty('--background', '#18181b')
-      p.style.setProperty('--border-color', '#27272a')
-      p.style.setProperty('--input-border-color', '#3f3f46')
-      p.style.setProperty('--input-font-color', '#f4f4f5')
-      p.style.setProperty('--indicator-color', '#a3e635')
-      p.addEventListener('emoji-click', (e) => {
-        const unicode = e.detail.unicode
-        if (unicode) pick.current(unicode)
-      })
-      box.current.append(p)
-      picker = p
-    })
-    return () => {
-      live = false
-      picker?.remove()
-    }
-  }, [])
-  return <div ref={box} className="min-h-[22rem]" />
 }
 
 /** Who reacted with what, a tab per emoji (like Facebook). */
