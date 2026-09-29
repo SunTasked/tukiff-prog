@@ -9,6 +9,7 @@ import { WorkoutView } from '../workouts/WorkoutView'
 import { BlockResults } from './BlockResults'
 import { BlockReactions, type Reaction } from './BlockReactions'
 import { useWorkoutResults } from './useWorkoutResults'
+import { useClaps } from './useClaps'
 import { useWeekLeaders } from './weeklyBoards'
 
 /**
@@ -68,6 +69,7 @@ export function WorkoutWithResults({
   const { oneRms } = useRecords(canLog ? me : undefined)
   // LEADER badge: leaders of the program's weekly leaderboard, refreshed with the scores.
   const leaders = useWeekLeaders(loaded ? programId : null, workout.date, results)
+  const { claps, clap } = useClaps(workout.id, me, results)
 
   return (
     <WorkoutView
@@ -98,6 +100,8 @@ export function WorkoutWithResults({
           skipped={skips?.has(block.id) ?? false}
           showBoard={boardOn || !canLog}
           leaders={leaders}
+          claps={claps}
+          onClap={clap}
           onChange={() => {
             reload()
             reloadSkips()
