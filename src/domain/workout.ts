@@ -99,6 +99,8 @@ export type WorkoutDraft = {
   title: string
   notes: string
   date?: string | null
+  /** Number of days the workout lasts from its date (1 = a normal workout). */
+  days?: number
   program_id?: string | null
   /** Library templates only. */
   section_id?: string | null

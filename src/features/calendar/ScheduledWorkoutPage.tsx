@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { DateField, DateTimeField } from '../../components/DatePicker'
 import { Button, Card, ErrorText, PageTitle, Spinner } from '../../components/ui'
-import { formatLongDay, fromLocalInput, mondayOf, toLocalInput } from '../../domain/dates'
+import { formatLongDay, fromLocalInput, lastDay, mondayOf, toLocalInput } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { useMyPrograms } from '../programs/useMyPrograms'
@@ -77,7 +77,11 @@ export function ScheduledWorkoutPage() {
         ‹ Programmation
       </Link>
       <PageTitle>{workout.title}</PageTitle>
-      <p className="-mt-3 mb-4 text-zinc-400 capitalize">{formatLongDay(meta.date)}</p>
+      <p className="-mt-3 mb-4 text-zinc-400 first-letter:uppercase">
+        {(workout.days ?? 1) > 1
+          ? `${formatLongDay(meta.date)} au ${formatLongDay(lastDay(meta.date, workout.days))} (${workout.days} jours)`
+          : formatLongDay(meta.date)}
+      </p>
 
       <div className="flex flex-col gap-4">
         <Card className="flex flex-col gap-2">
