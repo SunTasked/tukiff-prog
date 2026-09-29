@@ -2,11 +2,12 @@ import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import type { Gender } from '../../domain/profile'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
-import { allGenders, compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
+import { compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
+import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
@@ -53,6 +54,10 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
     const b = type === 'reps' && block.format === 'amrap' && r.reps ? repBreakdown(block, r.reps) : null
     return b && formatBreakdown(b)
   }
+  // Full leaderboard: one tab per gender, the viewer's own open first.
+  const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
+  const boardOf = (g: Gender) => boards.find((b) => b.gender === g)?.rows ?? []
+  const genderCounts = { male: boardOf('male').length, female: boardOf('female').length }
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
 
@@ -167,9 +172,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            {myGenderFirst(allGenders(boards, (gender) => ({ gender, rows: [] })), profile?.gender).map(({ gender, rows }) => (
-              <Board key={gender} gender={gender} rows={rows} type={type} me={me} leaders={leaders} detail={detail} />
-            ))}
+            <GenderTabs value={tab} counts={genderCounts} onChange={setTab} />
+            <Board gender={tab} showTitle={false} rows={boardOf(tab)} type={type} me={me} leaders={leaders} detail={detail} />
           </div>
         </div>
       )}
@@ -200,6 +204,7 @@ type BoardRow = { result: ResultRow; rank: number; level: Level }
 
 function Board({
   gender,
+  showTitle = true,
   rows,
   type,
   me,
@@ -207,6 +212,7 @@ function Board({
   detail,
 }: {
   gender: Gender
+  showTitle?: boolean
   rows: BoardRow[]
   type: ScoreType
   me: string | undefined
@@ -215,7 +221,7 @@ function Board({
 }) {
   return (
     <div className="mt-3">
-      <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{BOARD_TITLES[gender]}</p>
+      {showTitle && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{BOARD_TITLES[gender]}</p>}
       {rows.length === 0 && <p className="text-sm text-zinc-500">Pas encore de score.</p>}
       <ol className="flex flex-col gap-1">
         {rows.map(({ result: r, rank, level }) => (

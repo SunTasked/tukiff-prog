@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allGenders, boardPlaces, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { boardPlaces, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
 const names = <T extends { name: string }>(rows: { result: T; rank: number }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
@@ -151,12 +151,4 @@ describe('myGenderFirst', () => {
     expect(myGenderFirst(boards, 'male').map((b) => b.gender)).toEqual(['male', 'female'])
     expect(myGenderFirst(boards, null).map((b) => b.gender)).toEqual(['male', 'female'])
   })
-})
-
-it('allGenders fills the missing boards', () => {
-  const boards = allGenders([{ gender: 'female' as const, rows: [1] }], (gender) => ({ gender, rows: [] as number[] }))
-  expect(boards).toEqual([
-    { gender: 'male', rows: [] },
-    { gender: 'female', rows: [1] },
-  ])
 })

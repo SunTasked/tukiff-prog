@@ -206,8 +206,3 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
 export function myGenderFirst<B extends { gender: Gender }>(boards: B[], mine: string | null | undefined): B[] {
   return [...boards].sort((a, b) => Number(b.gender === mine) - Number(a.gender === mine))
 }
-
-/** Every gender board, in GENDERS order, the missing ones built empty (full leaderboards show men and women). */
-export function allGenders<B extends { gender: Gender }>(boards: B[], empty: (gender: Gender) => B): B[] {
-  return (Object.keys(GENDERS) as Gender[]).map((g) => boards.find((b) => b.gender === g) ?? empty(g))
-}

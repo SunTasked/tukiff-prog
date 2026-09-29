@@ -2,13 +2,13 @@ import { useEffect, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatWeek, mondayOf } from '../../domain/dates'
-import { allGenders, myGenderFirst } from '../../domain/scoring'
+import type { Gender } from '../../domain/profile'
 import { useAuth } from '../auth/AuthProvider'
+import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
 import { loadWeeklyBoards, type WeeklyBoards } from './weeklyBoards'
 
 const MEDALS = ['🥇', '🥈', '🥉']
-const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 
 /** Weekly leaderboard of one program (Monday to Sunday) in a modal, from the published workouts of the week. */
 export function WeeklyBoardSheet({
@@ -27,6 +27,8 @@ export function WeeklyBoardSheet({
   const [monday, setMonday] = useState(mondayOf(week))
   const [enabled, setEnabled] = useState(true)
   const [boards, setBoards] = useState<WeeklyBoards | null>(null)
+  const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
+  const countOf = (g: Gender) => boards?.find((b) => b.gender === g)?.rows.length ?? 0
 
   useEffect(() => {
     let live = true
@@ -85,12 +87,18 @@ export function WeeklyBoardSheet({
             <p className="text-zinc-400">Aucun score cette semaine.</p>
           </Card>
         ) : (
-          myGenderFirst(allGenders(boards, (gender) => ({ gender, blocks: 0, rows: [] })), profile?.gender).map(({ gender, blocks, rows }) => (
+          [boards.find((b) => b.gender === tab) ?? { gender: tab, blocks: 0, rows: [] }].map(({ gender, blocks, rows }) => (
             <div key={gender} className="mb-5">
-              <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                {BOARD_TITLES[gender]}
-                {blocks > 0 && ` · ${blocks} bloc${blocks > 1 ? 's' : ''}`}
-              </p>
+              <GenderTabs
+                value={tab}
+                counts={{ male: countOf('male'), female: countOf('female') }}
+                onChange={setTab}
+              />
+              {blocks > 0 && (
+                <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                  {blocks} bloc{blocks > 1 ? 's' : ''}
+                </p>
+              )}
               {rows.length === 0 && <p className="text-sm text-zinc-500">Aucun score cette semaine.</p>}
               <ol className="flex flex-col gap-1">
                 {rows.map(({ athlete: a, rank, total, places }) => (
