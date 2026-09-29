@@ -92,6 +92,7 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-20 | Bloc sans score : case « Fait » en un tap | a2 | Clean and jerk (mardi) |
 | UC-21 | Bloc sans score : pas de classement, « Voir les commentaires (n) » | a1 | Clean and jerk : « Fait » avec commentaires |
 | UC-22 | « Je passe » sur un bloc ; saisir un score l'annule | a2 | blocs déjà passés dans les semaines -1/-2 |
+| UC-35 | Saisie du temps au clavier : minutes puis secondes avec dixième optionnel (« 32,4 »), pavé numérique ; saisie invalide (≥ 60 s, 2 décimales) encadrée en rouge ; temps au-delà du cap refusé ; dixième affiché seulement s'il existe (« 7:32,4 ») | a2 | Josh, classement avec quelques temps à dixièmes ; aussi dans Records > benchmark au temps |
 | UC-23 | Minuteur : bips en mode silencieux iPhone, reprise après interruption | tout compte | EMOM Squat snatch, AMRAP DB DT |
 | UC-24 | Rechargement auto sur nouvelle version + rafraîchissement au retour dans l'app | tout compte | nécessite un nouveau déploiement de preview |
 

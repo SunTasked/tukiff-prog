@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { formatNumber, parseNumber } from '../domain/workout'
+import { durationParts, formatNumber, parseDuration, parseNumber } from '../domain/workout'
 import { SmallInput } from './ui'
 
 /**
@@ -95,6 +95,50 @@ export function DurationPicker({
           </option>
         ))}
       </select>
+    </div>
+  )
+}
+
+/**
+ * Time score typed on the keypad: minutes, then seconds with an optional tenth ("32,4").
+ * Emits null while empty or unreadable, so the sheet's validation asks for a time.
+ */
+export function DurationInput({ value, onChange }: { value: number | null | undefined; onChange: (v: number | null) => void }) {
+  const [parts, setParts] = useState<[string, string]>(() => (value != null ? durationParts(value) : ['', '']))
+  useEffect(() => {
+    if ((value ?? null) !== (parseDuration(...parts) ?? null)) setParts(value != null ? durationParts(value) : ['', ''])
+  }, [value])
+  const invalid = parseDuration(...parts) === undefined
+
+  function update(next: [string, string]) {
+    setParts(next)
+    onChange(parseDuration(...next) ?? null)
+  }
+
+  const cls = `w-0 min-w-0 flex-1 rounded-xl border bg-zinc-900 px-4 py-3 text-center text-lg text-zinc-100 outline-none focus:border-lime-400 ${invalid ? 'border-red-500' : 'border-zinc-800'}`
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        aria-label="Minutes"
+        className={cls}
+        inputMode="numeric"
+        pattern="[0-9]*"
+        placeholder="0"
+        maxLength={3}
+        value={parts[0]}
+        onChange={(e) => update([e.target.value, parts[1]])}
+      />
+      <span className="text-zinc-400">min</span>
+      <input
+        aria-label="Secondes"
+        className={cls}
+        inputMode="decimal"
+        placeholder="00,0"
+        maxLength={4}
+        value={parts[1]}
+        onChange={(e) => update([parts[0], e.target.value])}
+      />
+      <span className="text-zinc-400">s</span>
     </div>
   )
 }
