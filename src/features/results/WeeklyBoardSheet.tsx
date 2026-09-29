@@ -10,7 +10,7 @@ import { loadWorkout } from '../workouts/api'
 import type { ResultRow } from './useWorkoutResults'
 
 type Athlete = ResultRow & { gender: Gender | null }
-type Row = { id: string; program_id: string; publish_at: string | null }
+type Row = { id: string; date: string; program_id: string; publish_at: string | null }
 
 const MEDALS = ['🥇', '🥈', '🥉']
 const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
@@ -45,7 +45,8 @@ export function WeeklyBoardSheet({
         supabase.from('programs').select('leaderboard_enabled').eq('id', programId).maybeSingle(),
       ])
       const ids = ((week ?? []) as Row[])
-        .filter((w) => w.program_id === programId && publicationStatus(w.publish_at) === 'published')
+        // A multi-day workout started last week belongs to last week's board.
+        .filter((w) => w.program_id === programId && w.date >= monday && publicationStatus(w.publish_at) === 'published')
         .map((w) => w.id)
       const [workouts, { data: results }] = await Promise.all([
         Promise.all(ids.map(loadWorkout)),

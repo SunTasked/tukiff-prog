@@ -15,6 +15,7 @@ import {
   type BlockDraft,
   type WorkoutDraft,
 } from '../../domain/workout'
+import { formatDay, lastDay } from '../../domain/dates'
 import type { Exercise } from '../../lib/supabase'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { useExercises } from '../exercises/useExercises'
@@ -137,6 +138,25 @@ export function WorkoutEditor() {
           value={draft.title}
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
+        <label className="block">
+          <span className="mb-1 block text-sm text-zinc-400">Durée</span>
+          <select
+            className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100"
+            value={draft.days ?? 1}
+            onChange={(e) => setDraft({ ...draft, days: Number(e.target.value) })}
+          >
+            {[1, 2, 3, 4, 5, 6, 7].map((n) => (
+              <option key={n} value={n}>
+                {n === 1 ? '1 jour (séance normale)' : `${n} jours${n === 7 ? ' (challenge de la semaine)' : ''}`}
+              </option>
+            ))}
+          </select>
+          {(draft.days ?? 1) > 1 && (
+            <span className="mt-1 block text-xs text-zinc-500">
+              Affichée chaque jour{draft.date ? ` jusqu’au ${formatDay(lastDay(draft.date, draft.days))}` : ''}, un seul score par bloc.
+            </span>
+          )}
+        </label>
         {!draft.date && (
           <label className="block">
             <span className="mb-1 block text-sm text-zinc-400">Section de la bibliothèque</span>

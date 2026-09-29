@@ -5,7 +5,7 @@ import { firstPendingBlock, groupByProgram } from '../../domain/grouping'
 import { useOnResume } from '../../lib/resume'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
-import { addDays, formatLongDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
+import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
 import { StatusBadge } from '../calendar/StatusBadge'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
@@ -13,7 +13,7 @@ import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
 
-type Row = { id: string; title: string; date: string; program_id: string; program_name: string; publish_at: string | null }
+type Row = { id: string; title: string; date: string; days: number; program_id: string; program_name: string; publish_at: string | null }
 
 /** Diagonal stripes marking a workout athletes can't see yet (only its program's coaches get it). */
 const HATCHED =
@@ -81,7 +81,8 @@ export function HomePage() {
     if (!week) return
     setWorkouts(null)
     done.current = new Map()
-    const rows = week.filter((r) => r.date === day)
+    // Multi-day workouts (challenges) show every day of their range, after the day's workouts.
+    const rows = week.filter((r) => coversDay(r.date, r.days, day)).sort((a, b) => Number(a.days > 1) - Number(b.days > 1))
     Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
       setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
     )
@@ -109,7 +110,7 @@ export function HomePage() {
         </div>
         <div className="mt-2 grid grid-cols-7 gap-1">
           {weekDays(monday).map((d, i) => {
-            const has = week?.some((r) => r.date === d)
+            const has = week?.some((r) => coversDay(r.date, r.days, d))
             const selected = d === day
             return (
               <button
@@ -152,6 +153,11 @@ export function HomePage() {
               return (
                 <div key={w.id} className={published ? '' : HATCHED}>
                   <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
+                  {w.days > 1 && (
+                    <p className="-mt-1 mb-2 text-xs text-amber-300">
+                      🗓 Du {formatDay(w.date)} au {formatDay(lastDay(w.date, w.days))} · un seul score
+                    </p>
+                  )}
                   {!published && (
                     <p className="-mt-1 mb-2">
                       <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
