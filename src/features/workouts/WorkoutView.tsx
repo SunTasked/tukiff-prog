@@ -31,7 +31,7 @@ export function WorkoutView({
   workout: WorkoutDraft
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
-  /** Extra content right of each block's title (reactions). */
+  /** Extra content right after each block's title (reactions). */
   blockHeader?: (block: BlockDraft) => ReactNode
   /** Extra content under each block (results). */
   blockFooter?: (block: BlockDraft, label: string) => ReactNode
@@ -62,13 +62,13 @@ export function WorkoutView({
             </p>
             <TimerLink block={b} />
           </div>
-          <div className="flex items-start justify-between gap-2">
+          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
             {(b.title || formatSummary(b.format, b.params)) && (
-              <h3 className="mt-1 min-w-0 text-lg font-bold">
+              <h3 className="min-w-0 text-lg font-bold">
                 {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
               </h3>
             )}
-            {blockHeader && <div className="mt-1 ml-auto shrink-0">{blockHeader(b)}</div>}
+            {blockHeader?.(b)}
           </div>
           {blockLevels(b).length > 1 && (
             <div className="mt-2">
