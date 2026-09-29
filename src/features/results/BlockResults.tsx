@@ -249,14 +249,16 @@ function Board({
               <Avatar url={r.profiles?.avatar_url} name={r.profiles?.display_name} className="size-6 text-[10px]" />
               <span className="min-w-0 truncate">{r.profiles?.display_name ?? '—'}</span>
               {social.leaders.has(r.athlete_id) && <LeaderBadge />}
-              <ClapButton result={r} social={social} />
               <span className="flex-1" />
               <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">
                 {LEVELS[level]}
               </span>
               <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
             </div>
-            {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}
+            <div className={`mt-0.5 flex items-center gap-2 empty:hidden ${type === 'none' ? 'pl-8' : 'pl-16'}`}>
+              <ClapButton result={r} social={social} />
+              {detail(r) && <span className="ml-auto text-[11px] text-zinc-500">{detail(r)}</span>}
+            </div>
             {r.comment && <p className={`mt-0.5 text-xs whitespace-pre-line text-zinc-400 ${type === 'none' ? 'pl-8' : 'pl-16'}`}>{r.comment}</p>}
           </li>
         ))}
