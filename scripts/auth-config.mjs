@@ -25,7 +25,7 @@ const smtp = process.env.SMTP_PASSWORD && {
   smtp_pass: process.env.SMTP_PASSWORD,
   smtp_admin_email: smtpUser,
   smtp_sender_name: appName,
-  rate_limit_email_sent: 30,
+  rate_limit_email_sent: 100,
   mailer_subjects_magic_link: `Ton lien d’inscription ${appName}`,
   mailer_templates_magic_link_content: template,
   mailer_subjects_confirmation: `Ton lien d’inscription ${appName}`,

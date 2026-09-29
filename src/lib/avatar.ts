@@ -20,7 +20,12 @@ const path = (userId: string) => `${userId}/avatar.jpg`
 /** Uploads the picture and stores its URL on the profile (versioned so caches refresh). */
 export async function uploadAvatar(userId: string, file: File): Promise<string | null> {
   const blob = await toSquareJpeg(file)
-  const { error } = await supabase.storage.from('avatars').upload(path(userId), blob, { upsert: true, contentType: 'image/jpeg' })
+  const { error } = await supabase.storage.from('avatars').upload(path(userId), blob, {
+    upsert: true,
+    contentType: 'image/jpeg',
+    // The URL carries ?v=, so the file can be cached for a year (saves the free-tier egress).
+    cacheControl: '31536000',
+  })
   if (error) return error.message
   const url = `${supabase.storage.from('avatars').getPublicUrl(path(userId)).data.publicUrl}?v=${Date.now()}`
   const { error: e } = await supabase.from('profiles').update({ avatar_url: url }).eq('id', userId)
