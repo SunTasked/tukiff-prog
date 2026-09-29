@@ -59,7 +59,7 @@ Variables d'environnement :
 | `node scripts/auth-config.mjs <siteUrl>` | configure Auth : URLs, politique de mot de passe, SMTP Gmail et emails en français |
 | `node scripts/vercel-setup.mjs` | pousse les variables `VITE_SUPABASE_*` dans Vercel (prod → production, staging → previews) |
 | `node scripts/admin.mjs list \| create-user \| set-role \| login-link \| delete-user` | gestion ponctuelle des comptes |
-| `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a` ; sur la prod, seul `--clean` est accepté |
+| `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a`, décrit avec les cas à valider dans `docs/staging-use-cases.md` ; sur la prod, seul `--clean` est accepté |
 
 ## Déploiement
 
