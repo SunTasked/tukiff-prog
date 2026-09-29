@@ -9,6 +9,7 @@ import { WorkoutView } from '../workouts/WorkoutView'
 import { BlockResults } from './BlockResults'
 import { BlockReactions, type Reaction } from './BlockReactions'
 import { useWorkoutResults } from './useWorkoutResults'
+import { useWeekLeaders } from './weeklyBoards'
 
 /**
  * Workout + score entry + leaderboards. canLog: the workout is assigned to the viewer.
@@ -31,14 +32,16 @@ export function WorkoutWithResults({
   // Reactions and leaderboard can be turned off per program (athletes then only see their own score).
   const [reactionsOn, setReactionsOn] = useState(false)
   const [boardOn, setBoardOn] = useState(true)
+  const [programId, setProgramId] = useState<string | null>(null)
   const reloadReactions = useCallback(async () => {
     const [w, r] = await Promise.all([
-      supabase.from('workouts').select('programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single(),
-      supabase.from('block_reactions').select('block_id, user_id, emoji').eq('workout_id', workout.id!),
+      supabase.from('workouts').select('program_id, programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single(),
+      supabase.from('block_reactions').select('block_id, user_id, emoji, profiles(display_name, avatar_url)').eq('workout_id', workout.id!),
     ])
     const on = w.data?.programs?.reactions_enabled ?? true
     setReactionsOn(on)
     setBoardOn(w.data?.programs?.leaderboard_enabled ?? true)
+    setProgramId(w.data?.program_id ?? null)
     setReactions(on ? (r.data ?? []) : [])
   }, [workout.id])
   useEffect(() => {
@@ -63,6 +66,8 @@ export function WorkoutWithResults({
     onDone(new Set([...skips, ...results.filter((r) => r.athlete_id === me).map((r) => r.block_id)]))
   }, [onDone, loaded, reactions, skips, results, me])
   const { oneRms } = useRecords(canLog ? me : undefined)
+  // LEADER badge: leaders of the program's weekly leaderboard, refreshed with the scores.
+  const leaders = useWeekLeaders(loaded ? programId : null, workout.date, results)
 
   return (
     <WorkoutView
@@ -70,9 +75,8 @@ export function WorkoutWithResults({
       nameOf={nameOf}
       videoOf={(id) => byId.get(id)?.video_url}
       oneRmOf={canLog ? (id) => oneRms.get(id) : undefined}
-      blockFooter={(block, label) => (
-        <>
-        {reactionsOn && (
+      blockHeader={(block) =>
+        reactionsOn && (
           <BlockReactions
             workoutId={workout.id!}
             blockId={block.id}
@@ -81,7 +85,9 @@ export function WorkoutWithResults({
             canReact={canLog}
             onChange={reloadReactions}
           />
-        )}
+        )
+      }
+      blockFooter={(block, label) => (
         <BlockResults
           workoutId={workout.id!}
           block={block}
@@ -91,12 +97,12 @@ export function WorkoutWithResults({
           canLog={canLog}
           skipped={skips?.has(block.id) ?? false}
           showBoard={boardOn || !canLog}
+          leaders={leaders}
           onChange={() => {
             reload()
             reloadSkips()
           }}
         />
-        </>
       )}
     />
   )
