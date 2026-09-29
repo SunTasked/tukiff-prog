@@ -13,7 +13,7 @@ export type Reaction = {
 
 /**
  * Reactions right after the block title: one per member and block. Only emojis used at least once are shown;
- * tap one to see who reacted with what, "+" opens the full emoji picker (same emoji again = remove).
+ * tap one to see who reacted with what (and remove mine there), "+" (only while I haven't reacted) opens the full picker.
  */
 export function BlockReactions({
   workoutId,
@@ -64,7 +64,7 @@ export function BlockReactions({
           <span className="text-xs font-semibold text-zinc-300">{count}</span>
         </button>
       ))}
-      {canReact && (
+      {canReact && !mine && (
         <button
           aria-label="Ajouter une réaction"
           className="flex size-7 items-center justify-center rounded-full bg-zinc-950 text-lg leading-none text-zinc-400"
@@ -78,16 +78,9 @@ export function BlockReactions({
         <Sheet onClose={() => setPicking(false)}>
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="font-semibold">Réagir</span>
-            <div className="flex items-center gap-2">
-              {mine && (
-                <button className="rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-300" onClick={() => react(null)}>
-                  Retirer {mine}
-                </button>
-              )}
-              <button className="px-2 text-zinc-400" onClick={() => setPicking(false)}>
-                Fermer
-              </button>
-            </div>
+            <button className="px-2 text-zinc-400" onClick={() => setPicking(false)}>
+              Fermer
+            </button>
           </div>
           <EmojiPicker onPick={react} />
         </Sheet>
