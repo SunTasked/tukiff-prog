@@ -8,7 +8,7 @@ import type { ResultRow } from './useWorkoutResults'
 
 export type Athlete = ResultRow & { gender: Gender | null }
 export type WeeklyBoards = ReturnType<typeof weeklyLeaderboards<Athlete>>
-type Row = { id: string; program_id: string; publish_at: string | null }
+type Row = { id: string; date: string; program_id: string; publish_at: string | null }
 
 /** Weekly leaderboard of one program (Monday to Sunday), from the published workouts of the week. */
 async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ enabled: boolean; boards: WeeklyBoards }> {
@@ -18,7 +18,8 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   ])
   const enabled = program?.leaderboard_enabled ?? true
   const ids = ((week ?? []) as Row[])
-    .filter((w) => w.program_id === programId && publicationStatus(w.publish_at) === 'published')
+    // A multi-day workout started last week belongs to last week's board.
+    .filter((w) => w.program_id === programId && w.date >= monday && publicationStatus(w.publish_at) === 'published')
     .map((w) => w.id)
   const [workouts, { data: results }] = await Promise.all([
     Promise.all(ids.map(loadWorkout)),

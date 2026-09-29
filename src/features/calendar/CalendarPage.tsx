@@ -5,10 +5,12 @@ import { ProgramBadge, programColor } from '../../components/ProgramBadges'
 import { Button, ErrorText, PageTitle } from '../../components/ui'
 import {
   addDays,
+  coversDay,
   formatDay,
   formatWeek,
   fromISODate,
   fromLocalInput,
+  lastDay,
   mondayOf,
   today,
   weekDays,
@@ -20,7 +22,7 @@ import { searchExercises } from '../exercises/useExercises'
 import { useMyPrograms, type EditableProgram } from '../programs/useMyPrograms'
 import { StatusBadge } from './StatusBadge'
 
-type Row = { id: string; title: string; date: string; publish_at: string | null; program_id: string }
+type Row = { id: string; title: string; date: string; days: number; publish_at: string | null; program_id: string }
 
 const WEEKS_KEY = 'planningWeeks'
 const FILTER_KEY = 'planningPrograms'
@@ -69,14 +71,15 @@ export function CalendarPage() {
     if (!shownIds.length) return setRows([])
     const { data, error } = await supabase
       .from('workouts')
-      .select('id, title, date, publish_at, program_id')
+      .select('id, title, date, days, publish_at, program_id')
       .in('program_id', shownIds)
-      .gte('date', monday)
+      // 6 days earlier: multi-day workouts started last week still run this week.
+      .gte('date', addDays(monday, -6))
       .lte('date', end)
       .order('date')
       .order('created_at')
     setError(error?.message ?? '')
-    setRows((data ?? []) as Row[])
+    setRows(((data ?? []) as Row[]).filter((r) => lastDay(r.date, r.days) >= monday))
   }, [programs, shownIds, monday, end])
 
   useEffect(() => {
@@ -219,7 +222,7 @@ export function CalendarPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-        <button className="rounded-full bg-zinc-800 px-3 py-1.5 font-semibold text-zinc-200" onClick={() => selectMany(rows.map((r) => r.id))}>
+        <button className="rounded-full bg-zinc-800 px-3 py-1.5 font-semibold text-zinc-200" onClick={() => selectMany(idsOn(monday, end))}>
           Tout sélectionner
         </button>
         <span className="hidden lg:inline">
@@ -239,6 +242,8 @@ export function CalendarPage() {
             <div className="flex flex-col gap-2 lg:grid lg:grid-cols-7">
               {weekDays(m).map((day, di) => {
                 const dayRows = rows.filter((r) => r.date === day)
+                // Multi-day workouts running on this day but started earlier: a faded reminder line.
+                const running = rows.filter((r) => r.date < day && coversDay(r.date, r.days, day))
                 return (
                   <div
                     key={day}
@@ -287,6 +292,11 @@ export function CalendarPage() {
                             </span>
                           )}
                           <span className="block pr-5 font-semibold lg:text-sm">{r.title}</span>
+                          {r.days > 1 && (
+                            <span className="mt-0.5 block text-xs text-amber-300">
+                              🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
+                            </span>
+                          )}
                           <span className="mt-1 flex flex-wrap items-center justify-between gap-1 lg:flex-col lg:items-start">
                             {program && <ProgramBadge name={program.name} />}
                             <StatusBadge publishAt={r.publish_at} />
@@ -294,6 +304,15 @@ export function CalendarPage() {
                         </div>
                       )
                     })}
+                    {running.map((r) => (
+                      <button
+                        key={r.id}
+                        className="mt-2 block w-full truncate rounded-xl border border-dashed border-amber-300/30 px-3 py-1.5 text-left text-xs text-amber-200/70 lg:px-2"
+                        onClick={() => navigate(`/calendar/workouts/${r.id}`)}
+                      >
+                        ↳ {r.title} · jusqu’au {formatDay(lastDay(r.date, r.days))}
+                      </button>
+                    ))}
                   </div>
                 )
               })}
