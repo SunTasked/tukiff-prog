@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
+import { addDays, coversDay, lastDay, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
 
 describe('weeks', () => {
   it('finds the Monday of a week', () => {
@@ -45,5 +45,16 @@ describe('month grid', () => {
   it('moves by months', () => {
     expect(addMonths('2026-01-31', 1)).toBe('2026-02-01')
     expect(addMonths('2026-01-15', -1)).toBe('2025-12-01')
+  })
+})
+
+describe('multi-day workouts', () => {
+  it('computes the last day and the days covered', () => {
+    expect(lastDay('2026-09-28', 7)).toBe('2026-10-04')
+    expect(lastDay('2026-09-28')).toBe('2026-09-28')
+    expect(coversDay('2026-09-28', 7, '2026-10-04')).toBe(true)
+    expect(coversDay('2026-09-28', 7, '2026-10-05')).toBe(false)
+    expect(coversDay('2026-09-28', 1, '2026-09-28')).toBe(true)
+    expect(coversDay('2026-09-28', 3, '2026-09-27')).toBe(false)
   })
 })

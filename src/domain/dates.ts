@@ -71,3 +71,9 @@ export function publicationStatus(publishAt: string | null, now = new Date()): P
   if (!publishAt) return 'draft'
   return new Date(publishAt) <= now ? 'published' : 'scheduled'
 }
+
+/** Multi-day workouts ("challenge de la semaine"): last day of a workout lasting `days` days from `date`. */
+export const lastDay = (date: string, days = 1) => addDays(date, Math.max(days, 1) - 1)
+
+/** Whether a workout starting on `date` and lasting `days` days is shown on `day`. */
+export const coversDay = (date: string, days: number | undefined, day: string) => date <= day && lastDay(date, days) >= day
