@@ -21,14 +21,20 @@ export function useClaps(workoutId: string | undefined, me: string | undefined, 
     if (!workoutId) return
     const [counts, rows] = await Promise.all([
       supabase.rpc('clap_counts', { p_workout: workoutId }),
-      supabase.from('result_claps').select('result_id, from_user, profiles(display_name, avatar_url)').eq('workout_id', workoutId),
+      supabase.from('result_claps').select('result_id, from_user').eq('workout_id', workoutId),
     ])
     const next = empty()
     for (const c of counts.data ?? []) next.counts.set(c.result_id, c.claps)
-    for (const r of rows.data ?? []) {
-      if (r.from_user === me) next.given.add(r.result_id)
-      else next.received.set(r.result_id, [...(next.received.get(r.result_id) ?? []), { id: r.from_user, profiles: r.profiles }])
-    }
+    // from_user references auth.users (see migration 0033): names come from profiles separately.
+    const received = (rows.data ?? []).filter((r) => r.from_user !== me)
+    const ids = [...new Set(received.map((r) => r.from_user))]
+    const { data: profiles } = ids.length
+      ? await supabase.from('profiles').select('id, display_name, avatar_url').in('id', ids)
+      : { data: [] }
+    const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
+    for (const r of rows.data ?? []) if (r.from_user === me) next.given.add(r.result_id)
+    for (const r of received)
+      next.received.set(r.result_id, [...(next.received.get(r.result_id) ?? []), { id: r.from_user, profiles: byId.get(r.from_user) ?? null }])
     setClaps(next)
   }, [workoutId, me])
   useEffect(() => {

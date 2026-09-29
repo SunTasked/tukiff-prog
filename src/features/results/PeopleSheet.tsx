@@ -40,7 +40,7 @@ export function PeopleSheet({
               {p.onRemove && (
                 <button
                   aria-label="Retirer ma réaction"
-                  className="flex size-6 items-center justify-center rounded-full bg-zinc-800 text-sm leading-none text-zinc-300"
+                  className="flex size-6 items-center justify-center rounded-full bg-red-600 text-sm leading-none font-bold text-white"
                   onClick={p.onRemove}
                 >
                   −

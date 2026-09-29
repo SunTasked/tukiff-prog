@@ -3,7 +3,9 @@
 create table public.result_claps (
   result_id uuid not null references public.results on delete cascade,
   workout_id uuid not null references public.workouts on delete cascade,
-  from_user uuid not null default auth.uid() references public.profiles on delete cascade,
+  -- auth.users, not profiles: a results<->profiles link through this table would make the existing
+  -- results?select=profiles(...) embeds ambiguous (PGRST201) and break current clients.
+  from_user uuid not null default auth.uid() references auth.users on delete cascade,
   created_at timestamptz not null default now(),
   primary key (result_id, from_user)
 );

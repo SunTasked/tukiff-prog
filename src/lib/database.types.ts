@@ -551,13 +551,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "result_claps_from_user_fkey"
-            columns: ["from_user"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "result_claps_result_id_fkey"
             columns: ["result_id"]
             isOneToOne: false
@@ -747,6 +740,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           date: string | null
+          days: number
           id: string
           notes: string | null
           program_id: string | null
@@ -759,6 +753,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          days?: number
           id?: string
           notes?: string | null
           program_id?: string | null
@@ -771,6 +766,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           date?: string | null
+          days?: number
           id?: string
           notes?: string | null
           program_id?: string | null
@@ -848,6 +844,7 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: {
           date: string
+          days: number
           id: string
           program_id: string
           program_name: string
