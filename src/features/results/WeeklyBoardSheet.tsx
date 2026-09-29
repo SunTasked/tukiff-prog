@@ -1,16 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { Card, Spinner } from '../../components/ui'
-import { addDays, formatWeek, mondayOf, publicationStatus } from '../../domain/dates'
-import type { Gender } from '../../domain/profile'
-import { myGenderFirst, scoreType, weeklyLeaderboards } from '../../domain/scoring'
-import { supabase } from '../../lib/supabase'
+import { addDays, formatWeek, mondayOf } from '../../domain/dates'
+import { allGenders, myGenderFirst } from '../../domain/scoring'
 import { useAuth } from '../auth/AuthProvider'
-import { loadWorkout } from '../workouts/api'
-import type { ResultRow } from './useWorkoutResults'
-
-type Athlete = ResultRow & { gender: Gender | null }
-type Row = { id: string; program_id: string; publish_at: string | null }
+import { LeaderBadge } from './LeaderBadge'
+import { loadWeeklyBoards, type WeeklyBoards } from './weeklyBoards'
 
 const MEDALS = ['🥇', '🥈', '🥉']
 const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
@@ -31,45 +26,16 @@ export function WeeklyBoardSheet({
   const me = session?.user.id
   const [monday, setMonday] = useState(mondayOf(week))
   const [enabled, setEnabled] = useState(true)
-  const [boards, setBoards] = useState<ReturnType<typeof weeklyLeaderboards<Athlete>> | null>(null)
+  const [boards, setBoards] = useState<WeeklyBoards | null>(null)
 
   useEffect(() => {
     let live = true
     setBoards(null)
-    ;(async () => {
-      const [{ data: week }, { data: program }] = await Promise.all([
-        supabase.rpc('my_workouts', {
-          p_from: monday,
-          p_to: addDays(monday, 6),
-        }),
-        supabase.from('programs').select('leaderboard_enabled').eq('id', programId).maybeSingle(),
-      ])
-      const ids = ((week ?? []) as Row[])
-        .filter((w) => w.program_id === programId && publicationStatus(w.publish_at) === 'published')
-        .map((w) => w.id)
-      const [workouts, { data: results }] = await Promise.all([
-        Promise.all(ids.map(loadWorkout)),
-        ids.length
-          ? supabase.from('results').select('*, profiles(display_name, gender, avatar_url)').in('workout_id', ids)
-          : Promise.resolve({ data: [] }),
-      ])
+    loadWeeklyBoards(programId, monday, true).then(({ enabled, boards }) => {
       if (!live) return
-      const rows: Athlete[] = ((results ?? []) as ResultRow[]).map((r) => ({
-        ...r,
-        gender: r.profiles?.gender ?? null,
-      }))
-      setEnabled(program?.leaderboard_enabled ?? true)
-      setBoards(
-        weeklyLeaderboards(
-          workouts.flatMap((w) =>
-            (w?.blocks ?? []).map((b) => ({
-              type: scoreType(b.format, b.params),
-              results: rows.filter((r) => r.block_id === b.id),
-            })),
-          ),
-        ),
-      )
-    })()
+      setEnabled(enabled)
+      setBoards(boards)
+    })
     return () => {
       live = false
     }
@@ -119,11 +85,13 @@ export function WeeklyBoardSheet({
             <p className="text-zinc-400">Aucun score cette semaine.</p>
           </Card>
         ) : (
-          myGenderFirst(boards, profile?.gender).map(({ gender, blocks, rows }) => (
+          myGenderFirst(allGenders(boards, (gender) => ({ gender, blocks: 0, rows: [] })), profile?.gender).map(({ gender, blocks, rows }) => (
             <div key={gender} className="mb-5">
               <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                {BOARD_TITLES[gender]} · {blocks} bloc{blocks > 1 ? 's' : ''}
+                {BOARD_TITLES[gender]}
+                {blocks > 0 && ` · ${blocks} bloc${blocks > 1 ? 's' : ''}`}
               </p>
+              {rows.length === 0 && <p className="text-sm text-zinc-500">Aucun score cette semaine.</p>}
               <ol className="flex flex-col gap-1">
                 {rows.map(({ athlete: a, rank, total, places }) => (
                   <li
@@ -133,7 +101,9 @@ export function WeeklyBoardSheet({
                     <div className="flex items-center gap-2">
                       <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>
                       <Avatar url={a.profiles?.avatar_url} name={a.profiles?.display_name} className="size-6 text-[10px]" />
-                      <span className="min-w-0 flex-1 truncate">{a.profiles?.display_name ?? '—'}</span>
+                      <span className="min-w-0 truncate">{a.profiles?.display_name ?? '—'}</span>
+                      {rank === 1 && <LeaderBadge />}
+                      <span className="flex-1" />
                       <span className="shrink-0 font-semibold tabular-nums">{total} pts</span>
                     </div>
                     <p className="mt-0.5 pl-16 text-xs text-zinc-500 tabular-nums">

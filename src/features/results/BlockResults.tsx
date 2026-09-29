@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import type { Gender } from '../../domain/profile'
-import { compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
+import { formatBreakdown, repBreakdown } from '../../domain/repcount'
+import { allGenders, compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
+import { LeaderBadge } from './LeaderBadge'
 import { ScoreSheet } from './ScoreSheet'
 import type { ResultRow } from './useWorkoutResults'
 
@@ -20,6 +22,8 @@ type Props = {
   skipped: boolean
   /** Other athletes' scores (off when the program's leaderboard is disabled, for athletes). */
   showBoard: boolean
+  /** Leaders of the program's weekly leaderboard (LEADER badge). */
+  leaders: Set<string>
   onChange: () => void
 }
 
@@ -30,7 +34,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
  * "My score" / "Je passe" buttons + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately.
  * Compact: the top 3 of each level plus me, the full board opens in a sheet.
  */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, onChange }: Props) {
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
@@ -44,6 +48,11 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
     ),
     profile?.gender,
   )
+  // AMRAP scored in total reps: the total explained in rounds, ladder rounds and reps.
+  const detail = (r: ResultRow) => {
+    const b = type === 'reps' && block.format === 'amrap' && r.reps ? repBreakdown(block, r.reps) : null
+    return b && formatBreakdown(b)
+  }
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
 
@@ -112,6 +121,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
             Mon score : {formatScore(type, mine)} · {LEVELS[mine.level as Level]} ✎
+            {detail(mine) && <span className="block text-xs font-normal text-zinc-400">{detail(mine)}</span>}
           </button>
         ) : skipped ? (
           <div className="flex items-center gap-2">
@@ -138,9 +148,9 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
       {showBoard && boards.length > 0 && (
         <>
           {boards.map(({ gender, rows }) => (
-            <Board key={gender} gender={gender} rows={compactRows(rows, me)} type={type} me={me} />
+            <Board key={gender} gender={gender} rows={compactRows(rows, me)} type={type} me={me} leaders={leaders} detail={detail} />
           ))}
-          {boards.some(({ rows }) => compactRows(rows, me).length < rows.length) && (
+          {(type !== 'none' || boards.some(({ rows }) => compactRows(rows, me).length < rows.length)) && (
             <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
               Voir le classement complet ({results.length}) ›
             </button>
@@ -157,8 +167,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
             </button>
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-            {boards.map(({ gender, rows }) => (
-              <Board key={gender} gender={gender} rows={rows} type={type} me={me} />
+            {myGenderFirst(allGenders(boards, (gender) => ({ gender, rows: [] })), profile?.gender).map(({ gender, rows }) => (
+              <Board key={gender} gender={gender} rows={rows} type={type} me={me} leaders={leaders} detail={detail} />
             ))}
           </div>
         </div>
@@ -188,10 +198,25 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
 type BoardRow = { result: ResultRow; rank: number; level: Level }
 
-function Board({ gender, rows, type, me }: { gender: Gender; rows: BoardRow[]; type: ScoreType; me: string | undefined }) {
+function Board({
+  gender,
+  rows,
+  type,
+  me,
+  leaders,
+  detail,
+}: {
+  gender: Gender
+  rows: BoardRow[]
+  type: ScoreType
+  me: string | undefined
+  leaders: Set<string>
+  detail: (r: ResultRow) => string | null
+}) {
   return (
     <div className="mt-3">
       <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{BOARD_TITLES[gender]}</p>
+      {rows.length === 0 && <p className="text-sm text-zinc-500">Pas encore de score.</p>}
       <ol className="flex flex-col gap-1">
         {rows.map(({ result: r, rank, level }) => (
           <li
@@ -201,12 +226,15 @@ function Board({ gender, rows, type, me }: { gender: Gender; rows: BoardRow[]; t
             <div className="flex items-center gap-2">
               {type !== 'none' && <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>}
               <Avatar url={r.profiles?.avatar_url} name={r.profiles?.display_name} className="size-6 text-[10px]" />
-              <span className="min-w-0 flex-1 truncate">{r.profiles?.display_name ?? '—'}</span>
+              <span className="min-w-0 truncate">{r.profiles?.display_name ?? '—'}</span>
+              {leaders.has(r.athlete_id) && <LeaderBadge />}
+              <span className="flex-1" />
               <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">
                 {LEVELS[level]}
               </span>
               <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
             </div>
+            {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}
             {r.comment && <p className={`mt-0.5 text-xs whitespace-pre-line text-zinc-400 ${type === 'none' ? 'pl-8' : 'pl-16'}`}>{r.comment}</p>}
           </li>
         ))}

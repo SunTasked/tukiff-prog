@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { groupRounds, repPlan, roundReps, totalReps } from '../../domain/repcount'
+import { groupRounds, isCounted, repPlan, roundReps, totalReps } from '../../domain/repcount'
 import type { BlockDraft } from '../../domain/workout'
 
 /**
@@ -21,7 +21,7 @@ export function RepCounter({ block, onTotal }: { block: BlockDraft; onTotal: (re
   }
 
   // Sub-blocks done several times in a round get their own counter; the others count as reps.
-  const counted = block.groups.map((g, i) => ({ g, i })).filter(({ g }) => (g.start ?? 1) > 1 || (g.step ?? 0) > 0)
+  const counted = block.groups.map((g, i) => ({ g, i })).filter(({ g }) => isCounted(g))
   const marks = [1, 2, 3, 4, 5, 6].map((r) => ({ r, total: totalReps(plan, r, [], 0) }))
 
   return (

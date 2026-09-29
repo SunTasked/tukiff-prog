@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { groupRounds, itemCount, repPlan, roundReps, totalReps } from './repcount'
+import { formatBreakdown, groupRounds, itemCount, repBreakdown, repPlan, roundReps, totalReps } from './repcount'
 import { emptyItem, newBlock } from './workout'
 
 // DB DT ladder: N rounds of (12 DL + 9 HPC + 6 PJ), then 15 burpees box jump over.
@@ -32,5 +32,18 @@ describe('repcount', () => {
   it('no plan when a movement is not countable', () => {
     expect(repPlan({ ...ladder, items: [...ladder.items, g('max', null)] })).toBeNull()
     expect(repPlan(newBlock('metcon', 'e'))).toBeNull()
+  })
+  it('breaks a total back into rounds, ladder rounds and reps', () => {
+    const b = (total: number) => formatBreakdown(repBreakdown(ladder, total)!)
+    expect(b(207 + 54 + 5)).toBe('3 tours + 2 DB DT + 5 reps')
+    expect(b(42)).toBe('1 tour')
+    expect(b(20)).toBe('0 tour + 20 reps')
+    // All 4 DB DT of round 4 done, then 10 burpees.
+    expect(b(207 + 108 + 10)).toBe('3 tours + 4 DB DT + 10 reps')
+    expect(repBreakdown(ladder, 0)).toBeNull()
+  })
+  it('plain rounds without sub-blocks', () => {
+    const plain = { ...newBlock('metcon', 'p'), items: [g('10', null), g('5', null)] }
+    expect(formatBreakdown(repBreakdown(plain, 47)!)).toBe('3 tours + 2 reps')
   })
 })

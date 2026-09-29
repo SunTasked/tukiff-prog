@@ -24,12 +24,15 @@ export function WorkoutView({
   workout,
   nameOf,
   videoOf,
+  blockHeader,
   blockFooter,
   oneRmOf,
 }: {
   workout: WorkoutDraft
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
+  /** Extra content right of each block's title (reactions). */
+  blockHeader?: (block: BlockDraft) => ReactNode
   /** Extra content under each block (results). */
   blockFooter?: (block: BlockDraft, label: string) => ReactNode
   /** Viewer's 1RM per exercise: shows the load for "% 1RM" prescriptions. */
@@ -59,11 +62,14 @@ export function WorkoutView({
             </p>
             <TimerLink block={b} />
           </div>
-          {(b.title || formatSummary(b.format, b.params)) && (
-            <h3 className="mt-1 text-lg font-bold">
-              {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
-            </h3>
-          )}
+          <div className="flex items-start justify-between gap-2">
+            {(b.title || formatSummary(b.format, b.params)) && (
+              <h3 className="mt-1 min-w-0 text-lg font-bold">
+                {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
+              </h3>
+            )}
+            {blockHeader && <div className="mt-1 ml-auto shrink-0">{blockHeader(b)}</div>}
+          </div>
           {blockLevels(b).length > 1 && (
             <div className="mt-2">
               <Chips
