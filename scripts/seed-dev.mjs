@@ -1,33 +1,48 @@
-// Dev/test dataset: users c1, c2 (coaches), a1, a2, a3 (athletes) with password "a",
-// programs, library templates and scheduled workouts around the current week.
+// Staging dataset covering the use cases of docs/staging-use-cases.md (IDs UC-xx referenced below).
+// Users *@tkf.test (password "a"): 2 coaches, 10 athletes (men and women, every level), 1 account in onboarding.
+// Programs, library templates, workouts from 2 weeks ago to next week (dates relative to today), scores,
+// "Fait", "Je passe", reactions, comments, records, avatars and 7 days of usage stats.
+// Current week of "CrossFit" (stand-in for prod "Kanda WOD") copies the prod week of 28/09/2026 (content only).
 // Re-runnable: removes the previous seed first. Usage: node scripts/seed-dev.mjs [--clean]
 // The "a" password bypasses the password policy (hash written directly), staging only (refuses TARGET=prod).
+import { readFileSync } from 'node:fs'
 import { createClient } from '@supabase/supabase-js'
 import { api, serviceKey, sql, target, url } from './lib.mjs'
 
 const DOMAIN = 'tkf.test'
 const PASSWORD = 'a'
-const OWNER = 'guillaume.kheng@gmail.com' // real coach, added to the CrossFit program
+const OWNER = 'guillaume.kheng@gmail.com' // real coach, added to the CrossFit program when the account exists
+// skill: 0-1 (drives scores), skip: share of workouts not done, levels: levels they score in.
 const USERS = [
-  { name: 'c1', role: 'coach', admin: true },
-  { name: 'c2', role: 'coach' },
-  { name: 'a1', role: 'athlete' },
-  { name: 'a2', role: 'athlete' },
-  { name: 'a3', role: 'athlete' },
+  { name: 'c1', display: 'Max', role: 'coach', admin: true, gender: 'male', avatar: true, levels: ['elite', 'rx'], skill: 0.85, skip: 0.3 },
+  { name: 'c2', display: 'Julie', role: 'coach', gender: 'female', avatar: true, levels: ['rx'], skill: 0.7, skip: 0.4 },
+  { name: 'a1', display: 'Léa', role: 'athlete', gender: 'female', avatar: true, levels: ['rx', 'elite'], skill: 0.9, skip: 0 },
+  { name: 'a2', display: 'Tom', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.65, skip: 0.1 },
+  { name: 'a3', display: 'Sarah', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.5, skip: 0.2 },
+  { name: 'a4', display: 'Hugo', role: 'athlete', gender: 'male', avatar: true, levels: ['elite'], skill: 0.95, skip: 0 },
+  { name: 'a5', display: 'Inès', role: 'athlete', gender: 'female', levels: ['foundation'], skill: 0.3, skip: 0.2 },
+  { name: 'a6', display: 'Nico', role: 'athlete', gender: 'male', levels: ['scaled', 'rx'], skill: 0.45, skip: 0.2 },
+  { name: 'a7', display: 'Emma', role: 'athlete', gender: 'female', levels: ['rx'], skill: 0.6, skip: 0.15 },
+  { name: 'a8', display: 'Paul', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.5, skip: 1 }, // never scores (UC-report)
+  { name: 'a9', display: 'Chloé', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.4, skip: 0.25 },
+  { name: 'a10', display: 'Karim', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.75, skip: 0.1 },
+  // Onboarding: nickname set but gender missing -> the app asks for it (UC-02).
+  { name: 'n1', display: 'n1', role: 'athlete', gender: null, levels: [], skip: 1 },
 ]
-// name: { owner, contributors, members }
+const ALL = USERS.map((u) => u.name)
+// name: { owner, contributors, members, reactions, leaderboard }
 const PROGRAMS = {
-  CrossFit: { owner: 'c1', contributors: ['c2'], members: ['c1', 'c2', 'a1', 'a2', 'a3', OWNER] },
-  Haltéro: { owner: 'c1', contributors: [], members: ['c1', 'a1'] },
-  Hyrox: { owner: 'c2', contributors: [], members: ['a2'] },
-  'Open Gym': { owner: 'c1', contributors: [], members: ['c1', 'c2', 'a1', 'a2', 'a3', OWNER] },
+  CrossFit: { owner: 'c1', contributors: ['c2'], members: [...ALL, OWNER] },
+  Haltéro: { owner: 'c1', contributors: [], members: ['c1', 'a1', 'a2', 'a4', 'a10'], leaderboard: false, reactions: false },
+  Hyrox: { owner: 'c2', contributors: [], members: ['c2', 'a2', 'a3', 'a6', 'a7'], reactions: false },
+  'Open Gym': { owner: 'c1', contributors: [], members: ['c1', 'c2', 'a1', 'a3', 'a5', 'a9', OWNER] },
   'Perso a3': { owner: 'c1', contributors: [], members: ['a3'] },
 }
 
 // Library sections: section -> templates
 const SECTIONS = {
   'Benchmark CrossFit': ['Fran', 'Squat lourd + Cindy'],
-  WOD: ['Chipper DU', 'EMOM gym'],
+  WOD: ['Chipper DU', 'EMOM gym', 'DB DT ladder'],
   Hyrox: ['Hyrox simulation'],
   Haltéro: ['Haltéro : clean & jerk'],
 }
@@ -47,6 +62,7 @@ const ids = seedUsers.map((u) => q(u.id)).join(',')
 if (ids) {
   await sql(`delete from public.workouts where created_by in (${ids})`)
   await sql(`delete from public.programs where owner_id in (${ids})`)
+  await sql(`delete from storage.objects where bucket_id = 'avatars' and (storage.foldername(name))[1] in (${ids})`).catch(() => {})
 }
 await sql(
   `delete from public.library_sections s where name in (${Object.keys(SECTIONS).map(q).join(',')})
@@ -70,32 +86,47 @@ for (const u of USERS) {
   await sql(`
     update auth.users set encrypted_password = extensions.crypt(${q(PASSWORD)}, extensions.gen_salt('bf'))
       where id = ${q(data.user.id)};
-    update public.profiles set role = ${q(u.role)}, display_name = ${q(u.name)},
+    update public.profiles set role = ${q(u.role)}, display_name = ${q(u.display)}, gender = ${u.gender ? q(u.gender) : 'null'},
       is_admin = ${!!u.admin}, enrolled_at = now() where id = ${q(data.user.id)};`)
 }
 const [owner] = await sql(`select id from auth.users where email = ${q(OWNER)}`)
 if (owner) userId[OWNER] = owner.id
-console.log('Utilisateurs :', USERS.map((u) => emailOf(u.name)).join(', '))
+console.log('Utilisateurs :', USERS.map((u) => `${emailOf(u.name)} (${u.display})`).join(', '))
 
-// Act as the coaches through the real API (RLS + RPCs) ---------------------------------------
+// Act through the real API (RLS + RPCs) ------------------------------------------------------
+const clients = {}
 async function clientFor(name) {
+  if (clients[name]) return clients[name]
   const client = createClient(url, publishable, { auth: { persistSession: false } })
   const { error } = await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
   if (error) throw error
-  return client
+  return (clients[name] = client)
 }
-const coach = { c1: await clientFor('c1'), c2: await clientFor('c2') }
-const c1 = coach.c1
 const must = (r) => {
   if (r.error) throw new Error(r.error.message)
   return r.data
 }
 
+// Avatars (UC-03): uploaded by each user like the app does, versioned URL.
+for (const u of USERS.filter((x) => x.avatar)) {
+  const client = await clientFor(u.name)
+  const path = `${userId[u.name]}/avatar.jpg`
+  const file = readFileSync(new URL(`./seed-avatars/${u.name}.jpg`, import.meta.url))
+  must(await client.storage.from('avatars').upload(path, file, { upsert: true, contentType: 'image/jpeg' }))
+  const avatar_url = `${client.storage.from('avatars').getPublicUrl(path).data.publicUrl}?v=${Date.now()}`
+  must(await client.from('profiles').update({ avatar_url }).eq('id', userId[u.name]))
+}
+
+const coach = { c1: await clientFor('c1'), c2: await clientFor('c2') }
+const c1 = coach.c1
+
 const programId = {}
 const ownerOf = {}
 for (const [name, p] of Object.entries(PROGRAMS)) {
   const client = coach[p.owner]
+  const toggles = { reactions_enabled: p.reactions ?? true, leaderboard_enabled: p.leaderboard ?? true }
   programId[name] = must(await client.from('programs').insert({ name }).select().single()).id
+  must(await client.from('programs').update(toggles).eq('id', programId[name]))
   ownerOf[name] = client
   for (const c of p.contributors) must(await client.from('program_coaches').insert({ program_id: programId[name], coach_id: userId[c] }))
   const rows = p.members.filter((m) => userId[m]).map((m) => ({ program_id: programId[name], user_id: userId[m] }))
@@ -107,14 +138,17 @@ const item = (name, fields = {}, levels = {}) => {
   if (!ex[name]) throw new Error(`Exercice inconnu : ${name}`)
   return { exercise_id: ex[name], label: '', reps: '', levels, ...fields }
 }
+// groups: [{ title, note, start, step, items: [item indices] }] stored in params like the app does.
 const block = (kind, format, params, items, extra = {}) => ({
   id: crypto.randomUUID(), kind, format, params, items, title: '', notes: '', ...extra,
 })
-const warmup = block('warmup', 'none', {}, [item('Row', { calories: 15 }), item('Air Squat', { reps: '20' }), item('Push-up', { reps: '10' })], { notes: '2 rounds, rythme tranquille' })
+const warmup = () =>
+  block('warmup', 'none', {}, [item('Row', { calories: 15 }), item('Air Squat', { reps: '20' }), item('Push-up', { reps: '10' })], { notes: '2 rounds, rythme tranquille' })
+const newIds = (blocks) => blocks.map((b) => ({ ...b, id: crypto.randomUUID() }))
 
 const TEMPLATES = {
   'Chipper DU': [
-    warmup,
+    warmup(),
     block('metcon', 'for_time', { rounds: 3, time_cap_s: 25 * 60 }, [
       item('Double-Under', { reps: '100' }, { scaled: { exercise_id: ex['Single-Under'], reps: '200' }, foundation: { exercise_id: ex['Single-Under'], reps: '100' } }),
       item('Pull-up', { reps: '21' }, { foundation: { exercise_id: ex['Ring Row'] } }),
@@ -122,18 +156,18 @@ const TEMPLATES = {
       item('Chest-to-Bar Pull-up', { reps: '15' }, { scaled: { exercise_id: ex['Pull-up'] }, foundation: { exercise_id: ex['Ring Row'] } }),
       item('Echo Bike', { calories: 20 }, { foundation: { calories: 15 } }),
       item('Bar Muscle-up', { reps: '9' }, { elite: { exercise_id: ex['Ring Muscle-up'] }, scaled: { exercise_id: ex['Chest-to-Bar Pull-up'] }, foundation: { exercise_id: ex['Jumping Pull-up'] } }),
-    ]),
+    ], { title: 'Chipper' }),
   ],
   Fran: [
-    warmup,
+    warmup(),
     block('metcon', 'for_time', { time_cap_s: 10 * 60 }, [
-      item('Thruster', { reps: '21-15-9', load_kg: 43 }, { elite: { load_kg: 50 }, scaled: { load_kg: 30 }, foundation: { load_kg: 20, reps: '15-12-9' } }),
+      item('Thruster', { reps: '21-15-9', load_kg: 43, load_kg_f: 29 }, { elite: { load_kg: 50, load_kg_f: 35 }, scaled: { load_kg: 30, load_kg_f: 20 }, foundation: { load_kg: 20, load_kg_f: 15, reps: '15-12-9' } }),
       item('Pull-up', { reps: '21-15-9' }, { foundation: { exercise_id: ex['Ring Row'] } }),
     ], { title: 'Fran' }),
   ],
   'Squat lourd + Cindy': [
-    warmup,
-    block('strength', 'sets_reps', { sets: 5 }, [item('Back Squat', { reps: '5', pct_1rm: 80 })], { notes: 'Repos 2 min entre les séries' }),
+    warmup(),
+    block('strength', 'sets_reps', { sets: 5 }, [item('Back Squat', { reps: '5', pct_1rm: 80 })], { title: 'Back Squat', notes: 'Repos 2 min entre les séries' }),
     block('metcon', 'amrap', { duration_s: 20 * 60 }, [
       item('Pull-up', { reps: '5' }, { foundation: { exercise_id: ex['Ring Row'] } }),
       item('Push-up', { reps: '10' }),
@@ -141,18 +175,18 @@ const TEMPLATES = {
     ], { title: 'Cindy' }),
   ],
   'EMOM gym': [
-    warmup,
+    warmup(),
     block('skill', 'emom', { interval_s: 60, rounds: 12 }, [
       item('Toes-to-Bar', { reps: '10' }, { scaled: { exercise_id: ex['Knees-to-Elbows'] } }),
-      item('Wall Ball', { reps: '15', load_kg: 9 }, { scaled: { load_kg: 6 } }),
+      item('Wall Ball', { reps: '15', load_kg: 9, load_kg_f: 6 }, { scaled: { load_kg: 6, load_kg_f: 4 } }),
       item('Burpee', { reps: '10' }),
-    ], { notes: 'Alterner les 3 mouvements chaque minute' }),
-    block('accessory', 'tabata', { rounds: 8, work_s: 20, rest_s: 10 }, [item('Hollow Hold', { duration_s: 20 })]),
+    ], { title: 'EMOM 12', notes: 'Alterner les 3 mouvements chaque minute' }),
+    block('accessory', 'tabata', { rounds: 8, work_s: 20, rest_s: 10 }, [item('Hollow Hold', { duration_s: 20 })], { title: 'Tabata gainage' }),
   ],
   'Haltéro : clean & jerk': [
     block('warmup', 'none', {}, [item('Front Squat', { reps: '5', load_kg: 40 }), item('Push Press', { reps: '5', load_kg: 30 })]),
-    block('strength', 'emom', { interval_s: 90, rounds: 10 }, [item('Clean & Jerk', { reps: '1', pct_1rm: 75 })], { notes: '1 rep toutes les 1\'30' }),
-    block('accessory', 'sets_reps', { sets: 4 }, [item('Front Rack Lunge', { reps: '8', load_kg: 40 })]),
+    block('strength', 'emom', { interval_s: 90, rounds: 10, score: 'load' }, [item('Clean & Jerk', { reps: '1', pct_1rm: 75 })], { title: 'Clean & Jerk', notes: '1 rep toutes les 1\'30' }),
+    block('accessory', 'sets_reps', { sets: 4, score: 'none' }, [item('Front Rack Lunge', { reps: '8', load_kg: 40, load_kg_f: 25 })], { title: 'Fentes' }),
   ],
   'Hyrox simulation': [
     block('metcon', 'for_time', { time_cap_s: 45 * 60 }, [
@@ -162,8 +196,20 @@ const TEMPLATES = {
       item('Sled Push', { distance_m: 50 }),
       item('Run', { distance_m: 1000 }),
       item('Walking Lunge', { distance_m: 100 }),
-      item('Wall Ball', { reps: '100', load_kg: 6 }),
-    ]),
+      item('Wall Ball', { reps: '100', load_kg: 6, load_kg_f: 4 }),
+    ], { title: 'Hyrox' }),
+  ],
+  // Sub-block ladder + AMRAP scored in total reps (UC-10, UC-11): same as prod Kanda WOD 29/09.
+  'DB DT ladder': [
+    block('metcon', 'amrap', {
+      duration_s: 20 * 60, score: 'reps',
+      groups: [{ title: 'DB DT', note: 'Tour 1 : 1 round, tour 2 : 2 rounds, tour 3 : 3 rounds… (+1 round à chaque tour)', start: 1, step: 1, items: [0, 1, 2] }],
+    }, [
+      item('Dumbbell Deadlift', { reps: '12', load_kg: 22.5, load_kg_f: 15, notes: 'par haltère' }),
+      item('Dumbbell Hang Power Clean', { reps: '9', load_kg: 22.5, load_kg_f: 15, notes: 'par haltère' }),
+      item('Dumbbell Push Jerk', { reps: '6', load_kg: 22.5, load_kg_f: 15, notes: 'par haltère' }),
+      item('Burpee Box Jump Over', { reps: '15', notes: 'box 60/50 cm, après chaque tour' }),
+    ], { title: 'DB DT ladder' }),
   ],
 }
 
@@ -179,16 +225,96 @@ for (const [name, titles] of Object.entries(SECTIONS)) {
   must(await c1.from('workouts').update({ section_id: section.id }).in('id', titles.map((t) => templateId[t])))
 }
 
-// Schedule: 2 past weeks, current week, next week --------------------------------------
+// Dates ------------------------------------------------------------------------------------
 const pad = (n) => String(n).padStart(2, '0')
 const iso = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 const now = new Date()
+const today = iso(now)
 const monday = new Date(now.getFullYear(), now.getMonth(), now.getDate() - ((now.getDay() + 6) % 7), 12)
 const dayOf = (week, dow) => iso(new Date(monday.getFullYear(), monday.getMonth(), monday.getDate() + week * 7 + dow, 12))
 const at7 = (date) => new Date(`${date}T07:00:00`).toISOString()
+// Published at 7:00 on its day, like prod (a future day stays "scheduled": hatched for coaches, hidden for athletes).
+const publishOn = (date) => at7(date)
 
-// [template, day of week (0 = Monday), program]
-const WEEK_PLAN = [
+async function schedule(template, date, program, publish, extra = {}) {
+  const client = ownerOf[program]
+  const id = must(await client.rpc('schedule_workout', { p_template: templateId[template], p_date: date, p_program: programId[program] }))
+  must(await client.from('workouts').update({ publish_at: publish, ...extra }).eq('id', id))
+  return id
+}
+async function create(program, date, title, blocks, publish, days = 1) {
+  const client = ownerOf[program]
+  const id = must(await client.rpc('save_workout', { p: { title, notes: '', date, days, program_id: programId[program], blocks: newIds(blocks) } }))
+  must(await client.from('workouts').update({ publish_at: publish }).eq('id', id))
+  return id
+}
+
+// Current week of CrossFit = prod "Kanda WOD" week of 28/09/2026 (Mon-Fri), session "WOD".
+const KANDA_WEEK = [
+  [
+    block('metcon', 'emom', { rounds: 12, interval_s: 60, score: 'load' }, [item('Squat Snatch', { reps: '1', pct_1rm: 80 })], { title: 'Squat snatch' }),
+    block('metcon', 'for_time', { time_cap_s: 720 }, [
+      item('Overhead Squat', { reps: '21', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
+      item('Pull-up', { reps: '42' }, { scaled: { exercise_id: ex['Ring Row'] } }),
+      item('Overhead Squat', { reps: '15', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
+      item('Pull-up', { reps: '30' }, { scaled: { exercise_id: ex['Ring Row'] } }),
+      item('Overhead Squat', { reps: '9', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
+      item('Pull-up', { reps: '18' }, { scaled: { exercise_id: ex['Ring Row'] } }),
+    ], { title: 'Josh' }),
+  ],
+  [
+    block('skill', 'emom', { rounds: 8, interval_s: 90, score: 'none' }, [
+      item('Deadlift', { reps: '3' }),
+      item('Hang Clean', { reps: '2', pct_1rm: 75 }),
+      item('Push Jerk', { reps: '1' }),
+    ], { title: 'Clean and jerk', notes: 'Complexe toutes les 1\'30 à 75% du RM de hang clean (même barre sur tout le complexe).' }),
+    ...TEMPLATES['DB DT ladder'],
+  ],
+  [
+    block('skill', 'sets_reps', { sets: 5, score: 'none' }, [
+      item('Sled Pull', { distance_m: 10 }),
+      item('Dumbbell Bench Press', { reps: '8-10' }),
+      item('Double Kettlebell Overhead Lunge', { distance_m: 10, notes: '2 KB' }),
+      item('Strict Toes-to-Bar', { reps: '4-6', notes: 'ou Strict Knee Raise' }, { scaled: { exercise_id: ex['Strict Knee Raise'] } }),
+    ], { title: 'Renfo fonctionnel' }),
+    block('metcon', 'for_time', { score: 'time' }, [item('Ski Erg', { distance_m: 2000 })], { title: 'Test 2000 m Ski' }),
+  ],
+  [
+    block('skill', 'emom', { rounds: 6, interval_s: 180, score: 'load' }, [item('Front Squat', { reps: '6', pct_1rm: 75 })], { title: 'Front Squat', notes: 'Bonus : skill pistol' }),
+    block('metcon', 'for_time', { rounds: 3, time_cap_s: 900, score: 'time' }, [
+      item('Toes-to-Bar', { reps: '30' }),
+      item('Power Clean', { reps: '12', load_kg: 80, load_kg_f: 50 }),
+      item('Pistol', { reps: '30' }),
+    ], { title: 'WOD' }),
+  ],
+  [
+    block('skill', 'none', {
+      score: 'none',
+      groups: [
+        { title: 'Renfo pull', note: 'Every 2\' × 4', items: [0] },
+        { title: 'Complex', note: 'Every 2\' × 4', items: [1, 2] },
+        { title: 'Technique HSPU', note: '', items: [3] },
+      ],
+    }, [
+      item('Strict Chest-to-Bar Pull-up', { reps: 'X' }),
+      item('Upright Row', { reps: '6', notes: 'tirage menton' }),
+      item('Hang Muscle Clean', { reps: '6' }),
+      item('Handstand Push-up', { notes: 'technique' }),
+    ], { title: 'Renfo pull · Technique HSPU' }),
+    block('metcon', 'sets_reps', { sets: 5, score: 'reps' }, [
+      item('Parallette Handstand Push-up', { reps: '5' }),
+      item('Kettlebell Swing', { reps: '10', load_kg: 32, load_kg_f: 24 }),
+      item('Ski Erg', { reps: 'max', notes: 'max cal' }),
+    ], { title: 'WOD', notes: '5 sets : 2\' on / 2\' off. Score : total des calories Ski sur les 5 sets.' }),
+  ],
+]
+const challenge = (title, move) => [
+  block('metcon', 'amrap', { duration_s: 7 * 60, score: 'reps' }, [item(move, { reps: 'max' })], { title, notes: 'Une tentative dans la semaine, quand tu veux.' }),
+]
+
+let count = 0
+// Past 2 weeks: CrossFit from templates, published.
+const PAST_PLAN = [
   ['Chipper DU', 0, 'CrossFit'],
   ['Haltéro : clean & jerk', 1, 'Haltéro'],
   ['Fran', 2, 'CrossFit'],
@@ -196,93 +322,117 @@ const WEEK_PLAN = [
   ['Squat lourd + Cindy', 4, 'CrossFit'],
   ['EMOM gym', 5, 'Open Gym'],
 ]
-
-async function schedule(template, date, program, publish, title) {
-  const client = ownerOf[program]
-  const id = must(await client.rpc('schedule_workout', { p_template: templateId[template], p_date: date, p_program: programId[program] }))
-  must(await client.from('workouts').update({ publish_at: publish, ...(title && { title }) }).eq('id', id))
-}
-
-let count = 0
-for (const week of [-2, -1, 0, 1]) {
-  for (const [title, dow, program] of WEEK_PLAN) {
-    // Past and current weeks: published on Monday 7:00. Next week: scheduled (Mon-Wed) or draft.
-    const publish = week <= 0 ? at7(dayOf(week, 0)) : dow <= 2 ? at7(dayOf(1, 0)) : null
-    await schedule(title, dayOf(week, dow), program, publish)
+for (const week of [-2, -1]) {
+  for (const [title, dow, program] of PAST_PLAN) {
+    await schedule(title, dayOf(week, dow), program, publishOn(dayOf(week, dow)), program === 'CrossFit' ? { title: 'WOD' } : {})
     count++
   }
+  await create('CrossFit', dayOf(week, 0), 'Challenge de la semaine', challenge('Max burpees', 'Burpee'), publishOn(dayOf(week, 0)), 7)
+  count++
 }
-// Today: a CrossFit workout, and one in a3's personal program.
-await schedule('Chipper DU', iso(now), 'CrossFit', new Date().toISOString())
-await schedule('Fran', iso(now), 'Perso a3', new Date().toISOString(), 'Fran (perso a3)')
-count += 2
-
+// Current week: prod Kanda week in CrossFit, other programs from templates, weekly challenge (7 days).
+for (const [dow, blocks] of KANDA_WEEK.entries()) {
+  await create('CrossFit', dayOf(0, dow), 'WOD', blocks, publishOn(dayOf(0, dow)))
+  count++
+}
+await create('CrossFit', dayOf(0, 0), 'Challenge de la semaine', challenge('Max wall balls', 'Wall Ball'), publishOn(dayOf(0, 0)), 7)
+await schedule('Haltéro : clean & jerk', dayOf(0, 1), 'Haltéro', publishOn(dayOf(0, 1)))
+await schedule('Hyrox simulation', dayOf(0, 3), 'Hyrox', publishOn(dayOf(0, 3)))
+await schedule('EMOM gym', dayOf(0, 5), 'Open Gym', publishOn(dayOf(0, 5)))
+// Draft (no publish date) on Saturday: hatched for coaches, invisible to athletes (UC-13).
+await schedule('Chipper DU', dayOf(0, 5), 'CrossFit', null, { title: 'Team WOD (brouillon)' })
+// Today in a3's personal program.
+await schedule('Fran', today, 'Perso a3', new Date().toISOString(), { title: 'Fran (perso a3)' })
+count += 6
+// Next week: Mon-Wed scheduled, Thu-Fri drafts.
+for (const [title, dow] of [['Squat lourd + Cindy', 0], ['DB DT ladder', 1], ['Fran', 2], ['EMOM gym', 3], ['Chipper DU', 4]]) {
+  await schedule(title, dayOf(1, dow), 'CrossFit', dow <= 2 ? publishOn(dayOf(1, dow)) : null, { title: 'WOD' })
+  count++
+}
 console.log(`Programmes : ${Object.keys(PROGRAMS).join(', ')} · ${Object.keys(TEMPLATES).length} modèles · ${count} séances programmées`)
 
-// Results: each athlete logs scores through the API (RLS applies), on published workouts up to today.
+// Results ---------------------------------------------------------------------------------
+// Each athlete logs scores through the API (RLS applies) on workouts published up to now.
 // Deterministic pseudo-random so reruns give the same data.
 let seed = 42
 const rand = () => ((seed = (seed * 1103515245 + 12345) % 2 ** 31) / 2 ** 31)
 const between = (min, max) => Math.round(min + rand() * (max - min))
-const PROFILES = {
-  a1: { levels: ['rx'], skill: 0.8, skip: 0.1 },
-  a2: { levels: ['rx', 'scaled'], skill: 0.6, skip: 0.2 },
-  a3: { levels: ['scaled', 'foundation'], skill: 0.4, skip: 0.2 },
-  c1: { levels: ['elite', 'rx'], skill: 0.9, skip: 0.3 },
-}
-const COMMENTS = ['Grosse séance 🔥', 'Les DU ont piqué', 'Bras cramés', 'Rythme régulier', null, null, null]
+const pick = (arr) => arr[between(0, arr.length - 1)]
+const COMMENTS = ['Grosse séance 🔥', 'Les DU ont piqué', 'Bras cramés', 'Rythme régulier', 'Dur mais propre', null, null, null]
+const DONE_COMMENTS = ['Technique ok', 'Barre à 60', 'Épaules raides', null]
+const FACES = ['😬', '😘', '🫠', '😏', '😭']
 
-function scoreFor(format, params, skill) {
-  switch (format) {
-    case 'for_time': {
-      const cap = params.time_cap_s ?? 1200
-      const t = Math.round(cap * (0.95 - skill * 0.5 + rand() * 0.25))
-      return t >= cap ? { capped: true, reps: between(80, 200) } : { time_s: t }
+function scoreFor(type, params, skill, female) {
+  switch (type) {
+    case 'time': {
+      const cap = params.time_cap_s ?? 900
+      const t = Math.round(cap * (0.95 - skill * 0.5 + rand() * 0.2))
+      return t >= cap ? { capped: true, reps: between(40, 150) } : { time_s: t }
     }
-    case 'amrap':
-      return { rounds: Math.round(8 + skill * 12 + rand() * 4), reps: between(0, 14) }
-    case 'sets_reps':
-      return { load_kg: Math.round((60 + skill * 80 + rand() * 20) / 2.5) * 2.5 }
-    case 'tabata':
-      return { reps: between(60, 160) }
+    case 'rounds_reps':
+      return { rounds: Math.round(6 + skill * 14 + rand() * 3), reps: between(0, 14) }
+    case 'reps':
+      return { reps: Math.round((80 + skill * 160 + rand() * 30) * (female ? 0.85 : 1)) }
+    case 'load':
+      return { load_kg: Math.round(((40 + skill * 80 + rand() * 15) * (female ? 0.65 : 1)) / 2.5) * 2.5 }
     default:
       return {}
   }
 }
+const typeOf = (b) => b.params.score ?? { for_time: 'time', amrap: 'rounds_reps', sets_reps: 'load', tabata: 'reps' }[b.format] ?? 'none'
 
-let resultCount = 0
-for (const [name, p] of Object.entries(PROFILES)) {
-  const client = createClient(url, publishable, { auth: { persistSession: false } })
-  const auth = await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
-  if (auth.error) throw auth.error
-  const mine = must(await client.rpc('my_workouts', { p_from: dayOf(-2, 0), p_to: iso(now) }))
+let resultCount = 0, doneCount = 0, skipCount = 0, reactionCount = 0
+for (const u of USERS.filter((x) => x.skip < 1)) {
+  const client = await clientFor(u.name)
+  const female = u.gender === 'female'
+  const mine = must(await client.rpc('my_workouts', { p_from: dayOf(-2, 0), p_to: today }))
   for (const w of mine) {
-    if (rand() < p.skip) continue
-    const blocks = must(await client.from('workout_blocks').select('id, kind, format, params').eq('workout_id', w.id))
+    if (!w.publish_at || new Date(w.publish_at) > now) continue // coach preview of drafts / scheduled
+    if (rand() < u.skip) continue
+    const reactionsOn = w.program_name === 'CrossFit'
+    const blocks = must(await client.from('workout_blocks').select('id, kind, format, params').eq('workout_id', w.id).order('position'))
     for (const b of blocks) {
       if (b.kind === 'warmup') continue
-      const level = p.levels[between(0, p.levels.length - 1)]
-      const comment = COMMENTS[between(0, COMMENTS.length - 1)]
-      must(await client.from('results').insert({
-        workout_id: w.id, block_id: b.id, level, comment, ...scoreFor(b.format, b.params, p.skill),
-      }))
-      resultCount++
+      // "Je passe" on some blocks (UC-12).
+      if (rand() < 0.12) {
+        must(await client.from('block_skips').insert({ workout_id: w.id, block_id: b.id }))
+        skipCount++
+        continue
+      }
+      const type = typeOf(b)
+      const level = pick(u.levels)
+      if (type === 'none') {
+        // "Fait" (null score), sometimes with a comment (UC-20, UC-21).
+        if (rand() < 0.3) continue
+        must(await client.from('results').insert({ workout_id: w.id, block_id: b.id, level, comment: pick(DONE_COMMENTS) }))
+        doneCount++
+      } else {
+        must(await client.from('results').insert({
+          workout_id: w.id, block_id: b.id, level, comment: pick(COMMENTS), ...scoreFor(type, b.params, u.skill, female),
+        }))
+        resultCount++
+      }
+      if (reactionsOn && rand() < 0.35) {
+        must(await client.from('block_reactions').insert({ workout_id: w.id, block_id: b.id, emoji: pick(FACES) }))
+        reactionCount++
+      }
     }
   }
 }
-console.log(`Résultats : ${resultCount} (a3 et c2 ne partagent pas leurs scores)`)
+console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe", ${reactionCount} réactions`)
 
-// Personal records (a3 has no Back Squat 1RM, to show the "1RM ?" link).
+// Personal records: loads of % blocks (a3 has no Back Squat / Hang Clean 1RM, to show the "1RM ?" link).
 const RECORDS = {
-  a1: { 'Back Squat': [[1, 120], [5, 100]], Deadlift: [[1, 160]], 'Clean & Jerk': [[1, 90]], Fran: '4:05' },
-  a2: { 'Back Squat': [[1, 95], [3, 88]], 'Clean & Jerk': [[1, 65]], Fran: '5:40' },
-  a3: { Deadlift: [[1, 100]] },
-  c1: { 'Back Squat': [[1, 140]], 'Clean & Jerk': [[1, 105]], Fran: '3:20' },
+  a1: { 'Back Squat': [[1, 95], [5, 80]], 'Hang Clean': [[1, 65]], 'Front Squat': [[1, 80]], 'Squat Snatch': [[1, 55]], Fran: '3:55' },
+  a2: { 'Back Squat': [[1, 120], [3, 110]], 'Clean & Jerk': [[1, 85]], 'Front Squat': [[1, 100]], Fran: '5:40' },
+  a3: { Deadlift: [[1, 90]] },
+  a4: { 'Back Squat': [[1, 170]], 'Hang Clean': [[1, 120]], 'Squat Snatch': [[1, 95]], 'Clean & Jerk': [[1, 125]], Fran: '2:48' },
+  a7: { 'Back Squat': [[1, 85]], 'Front Squat': [[1, 70]] },
+  c1: { 'Back Squat': [[1, 140]], 'Clean & Jerk': [[1, 105]], 'Hang Clean': [[1, 100]], Fran: '3:20' },
 }
 let recordCount = 0
 for (const [name, recs] of Object.entries(RECORDS)) {
-  const client = createClient(url, publishable, { auth: { persistSession: false } })
-  await client.auth.signInWithPassword({ email: emailOf(name), password: PASSWORD })
+  const client = await clientFor(name)
   for (const [key, value] of Object.entries(recs)) {
     const rows =
       typeof value === 'string'
@@ -293,3 +443,36 @@ for (const [name, recs] of Object.entries(RECORDS)) {
   }
 }
 console.log(`Records : ${recordCount}`)
+
+// Usage stats for the admin "Stats" tab (UC-30): 7 days of sessions, screen loads, launches and a few errors.
+// Written directly (track_usage only records the caller at now()).
+const PAGES = [['/', 900, 40], ['/workouts/:id', 700, 25], ['/calendar', 1200, 10], ['/community', 800, 6], ['/records', 600, 6], ['/profile', 400, 3]]
+const events = []
+for (const u of USERS.filter((x) => x.skip < 1)) {
+  for (let d = 6; d >= 0; d--) {
+    if (rand() < u.skip + 0.15) continue
+    for (let s = between(1, 2); s > 0; s--) {
+      // Mostly 6-9h and 17-20h, Paris time.
+      const at = new Date(now.getTime() - d * 86400e3)
+      at.setHours(pick([6, 7, 8, 12, 17, 18, 19]), between(0, 59), between(0, 59))
+      if (at > now) at.setTime(now.getTime() - between(60, 3600) * 1000)
+      const t = at.getTime()
+      events.push([u.name, t, 'session', rand() < 0.8 ? 'standalone' : 'browser', null])
+      events.push([u.name, t + 500, 'load', '', between(700, 2600)])
+      let tt = t + 2000
+      for (const [key, ms, weight] of PAGES) {
+        if (rand() * 45 > weight) continue
+        events.push([u.name, (tt += between(5, 90) * 1000), 'view', key, between(ms * 0.4, ms * 1.8)])
+      }
+    }
+  }
+}
+events.push(['a6', now.getTime() - 2 * 86400e3, 'error', 'TypeError: Load failed', null])
+events.push(['a9', now.getTime() - 86400e3, 'error', 'TypeError: Load failed', null])
+events.push(['a2', now.getTime() - 3 * 3600e3, 'error', 'Failed to fetch dynamically imported module', null])
+const values = events.map(([n, t, kind, key, ms]) => `(${q(userId[n])}, ${q(new Date(t).toISOString())}, ${q(kind)}, ${q(key)}, ${ms ?? 'null'})`)
+await sql(`insert into public.usage_events (user_id, at, kind, key, ms) values ${values.join(',')}`)
+await sql(`insert into public.usage_last_seen (user_id, last_at)
+  select user_id, max(at) from public.usage_events where user_id in (${Object.values(userId).map(q).join(',')}) group by user_id
+  on conflict (user_id) do update set last_at = excluded.last_at`)
+console.log(`Stats : ${events.length} événements d'usage`)
