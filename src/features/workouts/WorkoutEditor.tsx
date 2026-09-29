@@ -153,7 +153,7 @@ export function WorkoutEditor() {
           </select>
           {(draft.days ?? 1) > 1 && (
             <span className="mt-1 block text-xs text-zinc-500">
-              Affichée chaque jour{draft.date ? ` jusqu’au ${formatDay(lastDay(draft.date, draft.days))}` : ''}, un seul score par bloc.
+              Affichée chaque jour{draft.date ? ` jusqu’au ${formatDay(lastDay(draft.date, draft.days))}` : ''}.
             </span>
           )}
         </label>

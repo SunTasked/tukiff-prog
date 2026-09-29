@@ -155,7 +155,7 @@ export function HomePage() {
                   <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
                   {w.days > 1 && (
                     <p className="-mt-1 mb-2 text-xs text-amber-300">
-                      🗓 Du {formatDay(w.date)} au {formatDay(lastDay(w.date, w.days))} · un seul score
+                      🗓 Du {formatDay(w.date)} au {formatDay(lastDay(w.date, w.days))}
                     </p>
                   )}
                   {!published && (
