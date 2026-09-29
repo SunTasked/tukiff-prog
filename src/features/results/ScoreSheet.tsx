@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { DurationPicker, NumberInput } from '../../components/inputs'
+import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Textarea } from '../../components/ui'
 import { SCORE_HINTS, emptyScore, formatScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
 import { LEVELS, type BlockDraft, type Level } from '../../domain/workout'
@@ -9,7 +9,7 @@ import { RepCounter } from './RepCounter'
 import type { ResultRow } from './useWorkoutResults'
 
 type Props = {
-  /** Time cap in seconds, bounds the minutes picker. */
+  /** Time cap in seconds: a time above it is refused. */
   timeCap?: number
   workoutId: string
   blockId: string
@@ -37,11 +37,12 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
   const set = (patch: Partial<Score>) => setScore({ ...score, ...patch })
-  const maxMinutes = timeCap ? Math.ceil(timeCap / 60) : 99
 
   async function save() {
     const invalid = validateScore(type, score)
     if (invalid) return setError(invalid)
+    if (type === 'time' && !score.capped && timeCap && score.time_s! > timeCap)
+      return setError('Ton temps dépasse le time cap : coche « Time cap atteint ».')
     setBusy(true)
     const row = { ...normalizeScore(type, score), level, comment: comment.trim() || null }
     const { error } = existing
@@ -95,7 +96,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
               </Field>
             ) : (
               <Field label="Temps">
-                <DurationPicker value={score.time_s} onChange={(v) => set({ time_s: v })} size="lg" maxMinutes={maxMinutes} />
+                <DurationInput value={score.time_s} onChange={(v) => set({ time_s: v })} />
               </Field>
             )}
           </>

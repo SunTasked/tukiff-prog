@@ -367,7 +367,7 @@ function scoreFor(type, params, skill, female) {
     case 'time': {
       const cap = params.time_cap_s ?? 900
       const t = Math.round(cap * (0.95 - skill * 0.5 + rand() * 0.2))
-      return t >= cap ? { capped: true, reps: between(40, 150) } : { time_s: t }
+      return t >= cap ? { capped: true, reps: between(40, 150) } : { time_s: rand() < 0.3 ? t - between(1, 9) / 10 : t }
     }
     case 'rounds_reps':
       return { rounds: Math.round(6 + skill * 14 + rand() * 3), reps: between(0, 14) }

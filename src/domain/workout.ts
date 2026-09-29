@@ -163,11 +163,33 @@ export function suggestedKind(index: number): BlockKind {
 
 // Durations ---------------------------------------------------------------------
 
-/** 720 -> "12:00", 90 -> "1:30". */
+/** 720 -> "12:00", 90 -> "1:30", 452.4 -> "7:32,4" (tenth shown only when there is one). */
 export function formatDuration(seconds: number): string {
-  const m = Math.floor(seconds / 60)
-  const s = seconds % 60
-  return `${m}:${String(s).padStart(2, '0')}`
+  const tenths = Math.round(seconds * 10)
+  const m = Math.floor(tenths / 600)
+  const s = Math.floor((tenths % 600) / 10)
+  const t = tenths % 10
+  return `${m}:${String(s).padStart(2, '0')}${t ? `,${t}` : ''}`
+}
+
+/**
+ * Minutes and seconds typed separately ("7", "32,4") -> 452.4 seconds.
+ * Both empty -> null; anything unreadable (letters, seconds >= 60, two decimals) -> undefined.
+ */
+export function parseDuration(minutes: string, seconds: string): number | null | undefined {
+  const min = minutes.trim()
+  const sec = seconds.trim()
+  if (!min && !sec) return null
+  if (min && !/^\d{1,3}$/.test(min)) return undefined
+  const match = sec ? /^(\d{1,2})(?:[.,](\d)?)?$/.exec(sec) : ['', '0']
+  if (!match || Number(match[1]) >= 60) return undefined
+  return Math.round((Number(min || 0) * 60 + Number(match[1]) + Number(match[2] ?? 0) / 10) * 10) / 10
+}
+
+/** 452.4 -> ["7", "32,4"], 65 -> ["1", "05"]: the two fields of a duration input. */
+export function durationParts(seconds: number): [string, string] {
+  const [m, rest] = formatDuration(seconds).split(':')
+  return [m, rest]
 }
 
 /** Compact label: 720 -> "12'", 90 -> "1'30", 20 -> "20\"". */

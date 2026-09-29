@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { DateField } from '../../components/DatePicker'
-import { DurationPicker, NumberInput } from '../../components/inputs'
+import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
 import { BENCHMARKS } from '../../domain/records'
 import { emptyScore, normalizeScore, validateScore, type Score } from '../../domain/scoring'
@@ -92,7 +92,7 @@ export function RecordSheet({
             <Chips options={BENCH_TYPES} value={benchType} onChange={setBenchType} />
             {benchType === 'time' && (
               <Field label="Temps">
-                <DurationPicker size="lg" value={score.time_s} onChange={(v) => setScore({ ...score, time_s: v })} />
+                <DurationInput value={score.time_s} onChange={(v) => setScore({ ...score, time_s: v })} />
               </Field>
             )}
             {benchType === 'rounds_reps' && (

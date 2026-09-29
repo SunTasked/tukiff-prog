@@ -5,11 +5,13 @@ import {
   itemRuns,
   removeGroup,
   emptyItem,
+  durationParts,
   formatDuration,
   formatSummary,
   invalidatedBlocks,
   itemSummary,
   newBlock,
+  parseDuration,
   parseNumber,
   prefilledItem,
   resolveItem,
@@ -27,6 +29,25 @@ describe('durations', () => {
     expect(shortDuration(720)).toBe("12'")
     expect(shortDuration(90)).toBe("1'30")
     expect(shortDuration(20)).toBe('20"')
+    expect(formatDuration(452.4)).toBe('7:32,4')
+    expect(formatDuration(59.9)).toBe('0:59,9')
+  })
+
+  it('parses minutes and seconds typed separately', () => {
+    expect(parseDuration('7', '32,4')).toBe(452.4)
+    expect(parseDuration('7', '32.4')).toBe(452.4)
+    expect(parseDuration('7', '32,')).toBe(452)
+    expect(parseDuration('7', '')).toBe(420)
+    expect(parseDuration('', '45')).toBe(45)
+    expect(parseDuration('', '')).toBeNull()
+    expect(parseDuration('7', '60')).toBeUndefined()
+    expect(parseDuration('7', '32,45')).toBeUndefined()
+    expect(parseDuration('a', '12')).toBeUndefined()
+  })
+
+  it('splits a duration back into its fields', () => {
+    expect(durationParts(452.4)).toEqual(['7', '32,4'])
+    expect(durationParts(65)).toEqual(['1', '05'])
   })
 })
 
