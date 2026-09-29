@@ -139,7 +139,7 @@ export function WorkoutEditor() {
           onChange={(e) => setDraft({ ...draft, title: e.target.value })}
         />
         <label className="block">
-          <span className="mb-1 block text-sm text-zinc-400">Durée</span>
+          <span className="mb-1 block text-sm text-zinc-400">Nombre de jours</span>
           <select
             className="w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 text-zinc-100"
             value={draft.days ?? 1}
