@@ -291,14 +291,18 @@ export function CalendarPage() {
                               ✓
                             </span>
                           )}
-                          <span className="block pr-5 font-semibold lg:text-sm">{r.title}</span>
+                          {program && (
+                            <span className="block pr-5">
+                              <ProgramBadge name={program.name} />
+                            </span>
+                          )}
+                          <span className="mt-1 block pr-5 font-semibold lg:text-sm">{r.title}</span>
                           {r.days > 1 && (
                             <span className="mt-0.5 block text-xs text-amber-300">
                               🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
                             </span>
                           )}
-                          <span className="mt-1 flex flex-wrap items-center justify-between gap-1 lg:flex-col lg:items-start">
-                            {program && <ProgramBadge name={program.name} />}
+                          <span className="mt-1 block text-xs">
                             <StatusBadge publishAt={r.publish_at} />
                           </span>
                         </div>
