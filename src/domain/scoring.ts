@@ -162,22 +162,28 @@ export function boardPlaces<R extends { rank: number; level: Level }>(rows: R[])
   return rows.map((row) => firstOfLevel.get(row.level)! + row.rank)
 }
 
-export type WeeklyPlace = { place: number; missed: boolean }
+export type WeeklyPlace = { place: number; missed: boolean; counted: boolean }
+
+/** Number of places that make the weekly total. */
+export const WEEKLY_COUNTED = 3
 
 /**
- * Weekly leaderboard, CrossFit Open style, one per gender: on each scored block of the week an athlete gets their
- * place in the block's board (levels stacked), a block they didn't score counts as last place + 1, lowest total wins.
- * Blocks without score, or that nobody of this gender scored, don't count.
+ * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their place in the block's
+ * board (levels stacked), a block they didn't score counts as last place + 1. The total is the sum of the athlete's 3
+ * best places; with fewer than 3 scores, the missing ones are taken from the blocks they didn't score, worst first.
+ * A bonus block (challenge of the week) counts only when scored, never as a missing one.
+ * Lowest total wins. Blocks without score, or that nobody of this gender scored, don't count.
  */
 export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
-  blocks: { type: ScoreType; results: T[] }[],
+  blocks: { type: ScoreType; results: T[]; bonus?: boolean; label?: string }[],
 ) {
   return (Object.keys(GENDERS) as Gender[])
     .map((gender) => {
-      const boards = blocks
+      const scored = blocks
         .filter((b) => b.type !== 'none')
-        .map((b) => leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [])
-        .filter((rows) => rows.length > 0)
+        .map((b) => ({ bonus: !!b.bonus, label: b.label ?? '', rows: leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [] }))
+        .filter((b) => b.rows.length > 0)
+      const boards = scored.map((b) => b.rows)
       const athletes = new Map<string, T>()
       for (const rows of boards) for (const { result } of rows) if (!athletes.has(result.athlete_id)) athletes.set(result.athlete_id, result)
       const placesByBoard = boards.map((rows) => {
@@ -187,9 +193,14 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
       const totals = [...athletes.values()].map((athlete) => {
         const places: WeeklyPlace[] = placesByBoard.map((byAthlete) => {
           const place = byAthlete.get(athlete.athlete_id)
-          return place == null ? { place: byAthlete.size + 1, missed: true } : { place, missed: false }
+          return place == null ? { place: byAthlete.size + 1, missed: true, counted: false } : { place, missed: false, counted: false }
         })
-        return { athlete, places, total: places.reduce((sum, p) => sum + p.place, 0) }
+        // Scored places best first, then missed blocks worst first.
+        const order = places
+          .filter((p, i) => !(p.missed && scored[i].bonus))
+          .sort((a, b) => Number(a.missed) - Number(b.missed) || (a.missed ? b.place - a.place : a.place - b.place))
+        for (const p of order.slice(0, WEEKLY_COUNTED)) p.counted = true
+        return { athlete, places, total: places.reduce((sum, p) => sum + (p.counted ? p.place : 0), 0) }
       })
       totals.sort((a, b) => a.total - b.total)
       const rows = totals.map((row, i) => {
@@ -197,7 +208,7 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
         while (rank > 1 && totals[rank - 2].total === row.total) rank--
         return { ...row, rank }
       })
-      return { gender, blocks: boards.length, rows }
+      return { gender, blocks: boards.length, labels: scored.map((b) => b.label), bonus: scored.map((b) => b.bonus), rows }
     })
     .filter((b) => b.rows.length > 0)
 }
