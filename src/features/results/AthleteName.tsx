@@ -31,8 +31,9 @@ export function AthleteName({ profile }: { profile: Names }) {
         {profile.display_name}
       </button>
       {open && (
-        <span className="absolute top-full left-0 z-20 mt-1 rounded-lg bg-zinc-100 px-2 py-1 text-xs font-semibold whitespace-nowrap text-zinc-900 shadow-lg">
+        <span className="absolute bottom-full left-2 z-20 mb-2 rounded-lg bg-zinc-100 px-2 py-1 text-xs font-semibold whitespace-nowrap text-zinc-900 shadow-lg">
           {shortName(profile)}
+          <span className="absolute top-full left-3 border-x-[6px] border-t-[6px] border-x-transparent border-t-zinc-100" />
         </span>
       )}
     </span>
