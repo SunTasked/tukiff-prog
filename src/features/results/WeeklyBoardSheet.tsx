@@ -74,7 +74,8 @@ export function WeeklyBoardSheet({
         <p className="mb-4 text-xs text-zinc-500">
           Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Ton
           total est la somme de tes 3 meilleures places. Avec moins de 3 scores, les blocs que tu n'as pas faits complètent,
-          le pire d'abord (dernière place + 1). Le plus petit total gagne.
+          le pire d'abord (dernière place + 1). Le challenge de la semaine ne compte que s'il est fait. Le plus petit total
+          gagne.
         </p>
 
         {!enabled ? (

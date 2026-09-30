@@ -170,6 +170,15 @@ describe('weekly total over 3 places', () => {
     expect(total([{ block: 0, reps: 99 }])).toEqual({ total: 14, counted: [true, false, false, true, true] })
   })
 
+  it('never fills with a missed bonus block, counts it when scored', () => {
+    const bonus = { type: 'reps' as const, bonus: true, results: [r('b', 10), r('c', 5)] }
+    const plain = { type: 'reps' as const, results: [r('a', 10), r('b', 5)] }
+    const men = weeklyLeaderboards([plain, bonus])[0].rows
+    // a: 1, bonus missed not counted; b: 2 + 1; c: bonus 2 + missed plain 3.
+    expect(men.map((x) => `${x.athlete.athlete_id}:${x.total}`)).toEqual(['a:1', 'b:3', 'c:5'])
+    expect(men[0].places[1]).toEqual({ place: 3, missed: true, counted: false })
+  })
+
   it('counts every block while fewer than 3 exist', () => {
     const row = weeklyLeaderboards([{ type: 'reps', results: [r('a', 10), r('b', 5)] }])[0].rows
     expect(row.map((x) => x.total)).toEqual([1, 2])

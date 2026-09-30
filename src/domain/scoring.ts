@@ -171,17 +171,19 @@ export const WEEKLY_COUNTED = 3
  * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their place in the block's
  * board (levels stacked), a block they didn't score counts as last place + 1. The total is the sum of the athlete's 3
  * best places; with fewer than 3 scores, the missing ones are taken from the blocks they didn't score, worst first.
+ * A bonus block (challenge of the week) counts only when scored, never as a missing one.
  * Lowest total wins. Blocks without score, or that nobody of this gender scored, don't count.
  */
 export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
-  blocks: { type: ScoreType; results: T[] }[],
+  blocks: { type: ScoreType; results: T[]; bonus?: boolean }[],
 ) {
   return (Object.keys(GENDERS) as Gender[])
     .map((gender) => {
-      const boards = blocks
+      const scored = blocks
         .filter((b) => b.type !== 'none')
-        .map((b) => leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [])
-        .filter((rows) => rows.length > 0)
+        .map((b) => ({ bonus: !!b.bonus, rows: leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [] }))
+        .filter((b) => b.rows.length > 0)
+      const boards = scored.map((b) => b.rows)
       const athletes = new Map<string, T>()
       for (const rows of boards) for (const { result } of rows) if (!athletes.has(result.athlete_id)) athletes.set(result.athlete_id, result)
       const placesByBoard = boards.map((rows) => {
@@ -194,7 +196,9 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
           return place == null ? { place: byAthlete.size + 1, missed: true, counted: false } : { place, missed: false, counted: false }
         })
         // Scored places best first, then missed blocks worst first.
-        const order = [...places].sort((a, b) => Number(a.missed) - Number(b.missed) || (a.missed ? b.place - a.place : a.place - b.place))
+        const order = places
+          .filter((p, i) => !(p.missed && scored[i].bonus))
+          .sort((a, b) => Number(a.missed) - Number(b.missed) || (a.missed ? b.place - a.place : a.place - b.place))
         for (const p of order.slice(0, WEEKLY_COUNTED)) p.counted = true
         return { athlete, places, total: places.reduce((sum, p) => sum + (p.counted ? p.place : 0), 0) }
       })

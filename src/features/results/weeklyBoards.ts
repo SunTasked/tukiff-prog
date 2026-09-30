@@ -8,7 +8,7 @@ import type { ResultRow } from './useWorkoutResults'
 
 export type Athlete = ResultRow & { gender: Gender | null }
 export type WeeklyBoards = ReturnType<typeof weeklyLeaderboards<Athlete>>
-type Row = { id: string; date: string; program_id: string; publish_at: string | null }
+type Row = { id: string; date: string; days: number; program_id: string; publish_at: string | null }
 
 /** Weekly leaderboard of one program (Monday to Sunday), from the published workouts of the week. */
 async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ enabled: boolean; boards: WeeklyBoards }> {
@@ -17,10 +17,10 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
     supabase.from('programs').select('leaderboard_enabled').eq('id', programId).maybeSingle(),
   ])
   const enabled = program?.leaderboard_enabled ?? true
-  const ids = ((week ?? []) as Row[])
+  const published = ((week ?? []) as Row[])
     // A multi-day workout started last week belongs to last week's board.
     .filter((w) => w.program_id === programId && w.date >= monday && publicationStatus(w.publish_at) === 'published')
-    .map((w) => w.id)
+  const ids = published.map((w) => w.id)
   const [workouts, { data: results }] = await Promise.all([
     Promise.all(ids.map(loadWorkout)),
     ids.length
@@ -29,8 +29,13 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   ])
   const rows: Athlete[] = ((results ?? []) as ResultRow[]).map((r) => ({ ...r, gender: r.profiles?.gender ?? null }))
   const boards = weeklyLeaderboards(
-    workouts.flatMap((w) =>
-      (w?.blocks ?? []).map((b) => ({ type: scoreType(b.format, b.params), results: rows.filter((r) => r.block_id === b.id) })),
+    workouts.flatMap((w, i) =>
+      (w?.blocks ?? []).map((b) => ({
+        type: scoreType(b.format, b.params),
+        results: rows.filter((r) => r.block_id === b.id),
+        // A multi-day workout (challenge of the week) is a bonus.
+        bonus: published[i].days > 1,
+      })),
     ),
   )
   return { enabled, boards }
