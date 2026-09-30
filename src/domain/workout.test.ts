@@ -129,7 +129,7 @@ describe('faster entry', () => {
 describe('blocks & validation', () => {
   it('suggests a class structure', () => {
     expect([0, 1, 2, 3].map(suggestedKind)).toEqual(['warmup', 'strength', 'metcon', 'accessory'])
-    expect(newBlock('metcon', 'x')).toMatchObject({ format: 'for_time', params: { time_cap_s: 720 } })
+    expect(newBlock('metcon', 'x')).toMatchObject({ kind: 'metcon', format: 'none', params: {} })
   })
   it('validates', () => {
     expect(validateWorkout({ title: ' ', notes: '', blocks: [] })).toMatch(/titre/)

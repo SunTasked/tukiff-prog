@@ -5,6 +5,7 @@ import { SCORE_HINTS, SCORE_TYPES, scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
+import { Markdown } from '../../components/Markdown'
 import {
   BLOCK_KINDS,
   LEVELS,
@@ -96,6 +97,7 @@ export function WorkoutView({
                 />
               </div>
             )}
+            {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
               {itemRuns(b).map(({ group, items }, k) => {
                 const lines = items.map(({ item, index }) => (
@@ -118,7 +120,7 @@ export function WorkoutView({
                 )
               })}
             </ul>
-            {b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
+            {b.format !== 'none' && b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
             <ScoreLine block={b} />
             {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]}`)}
           </section>

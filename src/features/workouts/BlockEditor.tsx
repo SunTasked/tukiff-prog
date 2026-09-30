@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
 import { SCORE_TYPES, defaultScoreType, scoreType, type ScoreType } from '../../domain/scoring'
@@ -5,7 +6,6 @@ import {
   BLOCK_KINDS,
   blockSettings,
   levelName,
-  DEFAULT_FORMAT,
   FORMATS,
   defaultParams,
   itemRuns,
@@ -19,6 +19,7 @@ import {
   type Measure,
 } from '../../domain/workout'
 import type { Exercise } from '../../lib/supabase'
+import { Markdown } from '../../components/Markdown'
 import { ItemEditor } from './ItemEditor'
 
 type Props = {
@@ -42,15 +43,11 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
   const set = (patch: Partial<BlockDraft>) => onChange({ ...block, ...patch })
   const setParams = (patch: Partial<FormatParams>) => set({ params: { ...block.params, ...patch } })
 
-  function setKind(kind: BlockKind) {
-    // Switching kind on an untouched block also switches to that kind's usual format.
-    if (block.items.length === 0) {
-      const format = DEFAULT_FORMAT[kind]
-      set({ kind, format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
-    } else set({ kind })
-  }
+  const [preview, setPreview] = useState(false)
   const setFormat = (format: Format) => set({ format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
   const p = block.params
+  // Libre = free text only: no movements or sub-blocks added (older ones stay listed, to remove or keep).
+  const libre = block.format === 'none'
   // Levels offered: the program's, and at least the block's own (library templates have no program).
   const levelCount = Math.max(accessLevels?.length ?? 0, p.min_level ?? 0)
   // Stored only when it differs from the format's default.
@@ -73,111 +70,120 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
 
   return (
     <section className="rounded-2xl bg-zinc-900 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-sm font-bold text-zinc-400">Bloc {String.fromCharCode(65 + index)}</span>
-        <div className="flex gap-1 text-zinc-400">
-          <button type="button" className="px-2 py-1 disabled:opacity-30" disabled={index === 0} onClick={() => onMove(-1)}>
+      {/* One line on a wide screen; on a phone the title goes under the category, full width. */}
+      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
+        <span className="shrink-0 text-sm font-bold text-zinc-400">Bloc {String.fromCharCode(65 + index)}</span>
+        <select
+          aria-label="Catégorie"
+          className="justify-self-start rounded-lg border border-zinc-800 bg-zinc-950 py-2 pr-1 pl-2 text-sm text-lime-400 outline-none focus:border-lime-400"
+          value={block.kind}
+          onChange={(e) => set({ kind: e.target.value as BlockKind })}
+        >
+          {(Object.keys(BLOCK_KINDS) as BlockKind[]).map((k) => (
+            <option key={k} value={k}>
+              {BLOCK_KINDS[k]}
+            </option>
+          ))}
+        </select>
+        <input
+          aria-label="Titre du bloc"
+          placeholder="Titre (option)"
+          className="order-last col-span-3 rounded-lg border border-zinc-800 sm:order-none sm:col-span-1 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 outline-none focus:border-lime-400"
+          value={block.title}
+          onChange={(e) => set({ title: e.target.value })}
+        />
+        <div className="flex shrink-0 text-zinc-400">
+          <button type="button" className="px-1.5 py-1 disabled:opacity-30" disabled={index === 0} onClick={() => onMove(-1)}>
             ↑
           </button>
           <button
             type="button"
-            className="px-2 py-1 disabled:opacity-30"
+            className="px-1.5 py-1 disabled:opacity-30"
             disabled={index === count - 1}
             onClick={() => onMove(1)}
           >
             ↓
           </button>
-          <button type="button" className="px-2 py-1 text-red-400" onClick={onRemove}>
+          <button type="button" className="px-1.5 py-1 text-red-400" onClick={onRemove}>
             ✕
           </button>
         </div>
       </div>
 
       <div className="flex flex-col gap-2">
-        <Chips options={BLOCK_KINDS} value={block.kind} onChange={setKind} />
         <Chips options={FORMATS} value={block.format} onChange={setFormat} />
 
-        <div className="grid grid-cols-3 gap-2">
-          {block.format === 'for_time' && (
-            <>
-              <Field label="Rounds">
-                <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
+        {!libre && (
+          <div className="grid grid-cols-3 gap-2">
+            {block.format === 'for_time' && (
+              <>
+                <Field label="Rounds">
+                  <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
+                </Field>
+                <Field label="Time cap" className="col-span-2">
+                  <DurationPicker value={p.time_cap_s} onChange={(v) => setParams({ time_cap_s: v ?? undefined })} />
+                </Field>
+              </>
+            )}
+            {block.format === 'amrap' && (
+              <Field label="Durée" className="col-span-2">
+                <DurationPicker value={p.duration_s} onChange={(v) => setParams({ duration_s: v ?? undefined })} />
               </Field>
-              <Field label="Time cap" className="col-span-2">
-                <DurationPicker value={p.time_cap_s} onChange={(v) => setParams({ time_cap_s: v ?? undefined })} />
+            )}
+            {block.format === 'emom' && (
+              <>
+                <Field label="Toutes les" className="col-span-2">
+                  <DurationPicker value={p.interval_s} onChange={(v) => setParams({ interval_s: v ?? undefined })} />
+                </Field>
+                <Field label="Rounds">
+                  <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
+                </Field>
+              </>
+            )}
+            {block.format === 'tabata' && (
+              <>
+                <Field label="Rounds">
+                  <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
+                </Field>
+                <Field label="Travail (s)">
+                  <NumberInput value={p.work_s} onChange={(v) => setParams({ work_s: int(v) })} />
+                </Field>
+                <Field label="Repos (s)">
+                  <NumberInput value={p.rest_s} onChange={(v) => setParams({ rest_s: int(v) })} />
+                </Field>
+              </>
+            )}
+            {block.format === 'sets_reps' && (
+              <Field label="Séries">
+                <NumberInput value={p.sets} onChange={(v) => setParams({ sets: int(v) })} />
               </Field>
-            </>
-          )}
-          {block.format === 'amrap' && (
-            <Field label="Durée" className="col-span-2">
-              <DurationPicker value={p.duration_s} onChange={(v) => setParams({ duration_s: v ?? undefined })} />
-            </Field>
-          )}
-          {block.format === 'emom' && (
-            <>
-              <Field label="Toutes les" className="col-span-2">
-                <DurationPicker value={p.interval_s} onChange={(v) => setParams({ interval_s: v ?? undefined })} />
-              </Field>
-              <Field label="Rounds">
-                <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
-              </Field>
-            </>
-          )}
-          {block.format === 'tabata' && (
-            <>
-              <Field label="Rounds">
-                <NumberInput value={p.rounds} onChange={(v) => setParams({ rounds: int(v) })} />
-              </Field>
-              <Field label="Travail (s)">
-                <NumberInput value={p.work_s} onChange={(v) => setParams({ work_s: int(v) })} />
-              </Field>
-              <Field label="Repos (s)">
-                <NumberInput value={p.rest_s} onChange={(v) => setParams({ rest_s: int(v) })} />
-              </Field>
-            </>
-          )}
-          {block.format === 'sets_reps' && (
-            <Field label="Séries">
-              <NumberInput value={p.sets} onChange={(v) => setParams({ sets: int(v) })} />
-            </Field>
-          )}
-          <Field label="Titre (option)" className={['tabata', 'for_time', 'emom'].includes(block.format) ? 'col-span-3' : 'col-span-1'}>
-            <SmallInput placeholder="Fran…" value={block.title} onChange={(e) => set({ title: e.target.value })} />
-          </Field>
-        </div>
-
-        <div>
-          <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
-          <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
-        </div>
-
-        {levelCount > 0 && (
-          <div>
-            <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
-            <Chips
-              options={Object.fromEntries(
-                Array.from({ length: levelCount + 1 }, (_, l) => [String(l), l ? `🔒 ${levelName(accessLevels, l)}` : 'Tous']),
-              )}
-              value={String(p.min_level ?? 0)}
-              onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
-            />
+            )}
           </div>
         )}
-        {scoreType(block.format, p) !== 'none' && (
-          <label className={`flex items-center gap-2 text-sm ${p.min_level ? 'text-zinc-500' : 'text-zinc-300'}`}>
-            <input
-              type="checkbox"
-              className="size-4 accent-lime-400"
-              // Premium blocks are never ranked.
-              disabled={!!p.min_level}
-              checked={!p.min_level && p.ranked !== false}
-              onChange={(e) => setParams({ ranked: e.target.checked ? undefined : false })}
-            />
-            <span>
-              Compte pour le classement de la semaine
-              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc réservé</span>}
-            </span>
-          </label>
+
+        {libre && (
+          <div>
+            <div className="mb-0.5 flex items-center justify-between text-xs text-zinc-500">
+              <span>Texte libre (markdown)</span>
+              <button type="button" className="text-lime-400" onClick={() => setPreview(!preview)}>
+                {preview ? 'Modifier' : 'Aperçu'}
+              </button>
+            </div>
+            {preview ? (
+              <Markdown
+                text={block.notes || '_Rien à afficher_'}
+                className="min-h-24 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm text-zinc-300"
+              />
+            ) : (
+              <textarea
+                rows={5}
+                placeholder={'# Échauffement\n- 2 rounds :\n- 10 **air squats**\n- 200 m run'}
+                className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 font-mono text-sm outline-none focus:border-lime-400"
+                value={block.notes}
+                onChange={(e) => set({ notes: e.target.value })}
+              />
+            )}
+          </div>
         )}
 
         {itemRuns(block).map((run) =>
@@ -202,13 +208,15 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 </button>
               </div>
               {run.items.map(({ item, index }) => itemEditor(item, index))}
-              <button
-                type="button"
-                className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-                onClick={() => onPick(null, undefined, run.group)}
-              >
-                + Mouvement dans le sous-bloc
-              </button>
+              {!libre && (
+                <button
+                  type="button"
+                  className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+                  onClick={() => onPick(null, undefined, run.group)}
+                >
+                  + Mouvement dans le sous-bloc
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Rounds au 1er tour">
                   <NumberInput
@@ -237,31 +245,80 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             </div>
           ),
         )}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-            onClick={() => onPick(null)}
-          >
-            + Mouvement
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-            onClick={() => set({ groups: [...block.groups, { title: '', note: '' }] })}
-          >
-            + Sous-bloc
-          </button>
-        </div>
+        {libre ? (
+          (block.items.length > 0 || block.groups.length > 0) && (
+            <p className="text-xs text-zinc-500">
+              Le mode Libre n’accepte plus de mouvements : retire ceux-ci ou choisis un autre format.
+            </p>
+          )
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+              onClick={() => onPick(null)}
+            >
+              + Mouvement
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+              onClick={() => set({ groups: [...block.groups, { title: '', note: '' }] })}
+            >
+              + Sous-bloc
+            </button>
+          </div>
+        )}
 
-        <Field label="Notes du bloc">
-          <textarea
-            rows={2}
-            className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 outline-none focus:border-lime-400"
-            value={block.notes}
-            onChange={(e) => set({ notes: e.target.value })}
-          />
-        </Field>
+        {!libre && (
+          <Field label="Notes du bloc">
+            <textarea
+              rows={2}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 outline-none focus:border-lime-400"
+              value={block.notes}
+              onChange={(e) => set({ notes: e.target.value })}
+            />
+          </Field>
+        )}
+
+        <div className="mt-1 flex flex-col gap-2 border-t border-zinc-800 pt-2">
+          <div>
+            <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
+            <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
+          </div>
+
+          {levelCount > 0 && (
+            <div>
+              <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
+              <Chips
+                options={Object.fromEntries(
+                  Array.from({ length: levelCount + 1 }, (_, l) => [
+                    String(l),
+                    l ? `🔒 ${levelName(accessLevels, l)}` : 'Tous',
+                  ]),
+                )}
+                value={String(p.min_level ?? 0)}
+                onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
+              />
+            </div>
+          )}
+          {scoreType(block.format, p) !== 'none' && (
+            <label className={`flex items-center gap-2 text-sm ${p.min_level ? 'text-zinc-500' : 'text-zinc-300'}`}>
+              <input
+                type="checkbox"
+                className="size-4 accent-lime-400"
+                // Premium blocks are never ranked.
+                disabled={!!p.min_level}
+                checked={!p.min_level && p.ranked !== false}
+                onChange={(e) => setParams({ ranked: e.target.checked ? undefined : false })}
+              />
+              <span>
+                Compte pour le classement de la semaine
+                {!!p.min_level && <span className="block text-xs">Jamais pour un bloc réservé</span>}
+              </span>
+            </label>
+          )}
+        </div>
       </div>
     </section>
   )
