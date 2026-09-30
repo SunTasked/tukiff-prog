@@ -68,11 +68,12 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
 
   return (
     <section className="rounded-2xl bg-zinc-900 p-3">
-      <div className="mb-2 flex items-center gap-2">
+      {/* One line on a wide screen; on a phone the title goes under the category, full width. */}
+      <div className="mb-2 grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 sm:grid-cols-[auto_auto_minmax(0,1fr)_auto]">
         <span className="shrink-0 text-sm font-bold text-zinc-400">Bloc {String.fromCharCode(65 + index)}</span>
         <select
           aria-label="Catégorie"
-          className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-950 py-2 pr-1 pl-2 text-sm text-lime-400 outline-none focus:border-lime-400"
+          className="justify-self-start rounded-lg border border-zinc-800 bg-zinc-950 py-2 pr-1 pl-2 text-sm text-lime-400 outline-none focus:border-lime-400"
           value={block.kind}
           onChange={(e) => set({ kind: e.target.value as BlockKind })}
         >
@@ -85,7 +86,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
         <input
           aria-label="Titre du bloc"
           placeholder="Titre (option)"
-          className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 outline-none focus:border-lime-400"
+          className="order-last col-span-3 rounded-lg border border-zinc-800 sm:order-none sm:col-span-1 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 outline-none focus:border-lime-400"
           value={block.title}
           onChange={(e) => set({ title: e.target.value })}
         />
