@@ -1,7 +1,7 @@
 import { Fragment, useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { DateField, DateTimeField } from '../../components/DatePicker'
-import { ProgramBadge, programColor } from '../../components/ProgramBadges'
+import { ProgramBadge, programColor, programDot } from '../../components/ProgramBadges'
 import { Button, ErrorText, PageTitle } from '../../components/ui'
 import {
   addDays,
@@ -12,6 +12,7 @@ import {
   fromLocalInput,
   lastDay,
   mondayOf,
+  publicationStatus,
   today,
   weekDays,
 } from '../../domain/dates'
@@ -21,16 +22,31 @@ import { getItem, setItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { searchExercises } from '../exercises/useExercises'
 import { useMyPrograms, type EditableProgram } from '../programs/useMyPrograms'
+import { useExercises } from '../exercises/useExercises'
+import { toBlock } from '../workouts/api'
+import type { AccessLevel, BlockDraft } from '../../domain/workout'
+import { BlockLines, DETAILS, type Detail } from './BlockLines'
 import { StatusBadge } from './StatusBadge'
 
-type Row = { id: string; title: string; date: string; days: number; publish_at: string | null; program_id: string }
+type Row = {
+  id: string
+  title: string
+  date: string
+  days: number
+  publish_at: string | null
+  program_id: string
+  /** Only loaded from the "blocks" detail level. */
+  blocks?: BlockDraft[]
+}
 
 const WEEKS_KEY = 'planningWeeks'
 const FILTER_KEY = 'planningPrograms'
+const DETAIL_KEY = 'planningDetail'
 const WEEK_CHOICES = [1, 2, 3, 4, 5, 6, 7, 8]
 const DAY_LETTERS = ['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim']
 const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches
-const daysBetween = (from: string, to: string) => Math.round((fromISODate(to).getTime() - fromISODate(from).getTime()) / 86_400_000)
+const daysBetween = (from: string, to: string) =>
+  Math.round((fromISODate(to).getTime() - fromISODate(from).getTime()) / 86_400_000)
 
 function readFilter(): string[] {
   try {
@@ -53,6 +69,12 @@ export function CalendarPage() {
   const end = addDays(monday, 7 * weeks - 1)
   const { programs } = useMyPrograms()
   const [filter, setFilterState] = useState<string[]>(readFilter)
+  const [detail, setDetailState] = useState<Detail>(() => {
+    const d = getItem(DETAIL_KEY)
+    return d && d in DETAILS ? (d as Detail) : 'session'
+  })
+  const withBlocks = detail === 'blocks' || detail === 'full'
+  const { nameOf } = useExercises()
   const [rows, setRows] = useState<Row[]>([])
   const [selected, setSelected] = useState<Set<string>>(new Set())
   const [adding, setAdding] = useState<string | null>(null)
@@ -72,7 +94,11 @@ export function CalendarPage() {
     if (!shownIds.length) return setRows([])
     const { data, error } = await supabase
       .from('workouts')
-      .select('id, title, date, days, publish_at, program_id')
+      .select(
+        withBlocks
+          ? 'id, title, date, days, publish_at, program_id, workout_blocks(*, block_items(*))'
+          : 'id, title, date, days, publish_at, program_id',
+      )
       .in('program_id', shownIds)
       // 6 days earlier: multi-day workouts started last week still run this week.
       .gte('date', addDays(monday, -6))
@@ -81,13 +107,18 @@ export function CalendarPage() {
       .order('created_at')
     setError(error?.message ?? '')
     const name = (r: Row) => programById.get(r.program_id)?.name ?? ''
+    type Loaded = Row & { workout_blocks?: Parameters<typeof toBlock>[0][] }
     setRows(
-      ((data ?? []) as Row[])
+      ((data ?? []) as unknown as Loaded[])
+        .map(({ workout_blocks, ...r }) => ({
+          ...r,
+          blocks: workout_blocks && [...workout_blocks].sort((a, b) => a.position - b.position).map(toBlock),
+        }))
         .filter((r) => lastDay(r.date, r.days) >= monday)
         // Within a day: program A→Z, then title, then publish time.
         .sort((a, b) => compareWorkouts({ ...a, program: name(a) }, { ...b, program: name(b) })),
     )
-  }, [programs, programById, shownIds, monday, end])
+  }, [programs, programById, shownIds, monday, end, withBlocks])
 
   useEffect(() => {
     load()
@@ -112,8 +143,11 @@ export function CalendarPage() {
     setItem(FILTER_KEY, JSON.stringify(ids))
     setFilterState(ids)
   }
-  const toggleFilter = (id: string) =>
-    setFilter(filter.includes(id) ? filter.filter((x) => x !== id) : [...filter, id])
+  const setDetail = (d: Detail) => {
+    setItem(DETAIL_KEY, d)
+    setDetailState(d)
+  }
+  const toggleFilter = (id: string) => setFilter(filter.includes(id) ? filter.filter((x) => x !== id) : [...filter, id])
   const goWeek = (delta: number) => setParams({ week: addDays(monday, 7 * delta) }, { replace: true })
 
   // Selection ----------------------------------------------------------------------------
@@ -194,6 +228,22 @@ export function CalendarPage() {
         </label>
       </div>
 
+      {/* Zoom: how much of each workout the cards show */}
+      <div className="mb-3 flex items-center gap-2 text-sm text-zinc-400">
+        Détail
+        <div className="flex rounded-full bg-zinc-900 p-0.5">
+          {(Object.keys(DETAILS) as Detail[]).map((d) => (
+            <button
+              key={d}
+              className={`rounded-full px-3 py-1 text-sm ${detail === d ? 'bg-lime-400 font-semibold text-zinc-950' : 'text-zinc-400'}`}
+              onClick={() => setDetail(d)}
+            >
+              {DETAILS[d]}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {/* Program filter: none selected = all my programs */}
       <div className="mb-3 flex flex-wrap gap-1.5">
         <button
@@ -229,12 +279,15 @@ export function CalendarPage() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center gap-3 text-xs text-zinc-500">
-        <button className="rounded-full bg-zinc-800 px-3 py-1.5 font-semibold text-zinc-200" onClick={() => selectMany(idsOn(monday, end))}>
+        <button
+          className="rounded-full bg-zinc-800 px-3 py-1.5 font-semibold text-zinc-200"
+          onClick={() => selectMany(idsOn(monday, end))}
+        >
           Tout sélectionner
         </button>
         <span className="hidden lg:inline">
-          Clic : sélectionner · Double-clic : ouvrir · Clic sur un jour : tout le jour · Double-clic : toute la semaine ·
-          Glisser : déplacer · Alt/Option + glisser : dupliquer
+          Clic : sélectionner · Double-clic : ouvrir · Clic sur un jour : tout le jour · Double-clic : toute la semaine · Glisser
+          : déplacer · Alt/Option + glisser : dupliquer
         </span>
       </div>
       <ErrorText>{error}</ErrorText>
@@ -305,7 +358,7 @@ export function CalendarPage() {
                               onDragStart={(e) => onDragStart(e, r)}
                               onClick={() => toggle(r.id)}
                               onDoubleClick={() => navigate(`/calendar/workouts/${r.id}`)}
-                              className={`relative mt-2 block cursor-pointer rounded-xl p-3 select-none lg:p-2 ${
+                              className={`relative block cursor-pointer rounded-xl select-none ${detail === 'title' ? 'mt-1.5 px-3 py-2 lg:px-2 lg:py-1.5' : 'mt-2 p-3 lg:p-2'} ${
                                 isSel ? 'bg-lime-400/10 ring-2 ring-lime-400' : 'bg-zinc-950'
                               }`}
                             >
@@ -314,20 +367,34 @@ export function CalendarPage() {
                                   ✓
                                 </span>
                               )}
-                              {program && (
-                                <span className="block pr-5">
-                                  <ProgramBadge name={program.name} />
-                                </span>
+                              {detail === 'title' ? (
+                                <TitleLine row={r} program={program?.name ?? ''} />
+                              ) : (
+                                <>
+                                  {program && (
+                                    <span className="block pr-5">
+                                      <ProgramBadge name={program.name} />
+                                    </span>
+                                  )}
+                                  <span className="mt-1 block pr-5 font-semibold lg:text-sm">{r.title}</span>
+                                  {r.days > 1 && (
+                                    <span className="mt-0.5 block text-xs text-amber-300">
+                                      🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
+                                    </span>
+                                  )}
+                                  <span className="mt-1 block text-xs">
+                                    <StatusBadge publishAt={r.publish_at} />
+                                  </span>
+                                  {withBlocks && r.blocks && (
+                                    <BlockLines
+                                      blocks={r.blocks}
+                                      levels={program?.access_levels as AccessLevel[] | undefined}
+                                      full={detail === 'full'}
+                                      nameOf={nameOf}
+                                    />
+                                  )}
+                                </>
                               )}
-                              <span className="mt-1 block pr-5 font-semibold lg:text-sm">{r.title}</span>
-                              {r.days > 1 && (
-                                <span className="mt-0.5 block text-xs text-amber-300">
-                                  🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
-                                </span>
-                              )}
-                              <span className="mt-1 block text-xs">
-                                <StatusBadge publishAt={r.publish_at} />
-                              </span>
                             </div>
                           )
                         })}
@@ -361,13 +428,25 @@ export function CalendarPage() {
       )}
 
       {adding && programs && (
-        <AddSheet
-          date={adding}
-          programs={programs.filter((p) => shownIds.includes(p.id))}
-          onClose={() => setAdding(null)}
-        />
+        <AddSheet date={adding} programs={programs.filter((p) => shownIds.includes(p.id))} onClose={() => setAdding(null)} />
       )}
     </div>
+  )
+}
+
+/** "Titre" zoom: one line, program as a colored dot, status only when not visible yet. */
+function TitleLine({ row, program }: { row: Row; program: string }) {
+  const status = publicationStatus(row.publish_at)
+  return (
+    <span className="flex min-w-0 items-center gap-2 pr-5 text-sm">
+      <span className={`size-2.5 shrink-0 rounded-full ${programDot(program)}`} title={program} />
+      <span className="min-w-0 flex-1 truncate font-semibold">
+        {row.title}
+        {row.days > 1 && <span className="font-normal text-amber-300"> · {row.days} j</span>}
+      </span>
+      {status === 'draft' && <span className="shrink-0 text-xs text-amber-400">Brouillon</span>}
+      {status === 'scheduled' && <span className="shrink-0 text-xs text-sky-400">Programmée</span>}
+    </span>
   )
 }
 
@@ -446,16 +525,29 @@ function SelectionBar({
               Modifier
             </Button>
           )}
-          <Button variant="secondary" className="px-3 py-2 text-sm" onClick={() => setAction(action === 'publish' ? null : 'publish')}>
+          <Button
+            variant="secondary"
+            className="px-3 py-2 text-sm"
+            onClick={() => setAction(action === 'publish' ? null : 'publish')}
+          >
             Publier
           </Button>
-          <Button variant="secondary" className="px-3 py-2 text-sm" onClick={() => setAction(action === 'duplicate' ? null : 'duplicate')}>
+          <Button
+            variant="secondary"
+            className="px-3 py-2 text-sm"
+            onClick={() => setAction(action === 'duplicate' ? null : 'duplicate')}
+          >
             Dupliquer
           </Button>
           <Button variant="danger" className="px-3 py-2 text-sm" disabled={busy} onClick={remove}>
             Supprimer
           </Button>
-          <button className="px-2 text-zinc-400" onClick={onClear} aria-label="Vider la sélection" title="Vider la sélection (Échap)">
+          <button
+            className="px-2 text-zinc-400"
+            onClick={onClear}
+            aria-label="Vider la sélection"
+            title="Vider la sélection (Échap)"
+          >
             ✕
           </button>
         </div>
@@ -464,10 +556,19 @@ function SelectionBar({
           <div className={panel}>
             <span className="text-sm text-zinc-400">Publier le</span>
             <DateTimeField value={publishAt} onChange={setPublishAt} />
-            <Button className="px-3 py-2 text-sm" disabled={!publishAt || busy} onClick={() => publish(fromLocalInput(publishAt))}>
+            <Button
+              className="px-3 py-2 text-sm"
+              disabled={!publishAt || busy}
+              onClick={() => publish(fromLocalInput(publishAt))}
+            >
               Programmer
             </Button>
-            <Button variant="secondary" className="px-3 py-2 text-sm" disabled={busy} onClick={() => publish(new Date().toISOString())}>
+            <Button
+              variant="secondary"
+              className="px-3 py-2 text-sm"
+              disabled={busy}
+              onClick={() => publish(new Date().toISOString())}
+            >
               Maintenant
             </Button>
             <Button variant="secondary" className="px-3 py-2 text-sm" disabled={busy} onClick={() => publish(null)}>
@@ -481,9 +582,7 @@ function SelectionBar({
 
         {action === 'duplicate' && sourceIds.length > 1 && (
           <div className={panel}>
-            <span className="text-sm text-zinc-400">
-              Sélectionne des séances d’une seule programmation pour les dupliquer.
-            </span>
+            <span className="text-sm text-zinc-400">Sélectionne des séances d’une seule programmation pour les dupliquer.</span>
             <Button variant="secondary" className="px-3 py-2 text-sm" onClick={() => setAction(null)}>
               Annuler
             </Button>
@@ -519,9 +618,7 @@ function SelectionBar({
               À partir du (la 1ʳᵉ séance du {formatDay(first)} y sera placée, les autres gardent leur écart)
             </span>
             <DateField value={target} onChange={setTarget} />
-            <span className="text-xs text-zinc-500">
-              {target ? `décalage de ${daysBetween(first, target)} jour(s)` : ''}
-            </span>
+            <span className="text-xs text-zinc-500">{target ? `décalage de ${daysBetween(first, target)} jour(s)` : ''}</span>
             <Button
               className="px-3 py-2 text-sm"
               disabled={!target || busy || (mode === 'other' && !targetProgram)}
@@ -562,7 +659,11 @@ function AddSheet({ date, programs, onClose }: { date: string; programs: Editabl
   }, [])
 
   async function pick(id: string) {
-    const { data, error } = await supabase.rpc('schedule_workout', { p_template: id, p_date: date, p_program: programId })
+    const { data, error } = await supabase.rpc('schedule_workout', {
+      p_template: id,
+      p_date: date,
+      p_program: programId,
+    })
     if (error) return setError(error.message)
     navigate(`/calendar/workouts/${data}`)
   }
@@ -628,4 +729,3 @@ function AddSheet({ date, programs, onClose }: { date: string; programs: Editabl
     </div>
   )
 }
-

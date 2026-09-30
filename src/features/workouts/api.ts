@@ -9,6 +9,7 @@ import type {
   LevelOverride,
   WorkoutDraft,
 } from '../../domain/workout'
+import type { Tables } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 
 // Sub-blocks are stored in the block params (no schema change, copied with the block): groups + item positions.
@@ -37,6 +38,38 @@ function toStored(b: BlockDraft): StoredParams {
   return { ...b.params, groups }
 }
 
+/** A workout_blocks row with its block_items, as edited and displayed. */
+export function toBlock(b: Tables<'workout_blocks'> & { block_items: Tables<'block_items'>[] }): BlockDraft {
+  const { params, groups, groupOf } = fromStored(b.params as StoredParams)
+  return {
+    id: b.id,
+    kind: b.kind as BlockKind,
+    title: b.title ?? '',
+    format: b.format as Format,
+    params,
+    notes: b.notes ?? '',
+    groups,
+    items: [...b.block_items]
+      .sort((x, y) => x.position - y.position)
+      .map(
+        (i, index): ItemDraft => ({
+          exercise_id: i.exercise_id,
+          label: i.label ?? '',
+          reps: i.reps ?? '',
+          load_kg: i.load_kg,
+          load_kg_f: i.load_kg_f,
+          pct_1rm: i.pct_1rm,
+          distance_m: i.distance_m,
+          calories: i.calories,
+          duration_s: i.duration_s,
+          notes: i.notes ?? '',
+          levels: i.levels as Record<string, LevelOverride>,
+          group: groupOf(index),
+        }),
+      ),
+  }
+}
+
 export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   // Blocks above my access level are not readable: they come back through an RPC, without their content.
   const [{ data }, { data: locked }] = await Promise.all([
@@ -49,38 +82,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   ])
   if (!data) return null
   const positions = data.workout_blocks.map((b) => b.position)
-  const blocks: BlockDraft[] = [...data.workout_blocks]
-    .sort((a, b) => a.position - b.position)
-    .map((b) => {
-      const { params, groups, groupOf } = fromStored(b.params as StoredParams)
-      return {
-        id: b.id,
-        kind: b.kind as BlockKind,
-        title: b.title ?? '',
-        format: b.format as Format,
-        params,
-        notes: b.notes ?? '',
-        groups,
-        items: [...b.block_items]
-          .sort((x, y) => x.position - y.position)
-          .map(
-            (i, index): ItemDraft => ({
-              exercise_id: i.exercise_id,
-              label: i.label ?? '',
-              reps: i.reps ?? '',
-              load_kg: i.load_kg,
-              load_kg_f: i.load_kg_f,
-              pct_1rm: i.pct_1rm,
-              distance_m: i.distance_m,
-              calories: i.calories,
-              duration_s: i.duration_s,
-              notes: i.notes ?? '',
-              levels: i.levels as Record<string, LevelOverride>,
-              group: groupOf(index),
-            }),
-          ),
-      }
-    })
+  const blocks = [...data.workout_blocks].sort((a, b) => a.position - b.position).map(toBlock)
   return {
     id: data.id,
     title: data.title,
