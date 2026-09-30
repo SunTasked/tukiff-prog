@@ -175,13 +175,13 @@ export const WEEKLY_COUNTED = 3
  * Lowest total wins. Blocks without score, or that nobody of this gender scored, don't count.
  */
 export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
-  blocks: { type: ScoreType; results: T[]; bonus?: boolean }[],
+  blocks: { type: ScoreType; results: T[]; bonus?: boolean; label?: string }[],
 ) {
   return (Object.keys(GENDERS) as Gender[])
     .map((gender) => {
       const scored = blocks
         .filter((b) => b.type !== 'none')
-        .map((b) => ({ bonus: !!b.bonus, rows: leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [] }))
+        .map((b) => ({ bonus: !!b.bonus, label: b.label ?? '', rows: leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [] }))
         .filter((b) => b.rows.length > 0)
       const boards = scored.map((b) => b.rows)
       const athletes = new Map<string, T>()
@@ -208,7 +208,7 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
         while (rank > 1 && totals[rank - 2].total === row.total) rank--
         return { ...row, rank }
       })
-      return { gender, blocks: boards.length, rows }
+      return { gender, blocks: boards.length, labels: scored.map((b) => b.label), bonus: scored.map((b) => b.bonus), rows }
     })
     .filter((b) => b.rows.length > 0)
 }

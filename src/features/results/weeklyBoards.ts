@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { addDays, mondayOf, publicationStatus } from '../../domain/dates'
+import { addDays, fromISODate, mondayOf, publicationStatus } from '../../domain/dates'
 import type { Gender } from '../../domain/profile'
 import { scoreType, weeklyLeaderboards } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
@@ -8,6 +8,7 @@ import type { ResultRow } from './useWorkoutResults'
 
 export type Athlete = ResultRow & { gender: Gender | null }
 export type WeeklyBoards = ReturnType<typeof weeklyLeaderboards<Athlete>>
+const weekday = new Intl.DateTimeFormat('fr-FR', { weekday: 'long' })
 type Row = { id: string; date: string; days: number; program_id: string; publish_at: string | null }
 
 /** Weekly leaderboard of one program (Monday to Sunday), from the published workouts of the week. */
@@ -20,6 +21,7 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   const published = ((week ?? []) as Row[])
     // A multi-day workout started last week belongs to last week's board.
     .filter((w) => w.program_id === programId && w.date >= monday && publicationStatus(w.publish_at) === 'published')
+    .sort((a, b) => a.date.localeCompare(b.date))
   const ids = published.map((w) => w.id)
   const [workouts, { data: results }] = await Promise.all([
     Promise.all(ids.map(loadWorkout)),
@@ -35,6 +37,10 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
         results: rows.filter((r) => r.block_id === b.id),
         // A multi-day workout (challenge of the week) is a bonus.
         bonus: published[i].days > 1,
+        label:
+          published[i].days > 1
+            ? w?.title || b.title
+            : `${weekday.format(fromISODate(published[i].date))} · ${b.title || w?.title || 'Bloc'}`,
       })),
     ),
   )
