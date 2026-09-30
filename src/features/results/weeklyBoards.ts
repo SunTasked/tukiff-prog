@@ -26,7 +26,7 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   const [workouts, { data: results }] = await Promise.all([
     Promise.all(ids.map(loadWorkout)),
     ids.length
-      ? supabase.from('results').select('*, profiles(display_name, gender, avatar_url)').in('workout_id', ids)
+      ? supabase.from('results').select('*, profiles(display_name, first_name, last_name, gender, avatar_url)').in('workout_id', ids)
       : Promise.resolve({ data: [] }),
   ])
   const rows: Athlete[] = ((results ?? []) as ResultRow[]).map((r) => ({ ...r, gender: r.profiles?.gender ?? null }))

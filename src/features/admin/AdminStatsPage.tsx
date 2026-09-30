@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
 import { Card, ErrorText, PageTitle } from '../../components/ui'
+import { fullName } from '../../domain/profile'
 import { isDormant, lastActivityLabel, pageLabel } from '../../domain/usage'
 import { supabase } from '../../lib/supabase'
 import { roleLabel } from '../auth/AuthProvider'
@@ -147,6 +148,7 @@ function LoadChart({ slots }: { slots: Stats['load_slots'] }) {
 
 export function AdminStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null)
+  const [names, setNames] = useState<Record<string, string>>({})
   const [error, setError] = useState('')
 
   useEffect(() => {
@@ -154,6 +156,11 @@ export function AdminStatsPage() {
       setError(error?.message ?? '')
       setStats((data as Stats | null) ?? null)
     })
+    // admin_usage() only returns nicknames: names come from the profiles.
+    supabase
+      .from('profiles')
+      .select('id, display_name, first_name, last_name')
+      .then(({ data }) => setNames(Object.fromEntries((data ?? []).map((p) => [p.id, fullName(p)]))))
   }, [])
 
   const now = new Date()
@@ -193,11 +200,11 @@ export function AdminStatsPage() {
               {s.users.map((u) => (
                 <li key={u.id}>
                   <Link to={`/athletes/${u.id}`} className="flex items-center gap-3 py-2">
-                    <Avatar url={u.avatar_url} name={u.display_name} />
+                    <Avatar url={u.avatar_url} name={names[u.id] ?? u.display_name} />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="truncate font-medium">
-                          {u.display_name ?? '?'} <span className="text-xs text-zinc-500">{roleLabel(u)}</span>
+                          {names[u.id] ?? u.display_name ?? '?'} <span className="text-xs text-zinc-500">{roleLabel(u)}</span>
                         </span>
                         <span
                           className={`shrink-0 text-xs ${isDormant(u.last_at, now) ? 'text-amber-400' : 'text-zinc-400'}`}

@@ -56,12 +56,12 @@ export default function App() {
   }, [session, pendingInvite])
 
   if (loading) return <Spinner />
-  if (!session || !profile?.role || !profile.display_name || !hasPassword(session)) skipLoadTiming()
+  if (!session || !profile?.role || !profile.first_name || !profile.last_name || !hasPassword(session)) skipLoadTiming()
   if (!session) return <LoginPage inviteCode={pendingInvite} />
   if (pendingInvite) return <Spinner />
   if (location.pathname === '/reset-password') return <ResetPasswordPage onDone={() => navigate('/', { replace: true })} />
   if (!profile?.role) return <PendingPage error={inviteError} />
-  if (!profile.display_name || !profile.gender || !hasPassword(session)) return <OnboardingPage />
+  if (!profile.first_name || !profile.last_name || !profile.gender || !hasPassword(session)) return <OnboardingPage />
 
   return (
     <Routes>

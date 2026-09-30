@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, ErrorText } from '../../components/ui'
+import { Button, ErrorText, Input } from '../../components/ui'
 import { invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { supabase, type Invitation, type Program } from '../../lib/supabase'
 
@@ -22,6 +22,7 @@ export function InviteSheet({
   onClose: () => void
 }) {
   const [invitePrograms, setInvitePrograms] = useState<string[]>([])
+  const [label, setLabel] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
   const links = invitations.filter((inv) => inv.role === role)
@@ -30,7 +31,7 @@ export function InviteSheet({
   async function create(validity: InvitationValidity) {
     const { data, error } = await supabase
       .from('invitations')
-      .insert({ role, ...invitationValues(validity) })
+      .insert({ role, label: label.trim() || null, ...invitationValues(validity) })
       .select()
       .single()
     if (error) return setError(error.message)
@@ -40,6 +41,7 @@ export function InviteSheet({
         .insert(invitePrograms.map((program_id) => ({ invitation_id: data.id, program_id })))
       if (res.error) setError(res.error.message)
     }
+    setLabel('')
     onChange()
   }
 
@@ -90,6 +92,15 @@ export function InviteSheet({
             </div>
           </>
         )}
+        <div className="mb-3">
+          <Input
+            label="Pour qui ? (optionnel)"
+            maxLength={60}
+            placeholder="ex. Julie Martin"
+            value={label}
+            onChange={(e) => setLabel(e.target.value)}
+          />
+        </div>
         <div className="flex gap-2">
           <Button className="flex-1" onClick={() => create('single')}>
             Usage unique
@@ -111,9 +122,10 @@ export function InviteSheet({
             <ul className="flex flex-col gap-3">
               {links.map((inv) => (
                 <li key={inv.id} className="rounded-xl border border-zinc-800 p-3">
-                  <div className="flex items-baseline justify-between text-sm">
-                    <span className="font-semibold">{inv.max_uses === 1 ? 'Usage unique' : '24 h'}</span>
-                    <span className="text-zinc-400">
+                  {inv.label && <p className="mb-1 truncate font-semibold">{inv.label}</p>}
+                  <div className="flex items-baseline justify-between gap-2 text-sm">
+                    <span className={inv.label ? 'text-zinc-300' : 'font-semibold'}>{inv.max_uses === 1 ? 'Usage unique' : '24 h'}</span>
+                    <span className="text-right text-zinc-400">
                       expire le {dateFmt.format(new Date(inv.expires_at))} · {inv.uses} utilisé
                       {inv.uses > 1 ? 's' : ''}
                     </span>

@@ -9,21 +9,22 @@ Les scores ne sont saisis que sur les séances déjà publiées : relancer le sc
 
 ## Comptes (mot de passe `a`)
 
-| Email | Pseudo | Rôle | Genre | Niveau | Particularité |
-|---|---|---|---|---|---|
-| c1@tkf.test | Max | coach, admin | H | elite / rx | photo ; owner CrossFit, Haltéro, Open Gym, Perso a3 |
-| c2@tkf.test | Julie | coach | F | rx | photo ; owner Hyrox, contributrice CrossFit |
-| a1@tkf.test | Léa | athlète | F | rx / elite | photo ; ne saute aucune séance (leader F attendue) |
-| a2@tkf.test | Tom | athlète | H | rx | |
-| a3@tkf.test | Sarah | athlète | F | scaled | programme perso ; pas de 1RM Back Squat / Hang Clean |
-| a4@tkf.test | Hugo | athlète | H | elite | photo ; meilleur niveau (leader H attendu) |
-| a5@tkf.test | Inès | athlète | F | foundation | |
-| a6@tkf.test | Nico | athlète | H | scaled / rx | |
-| a7@tkf.test | Emma | athlète | F | rx | |
-| a8@tkf.test | Paul | athlète | H | rx | ne saisit jamais rien (compte rendu vide) |
-| a9@tkf.test | Chloé | athlète | F | scaled | |
-| a10@tkf.test | Karim | athlète | H | rx | |
-| n1@tkf.test | n1 | athlète | aucun | | genre non renseigné : écran d'accueil (onboarding) |
+| Email | Prénom Nom | Pseudo | Rôle | Genre | Niveau | Particularité |
+|---|---|---|---|---|---|---|
+| c1@tkf.test | Maxime Durand | Max | coach, admin | H | elite / rx | photo ; owner CrossFit, Haltéro, Open Gym, Perso a3 |
+| c2@tkf.test | Julie Bernard | — | coach | F | rx | photo ; owner Hyrox, contributrice CrossFit |
+| a1@tkf.test | Léa Martin | — | athlète | F | rx / elite | photo ; ne saute aucune séance (leader F attendue) |
+| a2@tkf.test | Thomas Petit | Tom | athlète | H | rx | |
+| a3@tkf.test | Sarah Robert | — | athlète | F | scaled | programme perso ; pas de 1RM Back Squat / Hang Clean |
+| a4@tkf.test | Hugo Richard | Hugo le Viking | athlète | H | elite | photo ; meilleur niveau (leader H attendu) |
+| a5@tkf.test | Inès Moreau | — | athlète | F | foundation | |
+| a6@tkf.test | Nicolas Simon | Nico | athlète | H | scaled / rx | |
+| a7@tkf.test | Emma Laurent | — | athlète | F | rx | |
+| a8@tkf.test | — | Paul | athlète | H | rx | ne saisit jamais rien (compte rendu vide) ; sans prénom/nom : pseudo affiché aux autres, prénom et nom demandés à sa connexion |
+| a9@tkf.test | Chloé Michel | — | athlète | F | scaled | |
+| a10@tkf.test | Karim Lefèvre | — | athlète | H | rx | |
+| n1@tkf.test | — | n1 | athlète | aucun | | prénom, nom et genre non renseignés : écran d'accueil (onboarding) |
+| p1@tkf.test | — | — | athlète | aucun | | inscription en cours (lien « Marion Blanc » utilisé, rien rempli) |
 
 ## Programmes
 
@@ -61,9 +62,9 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | ID | Cas | Compte | Données / attendu |
 |---|---|---|---|
 | UC-01 | Connexion email + mot de passe | tout compte | `a` |
-| UC-02 | Onboarding demande le genre si absent | n1 | écran d'accueil avec choix Homme / Femme, puis accès à l'app |
+| UC-02 | Onboarding demande prénom, nom et genre si absents | n1 | écran d'accueil avec prénom, nom, choix Homme / Femme, puis accès à l'app |
 | UC-03 | Photo de profil : affichage, changement, suppression | c1, c2, a1, a4 (avec photo), a2 (sans) | initiales quand pas de photo |
-| UC-04 | Modifier son pseudo (modale) | tout compte | |
+| UC-04 | Modifier son pseudo, son prénom et son nom (modales) | tout compte | |
 | UC-05 | Changer son genre dans le profil | a2 | passe du classement H au F |
 
 ### Programmation (coach)
@@ -114,6 +115,10 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-31 | Communauté : admins > coachs, athlètes par ordre alpha avec point rose/bleu, « + » invite par catégorie | c1 | 13 comptes |
 | UC-32 | Communauté, programmes en 3 sections : mes programmes / contributeur / autres (admin) avec owner | c1 (Hyrox dans « autres »), c2 (CrossFit en contributeur) | |
 | UC-33 | Fiche membre, compte rendu 7/30 jours par programme (score, niveau, rang, commentaire, réaction, passé, record) | c1 sur Léa, Sarah, Paul (vide) | limité aux programmes où le coach est owner/contributeur : c2 ne voit que CrossFit et Hyrox |
+| UC-36 | Fiche membre et Communauté : « Prénom Nom » (pseudo si absent) ; email sous le nom pour un admin seulement | c1 (admin) vs c2 sur Thomas, Paul | c2 ne voit pas l'email (refusé côté serveur) ; Paul affiché « Paul » |
+| UC-39 | Classements : pseudo encadré si l'athlète en a un (tap = « Prénom N. » en infobulle), sinon « Prénom N. » ; pseudo optionnel à l'inscription et dans le profil | a2 | Josh : « Tom », « Hugo le Viking », « Léa M. » |
+| UC-37 | Liens d'invitation nommés (« Pour qui ? ») affichés dans les liens actifs | c1, « + » athlètes | lien « Julien Garnier » (usage unique) et un lien 24 h sans nom |
+| UC-38 | Inscriptions en cours (lien utilisé, inscription pas finie) listées à part avec le nom du lien, bouton « Supprimer » (le lien à usage unique redevient utilisable) ; suppression auto après 7 jours | c1 | « Marion Blanc » |
 | UC-34 | Records et % de 1RM ; lien « 1RM ? » quand il manque | a3 (sans 1RM) vs a1 | Squat snatch 80 %, Front Squat 75 %, Clean and jerk 75 % du hang clean |
 
 ## Relancer

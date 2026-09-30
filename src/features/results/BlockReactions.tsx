@@ -7,7 +7,7 @@ export type Reaction = {
   block_id: string
   user_id: string
   emoji: string
-  profiles: { display_name: string | null; avatar_url: string | null } | null
+  profiles: { display_name: string | null; first_name: string | null; last_name: string | null; avatar_url: string | null } | null
 }
 
 /**

@@ -36,7 +36,7 @@ export function WorkoutWithResults({
   const reloadReactions = useCallback(async () => {
     const [w, r] = await Promise.all([
       supabase.from('workouts').select('program_id, programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single(),
-      supabase.from('block_reactions').select('block_id, user_id, emoji, profiles(display_name, avatar_url)').eq('workout_id', workout.id!),
+      supabase.from('block_reactions').select('block_id, user_id, emoji, profiles(display_name, first_name, last_name, avatar_url)').eq('workout_id', workout.id!),
     ])
     const on = w.data?.programs?.reactions_enabled ?? true
     setReactionsOn(on)

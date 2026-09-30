@@ -9,6 +9,7 @@ import { useMyPrograms } from '../programs/useMyPrograms'
 import { loadWorkout } from '../workouts/api'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { StatusBadge } from './StatusBadge'
+import { fullName } from '../../domain/profile'
 
 type Meta = { date: string; publish_at: string | null; program_id: string }
 
@@ -174,12 +175,12 @@ export function ScheduledWorkoutPage() {
 /** Names of the program's athletes who have not logged any result for this workout. */
 async function missingMembers(workoutId: string, programId: string): Promise<string[]> {
   const [members, results] = await Promise.all([
-    supabase.from('program_members').select('user_id, profiles(display_name, role)').eq('program_id', programId),
+    supabase.from('program_members').select('user_id, profiles(display_name, first_name, last_name, role)').eq('program_id', programId),
     supabase.from('results').select('athlete_id').eq('workout_id', workoutId),
   ])
   const done = new Set((results.data ?? []).map((r) => r.athlete_id))
   return (members.data ?? [])
     .filter((m) => m.profiles?.role && !done.has(m.user_id))
-    .map((m) => m.profiles?.display_name ?? '—')
+    .map((m) => fullName(m.profiles))
     .sort((a, b) => a.localeCompare(b))
 }
