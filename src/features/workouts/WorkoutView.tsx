@@ -131,26 +131,18 @@ export function WorkoutView({
 /** Block above my access level: title only, closed; tap tells who to ask. */
 function LockedBlockCard({ block, letter }: { block: LockedBlock; letter: string }) {
   const [open, setOpen] = useState(false)
+  // Deliberately discreet (greyed out like a disabled row): a hint, not an ad.
   return (
-    <section className="rounded-2xl border border-zinc-800 bg-zinc-900/60">
-      <button
-        className="flex w-full items-center justify-between gap-2 p-4 text-left"
-        onClick={() => setOpen(!open)}
-        aria-expanded={open}
-      >
-        <span className="min-w-0">
-          <span className="block text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-            {letter} · {BLOCK_KINDS[block.kind]}
-          </span>
-          <span className="block text-lg font-bold text-zinc-400">{block.title || BLOCK_KINDS[block.kind]}</span>
+    <section className="rounded-2xl bg-zinc-900/40 opacity-50">
+      <button className="flex w-full items-center gap-2 px-4 py-3 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="min-w-0 flex-1 truncate text-sm text-zinc-500">
+          {letter} · {block.title || BLOCK_KINDS[block.kind]}
         </span>
-        <span className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-sm text-zinc-300">🔒 {ACCESS_LEVELS[1]}</span>
+        <span className="shrink-0 text-xs grayscale" aria-label="Verrouillé">
+          🔒
+        </span>
       </button>
-      {open && (
-        <p className="mx-4 mb-4 rounded-xl bg-zinc-800 px-3 py-2 text-sm text-zinc-200">
-          <b>Bloc {ACCESS_LEVELS[1]}.</b> Contacte les coachs de la box pour en savoir plus.
-        </p>
-      )}
+      {open && <p className="px-4 pb-3 text-xs text-zinc-500">Contacte les coachs de la box pour en savoir plus.</p>}
     </section>
   )
 }
