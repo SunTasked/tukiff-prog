@@ -7,8 +7,9 @@ import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
 import { StatusBadge } from '../calendar/StatusBadge'
-import type { WorkoutDraft } from '../../domain/workout'
+import { levelName, viewAs, type AccessLevel, type WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
+import { useAuth } from '../auth/AuthProvider'
 import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
@@ -23,6 +24,8 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
+  const { session } = useAuth()
+  const me = session?.user.id
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
   const monday = mondayOf(day)
@@ -67,15 +70,27 @@ export function HomePage() {
   const [weekBoard, setWeekBoard] = useState<{ key: string; label: string } | null>(null)
   // Programs of the week with the leaderboard turned off: no link to their weekly board.
   const [boardOff, setBoardOff] = useState<Set<string>>(new Set())
+  // Programs I coach that have access levels: I see every block, and can preview what a level sees.
+  const [coached, setCoached] = useState<Map<string, AccessLevel[]>>(new Map())
+  const [previewLevel, setPreviewLevel] = useState<Record<string, number>>({})
   const programIds = [...new Set((week ?? []).map((r) => r.program_id))].sort().join(',')
   useEffect(() => {
     if (!programIds) return
     supabase
       .from('programs')
-      .select('id, leaderboard_enabled')
+      .select('id, leaderboard_enabled, owner_id, access_levels, program_coaches(coach_id)')
       .in('id', programIds.split(','))
-      .then(({ data }) => setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id))))
-  }, [programIds])
+      .then(({ data }) => {
+        setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id)))
+        setCoached(
+          new Map(
+            (data ?? [])
+              .filter((p) => (p.owner_id === me || p.program_coaches.some((c) => c.coach_id === me)) && (p.access_levels as AccessLevel[]).length)
+              .map((p) => [p.id, p.access_levels as AccessLevel[]]),
+          ),
+        )
+      })
+  }, [programIds, me])
 
   useEffect(() => {
     if (!week) return
@@ -145,12 +160,46 @@ export function HomePage() {
           <p className="text-zinc-400">Pas de séance ce jour-là.</p>
         </Card>
       ) : (
-        groupByProgram(workouts).map((panel) => (
+        groupByProgram(workouts).map((panel) => {
+          const levels = coached.get(panel.key)
+          const preview = previewLevel[panel.key]
+          return (
           <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
-            {!boardOff.has(panel.key) && (
-              <button className="-mb-3 self-start text-sm text-lime-400" onClick={() => setWeekBoard(panel)}>
-                🏆 Classement de la semaine ›
-              </button>
+            {(!boardOff.has(panel.key) || levels) && (
+              <div className="-mb-3 flex items-center justify-between gap-2">
+                {!boardOff.has(panel.key) ? (
+                  <button className="text-sm whitespace-nowrap text-lime-400" onClick={() => setWeekBoard(panel)}>
+                    🏆 Classement de la semaine ›
+                  </button>
+                ) : (
+                  <span />
+                )}
+                {levels && (
+                  <label className="flex min-w-0 items-center gap-1 text-xs whitespace-nowrap text-zinc-400">
+                    👁
+                    <select
+                      aria-label="Voir comme"
+                      className={`max-w-[8.5rem] min-w-0 rounded-lg border bg-zinc-950 px-1.5 py-1 text-xs ${preview === undefined ? 'border-zinc-800 text-zinc-300' : 'border-amber-400/60 text-amber-300'}`}
+                      value={preview ?? -1}
+                      onChange={(e) => {
+                        const level = Number(e.target.value)
+                        setPreviewLevel((prev) => {
+                          const next = { ...prev, [panel.key]: level }
+                          if (level < 0) delete next[panel.key]
+                          return next
+                        })
+                      }}
+                    >
+                      <option value={-1}>Vue coach</option>
+                      {Array.from({ length: levels.length + 1 }, (_, level) => (
+                        <option key={level} value={level}>
+                          Vue {levelName(levels, level)}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+              </div>
             )}
             {panel.items.map((w) => {
               const published = publicationStatus(w.publish_at) === 'published'
@@ -167,7 +216,7 @@ export function HomePage() {
                       <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
                     </p>
                   )}
-                  <WorkoutWithResults workout={w} canLog={published}
+                  <WorkoutWithResults workout={preview === undefined ? w : viewAs(w, preview)} canLog={published}
                     // Unpublished: nothing to log, so never the auto-scroll target.
                     onDone={(ids) => report(w.id, published ? ids : new Set(w.blocks.map((b) => b.id)))}
                   />
@@ -175,7 +224,8 @@ export function HomePage() {
               )
             })}
           </ProgramPanel>
-        ))
+          )
+        })
       )}
       {weekBoard && (
         <WeeklyBoardSheet programId={weekBoard.key} programName={weekBoard.label} week={monday} onClose={() => setWeekBoard(null)} />

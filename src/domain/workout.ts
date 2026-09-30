@@ -135,6 +135,22 @@ export type WorkoutDraft = {
 
 export type LockedBlock = { id: string; kind: BlockKind; title: string; before: number }
 
+/**
+ * A workout as an athlete of the given level would see it (a coach's preview; the server applies the same rule):
+ * blocks above that level become locked if their level allows previews, else they disappear.
+ */
+export function viewAs(w: WorkoutDraft, level: number): WorkoutDraft {
+  const blocks: BlockDraft[] = []
+  const locked: LockedBlock[] = []
+  for (const b of w.blocks) {
+    const min = b.params.min_level ?? 0
+    if (min <= level) blocks.push(b)
+    else if (w.access_levels?.[min - 1]?.preview ?? true)
+      locked.push({ id: b.id, kind: b.kind, title: b.title, before: blocks.length })
+  }
+  return { ...w, blocks, locked: [...(w.locked ?? []), ...locked] }
+}
+
 export function defaultParams(format: Format): FormatParams {
   switch (format) {
     case 'for_time':
