@@ -6,9 +6,11 @@ import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
+  ACCESS_LEVELS,
   BLOCK_KINDS,
   LEVELS,
   blockLevels,
+  isPremium,
   formatSummary,
   itemRuns,
   itemSummary,
@@ -16,6 +18,7 @@ import {
   type BlockDraft,
   type ItemDraft,
   type Level,
+  type LockedBlock,
   type WorkoutDraft,
 } from '../../domain/workout'
 
@@ -51,56 +54,96 @@ export function WorkoutView({
     setChosen({ ...chosen, [blockId]: l })
   }
 
+  // Visible and locked blocks in the coach's order, lettered together.
+  const entries = workout.blocks.flatMap((block, i) => [
+    ...(workout.locked ?? []).filter((l) => l.before === i).map((locked) => ({ locked, block: undefined })),
+    { block, locked: undefined },
+  ])
+  entries.push(
+    ...(workout.locked ?? []).filter((l) => l.before >= workout.blocks.length).map((locked) => ({ locked, block: undefined })),
+  )
+  const lettered = entries.map((e, letter) => ({ ...e, letter }))
+
   return (
     <div className="flex flex-col gap-4">
       {workout.notes && <p className="whitespace-pre-line text-zinc-300">{workout.notes}</p>}
-      {workout.blocks.map((b, i) => (
-        <section key={b.id} id={`block-${b.id}`} className="scroll-mt-4 rounded-2xl bg-zinc-900 p-4">
-          <div className="flex items-center justify-between gap-2">
-            <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-              {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
-            </p>
-            <TimerLink block={b} />
-          </div>
-          <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-            {(b.title || formatSummary(b.format, b.params)) && (
-              <h3 className="min-w-0 text-lg font-bold">
-                {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
-              </h3>
-            )}
-            {blockHeader?.(b)}
-          </div>
-          {blockLevels(b).length > 1 && (
-            <div className="mt-2">
-              <Chips
-                options={Object.fromEntries(blockLevels(b).map((l) => [l, LEVELS[l]])) as Record<Level, string>}
-                value={levelOf(b)}
-                onChange={(l) => choose(b.id, l)}
-              />
+      {lettered.map(({ block: b, locked, letter: i }) =>
+        locked ? (
+          <LockedBlockCard key={locked.id} block={locked} letter={String.fromCharCode(65 + i)} />
+        ) : (
+          <section key={b.id} id={`block-${b.id}`} className="scroll-mt-4 rounded-2xl bg-zinc-900 p-4">
+            <div className="flex items-center justify-between gap-2">
+              <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
+                {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300">{ACCESS_LEVELS[1]}</span>}
+              </p>
+              <TimerLink block={b} />
             </div>
-          )}
-          <ul className="mt-2 flex flex-col gap-1">
-            {itemRuns(b).map(({ group, items }, k) => {
-              const lines = items.map(({ item, index }) => (
-                <ItemLine key={index} item={resolveItem(item, levelOf(b))} nameOf={nameOf} videoOf={videoOf} oneRmOf={oneRmOf} />
-              ))
-              if (group === null) return lines
-              const g = b.groups[group]
-              return (
-                <li key={`g${k}`} className="my-1 rounded-xl border border-zinc-700 p-2">
-                  {g.title && <p className="text-sm font-semibold text-lime-400">{g.title}</p>}
-                  <ul className="flex flex-col gap-1">{lines}</ul>
-                  {g.note && <p className="mt-1 text-sm whitespace-pre-line text-zinc-400">↻ {g.note}</p>}
-                </li>
-              )
-            })}
-          </ul>
-          {b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
-          <ScoreLine block={b} />
-          {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]}`)}
-        </section>
-      ))}
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {(b.title || formatSummary(b.format, b.params)) && (
+                <h3 className="min-w-0 text-lg font-bold">
+                  {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
+                </h3>
+              )}
+              {blockHeader?.(b)}
+            </div>
+            {blockLevels(b).length > 1 && (
+              <div className="mt-2">
+                <Chips
+                  options={Object.fromEntries(blockLevels(b).map((l) => [l, LEVELS[l]])) as Record<Level, string>}
+                  value={levelOf(b)}
+                  onChange={(l) => choose(b.id, l)}
+                />
+              </div>
+            )}
+            <ul className="mt-2 flex flex-col gap-1">
+              {itemRuns(b).map(({ group, items }, k) => {
+                const lines = items.map(({ item, index }) => (
+                  <ItemLine
+                    key={index}
+                    item={resolveItem(item, levelOf(b))}
+                    nameOf={nameOf}
+                    videoOf={videoOf}
+                    oneRmOf={oneRmOf}
+                  />
+                ))
+                if (group === null) return lines
+                const g = b.groups[group]
+                return (
+                  <li key={`g${k}`} className="my-1 rounded-xl border border-zinc-700 p-2">
+                    {g.title && <p className="text-sm font-semibold text-lime-400">{g.title}</p>}
+                    <ul className="flex flex-col gap-1">{lines}</ul>
+                    {g.note && <p className="mt-1 text-sm whitespace-pre-line text-zinc-400">↻ {g.note}</p>}
+                  </li>
+                )
+              })}
+            </ul>
+            {b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
+            <ScoreLine block={b} />
+            {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]}`)}
+          </section>
+        ),
+      )}
     </div>
+  )
+}
+
+/** Block above my access level: title only, closed; tap tells who to ask. */
+function LockedBlockCard({ block, letter }: { block: LockedBlock; letter: string }) {
+  const [open, setOpen] = useState(false)
+  // Deliberately discreet (greyed out like a disabled row): a hint, not an ad.
+  return (
+    <section className="rounded-2xl bg-zinc-900/40 opacity-50">
+      <button className="flex w-full items-center gap-2 px-4 py-3 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
+        <span className="min-w-0 flex-1 truncate text-sm text-zinc-500">
+          {letter} · {block.title || BLOCK_KINDS[block.kind]}
+        </span>
+        <span className="shrink-0 text-xs grayscale" aria-label="Verrouillé">
+          🔒
+        </span>
+      </button>
+      {open && <p className="px-4 pb-3 text-xs text-zinc-500">Contacte les coachs de la box pour en savoir plus.</p>}
+    </section>
   )
 }
 

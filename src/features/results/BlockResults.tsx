@@ -3,7 +3,7 @@ import { Avatar } from '../../components/Avatar'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
-import { compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
+import { compactRows, formatScore, isRanked, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
 import { getItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
@@ -68,6 +68,9 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const checkable = type === 'none'
   // Blocks without score have no leaderboard, only the athletes' comments.
   const commented = results.filter((r) => r.comment?.trim())
+  // Unranked blocks (coach's choice, premium): my score only, the others' in a plain list by name.
+  const ranked = isRanked(block.format, block.params)
+  const byName = [...results].sort((a, b) => scoreName(a.profiles).localeCompare(scoreName(b.profiles), 'fr'))
 
   // Blocks without score: one tap on the "Fait" box, the sheet stays available for level and comment.
   async function toggleDone() {
@@ -164,7 +167,13 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </button>
       )}
 
-      {showBoard && !checkable && boards.length > 0 && (
+      {showBoard && !checkable && !ranked && results.length > 0 && (
+        <button className="mt-3 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
+          Voir les scores ({results.length}) ›
+        </button>
+      )}
+
+      {showBoard && !checkable && ranked && boards.length > 0 && (
         <>
           <Board
             gender={myGender}
@@ -203,7 +212,35 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </div>
       )}
 
-      {full && !checkable && (
+      {full && !checkable && !ranked && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-3">
+            <span className="min-w-0 truncate font-semibold">Scores · {blockLabel}</span>
+            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
+              Fermer
+            </button>
+          </div>
+          <ol className="flex flex-1 flex-col gap-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            {byName.map((r) => (
+              <li key={r.id} className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}>
+                <div className="flex items-center gap-2">
+                  <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
+                  <AthleteName profile={r.profiles} />
+                  <span className="flex-1" />
+                  <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">
+                    {LEVELS[r.level as Level]}
+                  </span>
+                  <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
+                </div>
+                {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}
+                {r.comment && <p className="mt-0.5 pl-8 text-xs whitespace-pre-line text-zinc-400">{r.comment}</p>}
+              </li>
+            ))}
+          </ol>
+        </div>
+      )}
+
+      {full && !checkable && ranked && (
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Classement · {blockLabel}</span>

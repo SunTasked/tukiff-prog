@@ -479,16 +479,19 @@ export type Database = {
       program_members: {
         Row: {
           created_at: string
+          level: number
           program_id: string
           user_id: string
         }
         Insert: {
           created_at?: string
+          level?: number
           program_id: string
           user_id: string
         }
         Update: {
           created_at?: string
+          level?: number
           program_id?: string
           user_id?: string
         }
@@ -791,8 +794,10 @@ export type Database = {
       accept_invitation: { Args: { p_code: string }; Returns: string }
       admin_usage: { Args: never; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
+      block_min_level: { Args: { p_params: Json }; Returns: number }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
+      can_see_block: { Args: { p_block: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
       copy_workout: {
         Args: {
@@ -817,11 +822,22 @@ export type Database = {
         Returns: boolean
       }
       leaderboard_on: { Args: { p_workout: string }; Returns: boolean }
+      locked_blocks: {
+        Args: { p_workouts: string[] }
+        Returns: {
+          id: string
+          kind: string
+          position: number
+          title: string
+          workout_id: string
+        }[]
+      }
       member_email: { Args: { p_user: string }; Returns: string }
       move_workouts: {
         Args: { p_days: number; p_ids: string[] }
         Returns: undefined
       }
+      my_level: { Args: { p_workout: string }; Returns: number }
       my_role: { Args: never; Returns: string }
       my_workouts: {
         Args: { p_from: string; p_to: string }
