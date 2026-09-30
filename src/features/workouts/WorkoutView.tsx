@@ -7,7 +7,7 @@ import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import { Markdown } from '../../components/Markdown'
 import {
-  BLOCK_KINDS,
+  blockName,
   LEVELS,
   blockLevels,
   isPremium,
@@ -75,7 +75,7 @@ export function WorkoutView({
           <section key={b.id} id={`block-${b.id}`} className="scroll-mt-4 rounded-2xl bg-zinc-900 p-4">
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
+                Bloc {String.fromCharCode(65 + i)}
                 {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 tracking-normal whitespace-nowrap text-amber-300 normal-case">{levelName(workout.access_levels, b.params.min_level!)}</span>}
               </p>
               <TimerLink block={b} />
@@ -122,7 +122,7 @@ export function WorkoutView({
             </ul>
             {b.format !== 'none' && b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
             <ScoreLine block={b} />
-            {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]}`)}
+            {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${blockName(b)}`)}
           </section>
         ),
       )}
@@ -138,7 +138,7 @@ function LockedBlockCard({ block, letter }: { block: LockedBlock; letter: string
     <section className="rounded-2xl bg-zinc-900/40 opacity-50">
       <button className="flex w-full items-center gap-2 px-4 py-3 text-left" onClick={() => setOpen(!open)} aria-expanded={open}>
         <span className="min-w-0 flex-1 truncate text-sm text-zinc-500">
-          {letter} · {block.title || BLOCK_KINDS[block.kind]}
+          {letter} · {block.title || 'Bloc réservé'}
         </span>
         <span className="shrink-0 text-xs grayscale" aria-label="Verrouillé">
           🔒
@@ -201,7 +201,7 @@ function PctLoad({ exerciseId, pct, oneRm }: { exerciseId: string; pct: number; 
 function TimerLink({ block }: { block: BlockDraft }) {
   const config = timerFromBlock(block.format, block.params)
   if (!config) return null
-  const params = new URLSearchParams({ ...timerToParams(config), title: block.title || BLOCK_KINDS[block.kind] })
+  const params = new URLSearchParams({ ...timerToParams(config), title: blockName(block) })
   return (
     <Link to={`/timer?${params}`} className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-200">
       ▶ Timer

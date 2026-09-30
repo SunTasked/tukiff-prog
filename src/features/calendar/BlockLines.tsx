@@ -1,7 +1,6 @@
 import { Markdown } from '../../components/Markdown'
 import { SCORE_TYPES, scoreType } from '../../domain/scoring'
 import {
-  BLOCK_KINDS,
   formatSummary,
   isPremium,
   itemRuns,
@@ -37,7 +36,8 @@ export function BlockLines({
           <li key={b.id} className="min-w-0">
             <p className={full ? '' : 'truncate'}>
               <span className="font-semibold text-zinc-500">
-                {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
+                {String.fromCharCode(65 + i)}
+                {head ? ' ·' : ''}
               </span>
               {head && <span className="text-zinc-200"> {head}</span>}
               {isPremium(b) && (

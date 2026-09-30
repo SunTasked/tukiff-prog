@@ -19,6 +19,11 @@ export const FORMATS = {
   none: 'Libre',
 } as const
 export type Format = keyof typeof FORMATS
+/** Formats offered in the editor: "Séries × reps" is only kept for older blocks. */
+export const FORMAT_CHOICES = (({ sets_reps: _legacy, ...rest }) => rest)(FORMATS)
+/** Name of a block where no category is shown any more: its title, else its format summary. */
+export const blockName = (b: Pick<BlockDraft, 'title' | 'format' | 'params'>) =>
+  b.title || formatSummary(b.format, b.params) || 'Bloc'
 
 export const MEASURES = {
   reps: 'Répétitions',
