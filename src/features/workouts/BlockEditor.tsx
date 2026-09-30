@@ -73,7 +73,8 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
         <span className="shrink-0 text-sm font-bold text-zinc-400">Bloc {String.fromCharCode(65 + index)}</span>
         <input
           aria-label="Titre du bloc"
-          placeholder="Titre (option)"
+          placeholder="Titre du bloc"
+          required
           className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm text-zinc-100 outline-none focus:border-lime-400"
           value={block.title}
           onChange={(e) => set({ title: e.target.value })}
