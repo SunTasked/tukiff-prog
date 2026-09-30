@@ -21,6 +21,9 @@ export const FORMATS = {
 export type Format = keyof typeof FORMATS
 /** Formats offered in the editor: "Séries × reps" is only kept for older blocks. */
 export const FORMAT_CHOICES = (({ sets_reps: _legacy, ...rest }) => rest)(FORMATS)
+/** "Fran — For Time · cap 12'"; the summary alone once when the title repeats it. */
+export const blockHeading = (b: Pick<BlockDraft, 'title' | 'format' | 'params'>) =>
+  [...new Set([b.title, formatSummary(b.format, b.params)].filter(Boolean))].join(' — ')
 /** Name of a block where no category is shown any more: its title, else its format summary. */
 export const blockName = (b: Pick<BlockDraft, 'title' | 'format' | 'params'>) =>
   b.title || formatSummary(b.format, b.params) || 'Bloc'

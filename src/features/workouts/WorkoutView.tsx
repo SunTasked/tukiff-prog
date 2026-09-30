@@ -12,7 +12,7 @@ import {
   blockLevels,
   isPremium,
   levelName,
-  formatSummary,
+  blockHeading,
   itemRuns,
   itemSummary,
   resolveItem,
@@ -81,9 +81,9 @@ export function WorkoutView({
               <TimerLink block={b} />
             </div>
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-              {(b.title || formatSummary(b.format, b.params)) && (
+              {blockHeading(b) && (
                 <h3 className="min-w-0 text-lg font-bold">
-                  {[b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')}
+                  {blockHeading(b)}
                 </h3>
               )}
               {blockHeader?.(b)}
