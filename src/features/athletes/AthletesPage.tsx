@@ -31,7 +31,7 @@ export function AthletesPage() {
   const load = useCallback(async () => {
     const [m, i, p] = await Promise.all([
       supabase.from('profiles').select('*, invitations!profiles_invitation_id_fkey(label)').not('role', 'is', null),
-      supabase.from('invitations').select('*, invitation_programs(program_id)').order('created_at', { ascending: false }),
+      supabase.from('invitations').select('*, invitation_programs(program_id, level)').order('created_at', { ascending: false }),
       supabase.from('programs').select('*, program_members(count), program_coaches(coach_id)').is('archived_at', null).order('name'),
     ])
     setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
