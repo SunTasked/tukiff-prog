@@ -19,6 +19,7 @@ import {
   suggestedKind,
   usedExercises,
   validateWorkout,
+  viewAs,
   type WorkoutDraft,
 } from './workout'
 
@@ -196,5 +197,33 @@ describe('sub-blocks', () => {
     const r = removeGroup({ ...block, items: [...block.items, g('x', 1)] }, 0)
     expect(r.groups.map((x) => x.title)).toEqual(['Vide'])
     expect(r.items.map((i) => i.group)).toEqual([null, null, null, 0])
+  })
+})
+
+describe('viewAs', () => {
+  const block = (id: string, min_level?: number) => ({ ...newBlock('metcon', id), params: min_level ? { min_level } : {} })
+  const w: WorkoutDraft = {
+    title: 'WOD',
+    notes: '',
+    access_levels: [
+      { name: 'Accessoires', preview: true },
+      { name: 'Élite', preview: false },
+    ],
+    blocks: [block('pre', 1), block('wod'), block('elite', 2), block('post', 1)],
+  }
+
+  it('locks previewable blocks above the level and hides the others', () => {
+    const base = viewAs(w, 0)
+    expect(base.blocks.map((b) => b.id)).toEqual(['wod'])
+    expect(base.locked!.map((l) => [l.id, l.before])).toEqual([
+      ['pre', 0],
+      ['post', 1],
+    ])
+  })
+
+  it('shows everything up to the level', () => {
+    expect(viewAs(w, 1).blocks.map((b) => b.id)).toEqual(['pre', 'wod', 'post'])
+    expect(viewAs(w, 1).locked).toEqual([])
+    expect(viewAs(w, 2).blocks).toHaveLength(4)
   })
 })
