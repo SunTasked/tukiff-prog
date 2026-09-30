@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Card, Chips, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import { fullName } from '../../domain/profile'
-import { ACCESS_LEVELS } from '../../domain/workout'
+import { levelName } from '../../domain/workout'
 import { supabase, type Profile } from '../../lib/supabase'
 import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 import { useMyPrograms } from '../programs/useMyPrograms'
@@ -27,6 +27,7 @@ export function MemberPage() {
   const [programIds, setProgramIds] = useState<string[]>([])
   // Access level per program followed (0 = Free, 1 = Premium).
   const [levels, setLevels] = useState<Map<string, number>>(new Map())
+  const [levelNames, setLevelNames] = useState<Map<string, string[]>>(new Map())
   const [allPrograms, setAllPrograms] = useState<{ id: string; name: string }[]>([])
   const [email, setEmail] = useState<string | null>(null)
   const [error, setError] = useState('')
@@ -41,11 +42,12 @@ export function MemberPage() {
   const load = useCallback(async () => {
     const [m, pm] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', id!).single(),
-      supabase.from('program_members').select('program_id, level, programs(name, archived_at)').eq('user_id', id!),
+      supabase.from('program_members').select('program_id, level, programs(name, archived_at, access_levels)').eq('user_id', id!),
     ])
     setMember(m.data)
     setProgramIds((pm.data ?? []).map((r) => r.program_id))
     setLevels(new Map((pm.data ?? []).map((r) => [r.program_id, r.level])))
+    setLevelNames(new Map((pm.data ?? []).map((r) => [r.program_id, r.programs?.access_levels ?? []])))
     setAllPrograms(
       (pm.data ?? []).flatMap((r) => (r.programs && !r.programs.archived_at ? [{ id: r.program_id, name: r.programs.name }] : [])),
     )
@@ -148,11 +150,12 @@ export function MemberPage() {
                     <span className="flex-1">{p.name}</span>
                     {programIds.includes(p.id) && (
                       <span className="grid shrink-0 grid-cols-2 rounded-lg bg-zinc-800 p-0.5 text-xs">
-                        {ACCESS_LEVELS.map((label, level) => {
+                        {[0, 1].map((level) => {
+                          const label = levelName(levelNames.get(p.id), level)
                           const current = (levels.get(p.id) ?? 0) === level
                           return (
                             <button
-                              key={label}
+                              key={level}
                               type="button"
                               disabled={current}
                               className={`rounded-md px-2 py-1 font-semibold ${current ? 'bg-zinc-950 text-lime-400' : 'text-zinc-400'}`}

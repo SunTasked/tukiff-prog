@@ -15,6 +15,8 @@ export function ProgramPage() {
   const me = session?.user.id
   const [program, setProgram] = useState<Program | null>(null)
   const [name, setName] = useState('')
+  // Names of the 2 access levels (base, then the one that opens the restricted blocks).
+  const [levels, setLevels] = useState<string[] | null>(null)
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [coachIds, setCoachIds] = useState<string[]>([])
   const [everyone, setEveryone] = useState<Profile[]>([])
@@ -30,6 +32,7 @@ export function ProgramPage() {
     ])
     setProgram(p.data)
     setName((n) => n || p.data?.name || '')
+    setLevels((l) => l ?? p.data?.access_levels ?? null)
     setMemberIds((pm.data ?? []).map((r) => r.user_id))
     setCoachIds((pc.data ?? []).map((r) => r.coach_id))
     setEveryone(m.data ?? [])
@@ -144,6 +147,33 @@ export function ProgramPage() {
             <p className="text-xs text-zinc-500">
               Décoché : emojis masqués pour tous ; sans classement, chaque athlète ne voit que son score (les coachs voient tout).
             </p>
+          </Card>
+        )}
+        {isOwner && levels && (
+          <Card className="flex flex-col gap-2">
+            <h2 className="font-semibold">Niveaux d’accès</h2>
+            <p className="text-xs text-zinc-500">
+              Chaque athlète a un niveau (onglet Accès de sa fiche). Les blocs réservés au 2ᵉ niveau apparaissent grisés et
+              verrouillés pour les autres.
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[0, 1].map((i) => (
+                <Input
+                  key={i}
+                  label={i === 0 ? 'Niveau de base' : 'Niveau supérieur'}
+                  maxLength={30}
+                  value={levels[i] ?? ''}
+                  onChange={(e) => setLevels(levels.map((l, j) => (j === i ? e.target.value : l)))}
+                />
+              ))}
+            </div>
+            <Button
+              variant="secondary"
+              disabled={levels.some((l) => !l.trim()) || levels.join('|') === program.access_levels.join('|')}
+              onClick={() => run(supabase.from('programs').update({ access_levels: levels.map((l) => l.trim()) }).eq('id', id!))}
+            >
+              Enregistrer les niveaux
+            </Button>
           </Card>
         )}
         {isOwner && otherCoaches.length > 0 && (

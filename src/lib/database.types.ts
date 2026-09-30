@@ -514,6 +514,7 @@ export type Database = {
       }
       programs: {
         Row: {
+          access_levels: string[]
           archived_at: string | null
           created_at: string
           description: string | null
@@ -524,6 +525,7 @@ export type Database = {
           reactions_enabled: boolean
         }
         Insert: {
+          access_levels?: string[]
           archived_at?: string | null
           created_at?: string
           description?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           reactions_enabled?: boolean
         }
         Update: {
+          access_levels?: string[]
           archived_at?: string | null
           created_at?: string
           description?: string | null

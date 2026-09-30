@@ -2,9 +2,9 @@ import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
 import { SCORE_TYPES, defaultScoreType, scoreType, type ScoreType } from '../../domain/scoring'
 import {
-  ACCESS_LEVELS,
   BLOCK_KINDS,
   blockSettings,
+  levelName,
   DEFAULT_FORMAT,
   FORMATS,
   defaultParams,
@@ -31,11 +31,13 @@ type Props = {
   onRemove: () => void
   /** itemIndex null = new item, appended to the block or to sub-block `group`. */
   onPick: (itemIndex: number | null, level?: AltLevel, group?: number | null) => void
+  /** Names of the program's access levels. */
+  accessLevels?: string[]
 }
 
 const int = (v: number | null) => (v == null ? undefined : Math.round(v))
 
-export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMove, onRemove, onPick }: Props) {
+export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMove, onRemove, onPick, accessLevels }: Props) {
   const set = (patch: Partial<BlockDraft>) => onChange({ ...block, ...patch })
   const setParams = (patch: Partial<FormatParams>) => set({ params: { ...block.params, ...patch } })
 
@@ -149,7 +151,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
         <div>
           <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
           <Chips
-            options={{ '0': 'Tous', '1': `🔒 ${ACCESS_LEVELS[1]}` }}
+            options={{ '0': 'Tous', '1': `🔒 ${levelName(accessLevels, 1)}` }}
             value={String(p.min_level ?? 0) as '0' | '1'}
             onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
           />
@@ -166,7 +168,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             />
             <span>
               Compte pour le classement de la semaine
-              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc Premium</span>}
+              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc {levelName(accessLevels, 1)}</span>}
             </span>
           </label>
         )}

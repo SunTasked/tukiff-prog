@@ -41,7 +41,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   const [{ data }, { data: locked }] = await Promise.all([
     supabase
       .from('workouts')
-      .select('id, title, notes, date, days, section_id, workout_blocks(*, block_items(*))')
+      .select('id, title, notes, date, days, section_id, programs(access_levels), workout_blocks(*, block_items(*))')
       .eq('id', id)
       .maybeSingle(),
     supabase.rpc('locked_blocks', { p_workouts: [id] }),
@@ -87,6 +87,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
     date: data.date,
     days: data.days,
     section_id: data.section_id,
+    access_levels: data.programs?.access_levels,
     blocks,
     locked: (locked ?? []).map((b) => ({
       id: b.id,

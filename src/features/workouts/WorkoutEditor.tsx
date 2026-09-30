@@ -47,6 +47,18 @@ export function WorkoutEditor() {
       })
   }, [id])
 
+  // New scheduled workout: the program's access level names.
+  const newProgram = id ? null : search.get('program')
+  useEffect(() => {
+    if (!newProgram) return
+    supabase
+      .from('programs')
+      .select('access_levels')
+      .eq('id', newProgram)
+      .maybeSingle()
+      .then(({ data }) => data && setDraft((d) => d && { ...d, access_levels: data.access_levels }))
+  }, [newProgram])
+
   useEffect(() => {
     supabase
       .from('library_sections')
@@ -186,6 +198,7 @@ export function WorkoutEditor() {
             onMove={(d) => moveBlock(i, d)}
             onRemove={() => setBlocks(draft.blocks.filter((_, j) => j !== i))}
             onPick={(item, level, group) => setPick({ block: i, item, level, group })}
+            accessLevels={draft.access_levels}
           />
         ))}
         <Button

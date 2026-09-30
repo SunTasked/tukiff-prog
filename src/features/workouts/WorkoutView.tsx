@@ -6,11 +6,11 @@ import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
 import {
-  ACCESS_LEVELS,
   BLOCK_KINDS,
   LEVELS,
   blockLevels,
   isPremium,
+  levelName,
   formatSummary,
   itemRuns,
   itemSummary,
@@ -75,7 +75,7 @@ export function WorkoutView({
             <div className="flex items-center justify-between gap-2">
               <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
                 {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
-                {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 text-amber-300">{ACCESS_LEVELS[1]}</span>}
+                {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 tracking-normal whitespace-nowrap text-amber-300 normal-case">{levelName(workout.access_levels, b.params.min_level!)}</span>}
               </p>
               <TimerLink block={b} />
             </div>
