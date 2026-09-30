@@ -1,10 +1,10 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Button, Card, ErrorText, Input, PageTitle, Spinner } from '../../components/ui'
 import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { fullName } from '../../domain/profile'
-import { BASE_LEVEL, type AccessLevel } from '../../domain/workout'
+import { BASE_LEVEL, levelName, type AccessLevel } from '../../domain/workout'
 
 /**
  * Program detail. Owner: rename, archive, contributor coaches, emoji reactions and leaderboard on/off. Owner + contributors: athletes with access.
@@ -18,7 +18,8 @@ export function ProgramPage() {
   const [name, setName] = useState('')
   // Access levels above Base, being edited (saved together; a deletion is immediate).
   const [levels, setLevels] = useState<AccessLevel[] | null>(null)
-  const [memberIds, setMemberIds] = useState<string[]>([])
+  // Members and their access level.
+  const [memberLevels, setMemberLevels] = useState<Map<string, number>>(new Map())
   const [coachIds, setCoachIds] = useState<string[]>([])
   const [everyone, setEveryone] = useState<Profile[]>([])
   const [error, setError] = useState('')
@@ -27,14 +28,14 @@ export function ProgramPage() {
   const load = useCallback(async () => {
     const [p, pm, pc, m] = await Promise.all([
       supabase.from('programs').select('*').eq('id', id!).single(),
-      supabase.from('program_members').select('user_id').eq('program_id', id!),
+      supabase.from('program_members').select('user_id, level').eq('program_id', id!),
       supabase.from('program_coaches').select('coach_id').eq('program_id', id!),
       supabase.from('profiles').select('*').not('role', 'is', null).order('first_name'),
     ])
     setProgram(p.data)
     setName((n) => n || p.data?.name || '')
     setLevels((l) => l ?? ((p.data?.access_levels ?? null) as AccessLevel[] | null))
-    setMemberIds((pm.data ?? []).map((r) => r.user_id))
+    setMemberLevels(new Map((pm.data ?? []).map((r) => [r.user_id, r.level])))
     setCoachIds((pc.data ?? []).map((r) => r.coach_id))
     setEveryone(m.data ?? [])
   }, [id])
@@ -57,10 +58,12 @@ export function ProgramPage() {
 
   const toggleMember = (userId: string) =>
     run(
-      memberIds.includes(userId)
+      memberLevels.has(userId)
         ? supabase.from('program_members').delete().eq('program_id', id!).eq('user_id', userId)
         : supabase.from('program_members').insert({ program_id: id!, user_id: userId }),
     )
+  const setMemberLevel = (userId: string, level: number) =>
+    run(supabase.from('program_members').update({ level }).eq('program_id', id!).eq('user_id', userId))
   const toggleCoach = (coachId: string) =>
     run(
       coachIds.includes(coachId)
@@ -78,12 +81,27 @@ export function ProgramPage() {
 
   const owner = everyone.find((p) => p.id === program.owner_id)
   const otherCoaches = everyone.filter((p) => p.role === 'coach' && p.id !== program.owner_id)
-  const check = (checked: boolean, onChange: () => void, label: string, hint?: string) => (
+  const check = (checked: boolean, onChange: () => void, label: string, hint?: string, extra?: ReactNode) => (
     <label className="flex items-center gap-3 py-1.5">
       <input type="checkbox" className="size-5 accent-lime-400" checked={checked} onChange={onChange} />
       <span>{label}</span>
       {hint && <span className="text-xs text-zinc-500">{hint}</span>}
+      {extra}
     </label>
+  )
+  const levelSelect = (userId: string) => (
+    <select
+      aria-label="Niveau d’accès"
+      className="ml-auto max-w-[45%] shrink-0 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1 text-sm"
+      value={memberLevels.get(userId) ?? 0}
+      onChange={(e) => setMemberLevel(userId, Number(e.target.value))}
+    >
+      {Array.from({ length: savedLevels.length + 1 }, (_, level) => (
+        <option key={level} value={level}>
+          {levelName(savedLevels, level)}
+        </option>
+      ))}
+    </select>
   )
 
   return (
@@ -97,10 +115,18 @@ export function ProgramPage() {
       </p>
       <div className="flex flex-col gap-4">
         <Card>
-          <h2 className="mb-2 font-semibold">Athlètes ({memberIds.length})</h2>
+          <h2 className="mb-2 font-semibold">Athlètes ({memberLevels.size})</h2>
           <ul>
             {everyone.map((m) => (
-              <li key={m.id}>{check(memberIds.includes(m.id), () => toggleMember(m.id), fullName(m), m.role === 'coach' ? 'coach' : undefined)}</li>
+              <li key={m.id}>
+                {check(
+                  memberLevels.has(m.id),
+                  () => toggleMember(m.id),
+                  fullName(m),
+                  m.role === 'coach' ? 'coach' : undefined,
+                  memberLevels.has(m.id) && savedLevels.length > 0 ? levelSelect(m.id) : undefined,
+                )}
+              </li>
             ))}
           </ul>
         </Card>

@@ -6,6 +6,7 @@ import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../componen
 import { fullName, GENDERS, type Gender } from '../../domain/profile'
 import { removeAvatar, uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
+import { levelName, type AccessLevel } from '../../domain/workout'
 import { roleLabel, useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
 
@@ -16,19 +17,31 @@ export function ProfilePage() {
   const fileInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
-  const [programs, setPrograms] = useState<string[] | null>(null)
+  const [programs, setPrograms] = useState<{ name: string; level: string | null }[] | null>(null)
 
   useEffect(() => {
     if (!session) return
     supabase
       .from('program_members')
-      .select('programs(name, archived_at)')
+      .select('level, programs(name, archived_at, access_levels)')
       .eq('user_id', session.user.id)
       .then(({ data }) =>
         setPrograms(
           (data ?? [])
-            .flatMap((r) => (r.programs && !r.programs.archived_at ? [r.programs.name] : []))
-            .sort((a, b) => a.localeCompare(b)),
+            .flatMap((r) =>
+              r.programs && !r.programs.archived_at
+                ? [
+                    {
+                      name: r.programs.name,
+                      // Level shown only for programs that have levels.
+                      level: (r.programs.access_levels as AccessLevel[]).length
+                        ? levelName(r.programs.access_levels as AccessLevel[], r.level)
+                        : null,
+                    },
+                  ]
+                : [],
+            )
+            .sort((a, b) => a.name.localeCompare(b.name)),
         ),
       )
   }, [session])
@@ -128,9 +141,10 @@ export function ProfilePage() {
               <span className="text-zinc-500">Aucun programme</span>
             ) : (
               <span className="flex flex-wrap gap-1">
-                {programs.map((name) => (
+                {programs.map(({ name, level }) => (
                   <span key={name} className={`rounded-full px-2 py-0.5 text-xs font-semibold ${programColor(name)}`}>
                     {name}
+                    {level && <span className="font-normal"> · {level}</span>}
                   </span>
                 ))}
               </span>

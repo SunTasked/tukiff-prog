@@ -238,14 +238,17 @@ export type Database = {
       invitation_programs: {
         Row: {
           invitation_id: string
+          level: number
           program_id: string
         }
         Insert: {
           invitation_id: string
+          level?: number
           program_id: string
         }
         Update: {
           invitation_id?: string
+          level?: number
           program_id?: string
         }
         Relationships: [

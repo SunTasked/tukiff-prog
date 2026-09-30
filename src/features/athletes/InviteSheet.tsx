@@ -1,11 +1,12 @@
 import { useState } from 'react'
 import { Button, ErrorText, Input } from '../../components/ui'
 import { invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
+import { levelName, type AccessLevel } from '../../domain/workout'
 import { supabase, type Invitation, type Program } from '../../lib/supabase'
 
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
-export type InvitationRow = Invitation & { invitation_programs: { program_id: string }[] }
+export type InvitationRow = Invitation & { invitation_programs: { program_id: string; level: number }[] }
 
 /** Invitation link generation for one role: program access, validity, and the active links of that role. */
 export function InviteSheet({
@@ -22,11 +23,16 @@ export function InviteSheet({
   onClose: () => void
 }) {
   const [invitePrograms, setInvitePrograms] = useState<string[]>([])
+  // Access level granted per program (0 = Base).
+  const [inviteLevels, setInviteLevels] = useState<Record<string, number>>({})
+  const levelsOf = (id: string) => (programs.find((p) => p.id === id)?.access_levels ?? []) as AccessLevel[]
   const [label, setLabel] = useState('')
   const [copied, setCopied] = useState<string | null>(null)
   const [error, setError] = useState('')
   const links = invitations.filter((inv) => inv.role === role)
   const programName = (id: string) => programs.find((p) => p.id === id)?.name ?? '?'
+  const programLabel = ({ program_id, level }: { program_id: string; level: number }) =>
+    level ? `${programName(program_id)} (${levelName(levelsOf(program_id), level)})` : programName(program_id)
 
   async function create(validity: InvitationValidity) {
     const { data, error } = await supabase
@@ -38,7 +44,7 @@ export function InviteSheet({
     if (invitePrograms.length) {
       const res = await supabase
         .from('invitation_programs')
-        .insert(invitePrograms.map((program_id) => ({ invitation_id: data.id, program_id })))
+        .insert(invitePrograms.map((program_id) => ({ invitation_id: data.id, program_id, level: inviteLevels[program_id] ?? 0 })))
       if (res.error) setError(res.error.message)
     }
     setLabel('')
@@ -90,6 +96,24 @@ export function InviteSheet({
                 </button>
               ))}
             </div>
+            {invitePrograms
+              .filter((id) => levelsOf(id).length > 0)
+              .map((id) => (
+                <label key={id} className="mb-2 flex items-center justify-between gap-2 text-sm">
+                  <span className="min-w-0 truncate text-zinc-300">Niveau · {programName(id)}</span>
+                  <select
+                    className="shrink-0 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1"
+                    value={inviteLevels[id] ?? 0}
+                    onChange={(e) => setInviteLevels({ ...inviteLevels, [id]: Number(e.target.value) })}
+                  >
+                    {Array.from({ length: levelsOf(id).length + 1 }, (_, level) => (
+                      <option key={level} value={level}>
+                        {levelName(levelsOf(id), level)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ))}
           </>
         )}
         <div className="mb-3">
@@ -132,7 +156,7 @@ export function InviteSheet({
                   </div>
                   {inv.invitation_programs.length > 0 && (
                     <p className="mt-1 text-xs text-zinc-400">
-                      Programmes : {inv.invitation_programs.map((ip) => programName(ip.program_id)).join(', ')}
+                      Programmes : {inv.invitation_programs.map(programLabel).join(', ')}
                     </p>
                   )}
                   <p className="mt-1 truncate font-mono text-xs text-zinc-500">
