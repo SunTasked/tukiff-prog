@@ -16,6 +16,8 @@ const PANELS = [
   'border-rose-400/25 bg-rose-400/[0.04]',
   'border-indigo-400/25 bg-indigo-400/[0.04]',
 ]
+// Solid dot of the same color (same order as COLORS).
+const DOTS = ['bg-sky-400', 'bg-amber-400', 'bg-fuchsia-400', 'bg-emerald-400', 'bg-rose-400', 'bg-indigo-400']
 
 function colorIndex(name: string) {
   let h = 0
@@ -24,6 +26,7 @@ function colorIndex(name: string) {
 }
 
 export const programColor = (name: string) => COLORS[colorIndex(name)]
+export const programDot = (name: string) => DOTS[colorIndex(name)]
 export const programPanelColor = (name: string) => PANELS[colorIndex(name)]
 
 export function ProgramBadge({ name }: { name: string }) {
