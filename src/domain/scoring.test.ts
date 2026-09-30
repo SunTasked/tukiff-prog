@@ -139,8 +139,40 @@ describe('compact and weekly boards', () => {
     expect(men.blocks).toBe(2)
     // a: 1 + (2 + 1) = 4, b: 2 + 1 = 3, c: (2 + 1) + 2 = 5; d only did a block without score.
     expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:3', '2:a:4', '3:c:5'])
-    expect(men.rows[1].places).toEqual([{ place: 1, missed: false }, { place: 3, missed: true }])
+    expect(men.rows[1].places).toEqual([{ place: 1, missed: false, counted: true }, { place: 3, missed: true, counted: true }])
     expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 1, rank: 1 }] })
+  })
+})
+
+describe('weekly total over 3 places', () => {
+  const r = (athlete_id: string, reps: number) => ({ ...s({ reps }), athlete_id, level: 'rx', gender: 'male' as const })
+  // 5 blocks; filler athletes make the boards long enough: block i has i + 2 athletes scored.
+  const blocks = [0, 1, 2, 3, 4].map((i) => ({
+    type: 'reps' as const,
+    results: Array.from({ length: i + 2 }, (_, k) => r(`f${i}-${k}`, 50 - k)),
+  }))
+  const total = (extra: { block: number; reps: number }[]) => {
+    const withA = blocks.map((b, i) => ({ ...b, results: [...b.results, ...extra.filter((e) => e.block === i).map((e) => r('a', e.reps))] }))
+    const row = weeklyLeaderboards(withA)[0].rows.find((x) => x.athlete.athlete_id === 'a')!
+    return { total: row.total, counted: row.places.map((p) => p.counted) }
+  }
+
+  it('keeps the 3 best places when 3 or more blocks are scored', () => {
+    // Places: block0 1, block1 1, block2 5 (last of 5), block3 1.
+    expect(total([{ block: 0, reps: 99 }, { block: 1, reps: 99 }, { block: 2, reps: 0 }, { block: 3, reps: 99 }])).toEqual({
+      total: 3,
+      counted: [true, true, false, true, false],
+    })
+  })
+
+  it('fills missing scores with the worst missed blocks', () => {
+    // Scored block0 (place 1); missed places: block1 4, block2 5, block3 6, block4 7 -> 1 + 7 + 6.
+    expect(total([{ block: 0, reps: 99 }])).toEqual({ total: 14, counted: [true, false, false, true, true] })
+  })
+
+  it('counts every block while fewer than 3 exist', () => {
+    const row = weeklyLeaderboards([{ type: 'reps', results: [r('a', 10), r('b', 5)] }])[0].rows
+    expect(row.map((x) => x.total)).toEqual([1, 2])
   })
 })
 

@@ -162,12 +162,16 @@ export function boardPlaces<R extends { rank: number; level: Level }>(rows: R[])
   return rows.map((row) => firstOfLevel.get(row.level)! + row.rank)
 }
 
-export type WeeklyPlace = { place: number; missed: boolean }
+export type WeeklyPlace = { place: number; missed: boolean; counted: boolean }
+
+/** Number of places that make the weekly total. */
+export const WEEKLY_COUNTED = 3
 
 /**
- * Weekly leaderboard, CrossFit Open style, one per gender: on each scored block of the week an athlete gets their
- * place in the block's board (levels stacked), a block they didn't score counts as last place + 1, lowest total wins.
- * Blocks without score, or that nobody of this gender scored, don't count.
+ * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their place in the block's
+ * board (levels stacked), a block they didn't score counts as last place + 1. The total is the sum of the athlete's 3
+ * best places; with fewer than 3 scores, the missing ones are taken from the blocks they didn't score, worst first.
+ * Lowest total wins. Blocks without score, or that nobody of this gender scored, don't count.
  */
 export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
   blocks: { type: ScoreType; results: T[] }[],
@@ -187,9 +191,12 @@ export function weeklyLeaderboards<T extends Score & { level: string; gender: Ge
       const totals = [...athletes.values()].map((athlete) => {
         const places: WeeklyPlace[] = placesByBoard.map((byAthlete) => {
           const place = byAthlete.get(athlete.athlete_id)
-          return place == null ? { place: byAthlete.size + 1, missed: true } : { place, missed: false }
+          return place == null ? { place: byAthlete.size + 1, missed: true, counted: false } : { place, missed: false, counted: false }
         })
-        return { athlete, places, total: places.reduce((sum, p) => sum + p.place, 0) }
+        // Scored places best first, then missed blocks worst first.
+        const order = [...places].sort((a, b) => Number(a.missed) - Number(b.missed) || (a.missed ? b.place - a.place : a.place - b.place))
+        for (const p of order.slice(0, WEEKLY_COUNTED)) p.counted = true
+        return { athlete, places, total: places.reduce((sum, p) => sum + (p.counted ? p.place : 0), 0) }
       })
       totals.sort((a, b) => a.total - b.total)
       const rows = totals.map((row, i) => {

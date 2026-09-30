@@ -72,8 +72,9 @@ export function WeeklyBoardSheet({
           </button>
         </div>
         <p className="mb-4 text-xs text-zinc-500">
-          Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Un bloc
-          non noté compte comme dernière place + 1. Le plus petit total gagne.
+          Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Ton
+          total est la somme de tes 3 meilleures places. Avec moins de 3 scores, les blocs que tu n'as pas faits complètent,
+          le pire d'abord (dernière place + 1). Le plus petit total gagne.
         </p>
 
         {!enabled ? (
@@ -116,7 +117,7 @@ export function WeeklyBoardSheet({
                     </div>
                     <p className="mt-0.5 pl-16 text-xs text-zinc-500 tabular-nums">
                       {places.map((p, i) => (
-                        <span key={i} className={p.missed ? 'text-zinc-600' : ''}>
+                        <span key={i} className={`${p.missed ? 'text-zinc-600' : ''} ${p.counted ? '' : 'line-through opacity-60'}`}>
                           {i > 0 && ' · '}
                           {p.missed ? `(${p.place})` : p.place}
                         </span>
@@ -129,7 +130,7 @@ export function WeeklyBoardSheet({
           ))
         )}
         {enabled && boards && boards.length > 0 && (
-          <p className="text-xs text-zinc-600">Places bloc par bloc, entre parenthèses : bloc non noté.</p>
+          <p className="text-xs text-zinc-600">Places bloc par bloc, entre parenthèses : bloc non noté, barrée : place non comptée.</p>
         )}
       </div>
     </div>
