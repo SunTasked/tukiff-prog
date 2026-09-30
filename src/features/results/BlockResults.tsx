@@ -34,7 +34,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 
 /**
  * "My score" / "Je passe" buttons + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately.
- * Compact: the top 3 of each level plus me, the full board opens in a sheet.
+ * Compact: only my category (gender + level), its top 3 plus me; the full board opens in a sheet.
  */
 export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, onChange }: Props) {
   const [open, setOpen] = useState(false)
@@ -59,6 +59,11 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
   const boardOf = (g: Gender) => boards.find((b) => b.gender === g)?.rows ?? []
   const genderCounts = { male: boardOf('male').length, female: boardOf('female').length }
+  // My category: my gender, and the level of my score (else my usual level for this block).
+  const myGender: Gender = profile?.gender === 'female' ? 'female' : 'male'
+  const preferred = getItem('level') as Level | null
+  const myLevel: Level = (mine?.level as Level | undefined) ?? (preferred && blockLevels(block).includes(preferred) ? preferred : 'rx')
+  const myRows = boardOf(myGender).filter((row) => row.level === myLevel)
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
   // Blocks without score have no leaderboard, only the athletes' comments.
@@ -161,9 +166,15 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
       {showBoard && !checkable && boards.length > 0 && (
         <>
-          {boards.map(({ gender, rows }) => (
-            <Board key={gender} gender={gender} rows={compactRows(rows, me)} type={type} me={me} leaders={leaders} detail={detail} />
-          ))}
+          <Board
+            gender={myGender}
+            title={`${BOARD_TITLES[myGender]} · ${LEVELS[myLevel]}`}
+            rows={compactRows(myRows, me)}
+            type={type}
+            me={me}
+            leaders={leaders}
+            detail={detail}
+          />
           <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
             Voir le classement complet ({results.length}) ›
           </button>
@@ -233,6 +244,7 @@ type BoardRow = { result: ResultRow; rank: number; level: Level }
 
 function Board({
   gender,
+  title,
   showTitle = true,
   rows,
   type,
@@ -241,6 +253,7 @@ function Board({
   detail,
 }: {
   gender: Gender
+  title?: string
   showTitle?: boolean
   rows: BoardRow[]
   type: ScoreType
@@ -250,7 +263,7 @@ function Board({
 }) {
   return (
     <div className="mt-3">
-      {showTitle && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{BOARD_TITLES[gender]}</p>}
+      {showTitle && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title ?? BOARD_TITLES[gender]}</p>}
       {rows.length === 0 && <p className="text-sm text-zinc-500">Pas encore de score.</p>}
       <ol className="flex flex-col gap-1">
         {rows.map(({ result: r, rank, level }) => (

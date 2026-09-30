@@ -10,6 +10,7 @@ import { LeaderBadge } from './LeaderBadge'
 import { loadWeeklyBoards, type WeeklyBoards } from './weeklyBoards'
 
 const MEDALS = ['🥇', '🥈', '🥉']
+const ordinal = (n: number) => (n === 1 ? '1er' : `${n}e`)
 
 /** Weekly leaderboard of one program (Monday to Sunday) in a modal, from the published workouts of the week. */
 export function WeeklyBoardSheet({
@@ -29,6 +30,7 @@ export function WeeklyBoardSheet({
   const [enabled, setEnabled] = useState(true)
   const [boards, setBoards] = useState<WeeklyBoards | null>(null)
   const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
+  const [open, setOpen] = useState<string | null>(null)
   const countOf = (g: Gender) => boards?.find((b) => b.gender === g)?.rows.length ?? 0
 
   useEffect(() => {
@@ -73,8 +75,10 @@ export function WeeklyBoardSheet({
           </button>
         </div>
         <p className="mb-4 text-xs text-zinc-500">
-          Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Un bloc
-          non noté compte comme dernière place + 1. Le plus petit total gagne.
+          Sur chaque bloc noté de la semaine, tu marques ta place au classement du bloc (Elite devant RX devant Scaled). Ton
+          total est la somme de tes 3 meilleures places. Avec moins de 3 scores, les blocs que tu n'as pas faits complètent,
+          le pire d'abord (dernière place + 1). Le challenge de la semaine ne compte que s'il est fait. Le plus petit total
+          gagne.
         </p>
 
         {!enabled ? (
@@ -88,7 +92,7 @@ export function WeeklyBoardSheet({
             <p className="text-zinc-400">Aucun score cette semaine.</p>
           </Card>
         ) : (
-          [boards.find((b) => b.gender === tab) ?? { gender: tab, blocks: 0, rows: [] }].map(({ gender, blocks, rows }) => (
+          [boards.find((b) => b.gender === tab) ?? { gender: tab, blocks: 0, labels: [], bonus: [], rows: [] }].map(({ gender, blocks, labels, bonus, rows }) => (
             <div key={gender} className="mb-5">
               <GenderTabs
                 value={tab}
@@ -105,7 +109,8 @@ export function WeeklyBoardSheet({
                 {rows.map(({ athlete: a, rank, total, places }) => (
                   <li
                     key={a.athlete_id}
-                    className={`rounded-lg px-2 py-1.5 text-sm ${a.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}
+                    className={`cursor-pointer rounded-lg px-2 py-1.5 text-sm ${a.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}
+                    onClick={() => setOpen(open === a.athlete_id ? null : a.athlete_id)}
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>
@@ -114,15 +119,23 @@ export function WeeklyBoardSheet({
                       {rank === 1 && <LeaderBadge />}
                       <span className="flex-1" />
                       <span className="shrink-0 font-semibold tabular-nums">{total} pts</span>
+                      <span className="shrink-0 text-xs text-zinc-500">{open === a.athlete_id ? '▴' : '▾'}</span>
                     </div>
-                    <p className="mt-0.5 pl-16 text-xs text-zinc-500 tabular-nums">
-                      {places.map((p, i) => (
-                        <span key={i} className={p.missed ? 'text-zinc-600' : ''}>
-                          {i > 0 && ' · '}
-                          {p.missed ? `(${p.place})` : p.place}
-                        </span>
-                      ))}
-                    </p>
+                    {open === a.athlete_id && (
+                      <ul className="mt-1 flex flex-col gap-0.5 pl-16 text-xs text-zinc-400">
+                        {places.map((p, i) =>
+                          p.counted ? (
+                            <li key={i} className="flex gap-2">
+                              <span className="min-w-0 flex-1 truncate">
+                                {p.missed ? `Pénalité absence · ${labels[i]}` : labels[i]}
+                                {bonus[i] && ' (bonus)'}
+                              </span>
+                              <span className="shrink-0 tabular-nums">{ordinal(p.place)}</span>
+                            </li>
+                          ) : null,
+                        )}
+                      </ul>
+                    )}
                   </li>
                 ))}
               </ol>
@@ -130,7 +143,7 @@ export function WeeklyBoardSheet({
           ))
         )}
         {enabled && boards && boards.length > 0 && (
-          <p className="text-xs text-zinc-600">Places bloc par bloc, entre parenthèses : bloc non noté.</p>
+          <p className="text-xs text-zinc-600">Touche un athlète pour voir les places qui comptent.</p>
         )}
       </div>
     </div>
