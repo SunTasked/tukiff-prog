@@ -11,12 +11,12 @@ export const BLOCK_KINDS = {
 export type BlockKind = keyof typeof BLOCK_KINDS
 
 export const FORMATS = {
+  none: 'Libre',
   for_time: 'For Time',
   amrap: 'AMRAP',
   emom: 'EMOM',
   tabata: 'Tabata',
   sets_reps: 'Séries × reps',
-  none: 'Libre',
 } as const
 export type Format = keyof typeof FORMATS
 /** Formats offered in the editor: "Séries × reps" is only kept for older blocks. */
