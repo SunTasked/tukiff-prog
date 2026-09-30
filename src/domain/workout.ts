@@ -168,15 +168,6 @@ export function defaultParams(format: Format): FormatParams {
   }
 }
 
-/** Default format when picking a block kind. */
-export const DEFAULT_FORMAT: Record<BlockKind, Format> = {
-  warmup: 'none',
-  strength: 'sets_reps',
-  skill: 'none',
-  metcon: 'for_time',
-  accessory: 'sets_reps',
-  cooldown: 'none',
-}
 
 export function emptyItem(exercise_id: string | null = null, label = ''): ItemDraft {
   return {
@@ -195,9 +186,9 @@ export function emptyItem(exercise_id: string | null = null, label = ''): ItemDr
   }
 }
 
+/** The kind is only a label: every new block starts free ("Libre"), the coach picks its format. */
 export function newBlock(kind: BlockKind, id: string): BlockDraft {
-  const format = DEFAULT_FORMAT[kind]
-  return { id, kind, title: '', format, params: defaultParams(format), notes: '', items: [], groups: [] }
+  return { id, kind, title: '', format: 'none', params: {}, notes: '', items: [], groups: [] }
 }
 
 /** Kind suggested for the n-th block (0-based) of a typical CrossFit class. */
@@ -330,10 +321,10 @@ export function validateWorkout(w: WorkoutDraft): string | null {
   return null
 }
 
-/** What a score depends on: title and notes excluded (fixing a typo keeps the scores). */
+/** What a score depends on: kind, title and notes excluded (fixing a typo keeps the scores). */
 const scoringSignature = (b: BlockDraft) => {
   const { min_level: _level, ranked: _ranked, ...params } = b.params
-  return JSON.stringify([b.kind, b.format, params, b.items])
+  return JSON.stringify([b.format, params, b.items])
 }
 
 /** Blocks of the original workout whose scores become invalid: scoring content changed, or removed. */
