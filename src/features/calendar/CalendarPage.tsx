@@ -434,18 +434,20 @@ export function CalendarPage() {
   )
 }
 
-/** "Titre" zoom: one line, program as a colored dot, status only when not visible yet. */
+/** "Titre" zoom: program as a colored dot, the title (2 lines max), the status only when not visible yet. */
 function TitleLine({ row, program }: { row: Row; program: string }) {
   const status = publicationStatus(row.publish_at)
   return (
-    <span className="flex min-w-0 items-center gap-2 pr-5 text-sm">
-      <span className={`size-2.5 shrink-0 rounded-full ${programDot(program)}`} title={program} />
-      <span className="min-w-0 flex-1 truncate font-semibold">
-        {row.title}
-        {row.days > 1 && <span className="font-normal text-amber-300"> · {row.days} j</span>}
+    <span className="flex min-w-0 items-start gap-2 pr-5 text-sm">
+      <span className={`mt-1.5 size-2.5 shrink-0 rounded-full ${programDot(program)}`} title={program} />
+      <span className="min-w-0 flex-1">
+        <span className="line-clamp-2 font-semibold break-words">
+          {row.title}
+          {row.days > 1 && <span className="font-normal text-amber-300"> · {row.days} j</span>}
+        </span>
+        {status === 'draft' && <span className="block text-xs text-amber-400">Brouillon</span>}
+        {status === 'scheduled' && <span className="block text-xs text-sky-400">Programmée</span>}
       </span>
-      {status === 'draft' && <span className="shrink-0 text-xs text-amber-400">Brouillon</span>}
-      {status === 'scheduled' && <span className="shrink-0 text-xs text-sky-400">Programmée</span>}
     </span>
   )
 }
