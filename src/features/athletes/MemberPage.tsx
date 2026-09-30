@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Card, Chips, ErrorText, PageTitle, Spinner } from '../../components/ui'
+import { fullName } from '../../domain/profile'
 import { supabase, type Profile } from '../../lib/supabase'
 import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 import { useMyPrograms } from '../programs/useMyPrograms'
@@ -24,6 +25,7 @@ export function MemberPage() {
   const [member, setMember] = useState<Profile | null>(null)
   const [programIds, setProgramIds] = useState<string[]>([])
   const [allPrograms, setAllPrograms] = useState<{ id: string; name: string }[]>([])
+  const [email, setEmail] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<keyof typeof TABS>('report')
   // Report: only the programs I edit that the member follows.
@@ -48,6 +50,12 @@ export function MemberPage() {
     load()
   }, [load])
 
+  // Emails are readable by admins only (checked server-side).
+  useEffect(() => {
+    if (!admin || !id) return
+    supabase.rpc('member_email', { p_user: id }).then(({ data }) => setEmail(data ?? null))
+  }, [admin, id])
+
   if (!member) return <Spinner />
 
   async function toggle(programId: string) {
@@ -62,14 +70,14 @@ export function MemberPage() {
     const label = { athlete: 'athlète', coach: 'coach', admin: 'admin' }[role]
     const warning =
       role === 'athlete' && member!.role === 'coach' ? '\nSes programmations te seront transférées.' : ''
-    if (!confirm(`Passer ${member!.display_name ?? 'ce membre'} en ${label} ?${warning}`)) return
+    if (!confirm(`Passer ${fullName(member)} en ${label} ?${warning}`)) return
     const { error } = await supabase.rpc('set_member_role', { p_user: id!, p_role: role })
     setError(error ? translate(error.message) : '')
     load()
   }
 
   async function removeAccess() {
-    if (!confirm(`Retirer l’accès de ${member!.display_name ?? 'ce membre'} ? Il pourra être réinvité.`)) return
+    if (!confirm(`Retirer l’accès de ${fullName(member)} ? Il pourra être réinvité.`)) return
     const { error } = await supabase.rpc('remove_member', { p_user: id! })
     if (error) setError(translate(error.message))
     else navigate('/athletes')
@@ -80,8 +88,9 @@ export function MemberPage() {
       <Link to="/athletes" className="text-sm text-zinc-400">
         ‹ Communauté
       </Link>
-      <PageTitle>{member.display_name ?? '—'}</PageTitle>
-      <p className="-mt-3 mb-4 text-sm text-zinc-400">
+      <PageTitle>{fullName(member)}</PageTitle>
+      {admin && email && <p className="-mt-3 mb-1 text-sm break-all text-zinc-300">{email}</p>}
+      <p className={`${admin && email ? '' : '-mt-3 '}mb-4 text-sm text-zinc-400`}>
         {roleLabel(member)}
         {member.is_app_owner ? ' · propriétaire de l’app' : ''}
       </p>

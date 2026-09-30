@@ -272,6 +272,7 @@ export type Database = {
           created_by: string
           expires_at: string
           id: string
+          label: string | null
           max_uses: number | null
           revoked_at: string | null
           role: string
@@ -283,6 +284,7 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
+          label?: string | null
           max_uses?: number | null
           revoked_at?: string | null
           role?: string
@@ -294,6 +296,7 @@ export type Database = {
           created_by?: string
           expires_at?: string
           id?: string
+          label?: string | null
           max_uses?: number | null
           revoked_at?: string | null
           role?: string
@@ -396,10 +399,12 @@ export type Database = {
           created_at: string
           display_name: string | null
           enrolled_at: string | null
+          first_name: string | null
           gender: string | null
           id: string
           is_admin: boolean
           is_app_owner: boolean
+          last_name: string | null
           role: string | null
         }
         Insert: {
@@ -407,10 +412,12 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           enrolled_at?: string | null
+          first_name?: string | null
           gender?: string | null
           id: string
           is_admin?: boolean
           is_app_owner?: boolean
+          last_name?: string | null
           role?: string | null
         }
         Update: {
@@ -418,10 +425,12 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           enrolled_at?: string | null
+          first_name?: string | null
           gender?: string | null
           id?: string
           is_admin?: boolean
           is_app_owner?: boolean
+          last_name?: string | null
           role?: string | null
         }
         Relationships: []
@@ -792,6 +801,7 @@ export type Database = {
       is_coach: { Args: never; Returns: boolean }
       is_member: { Args: never; Returns: boolean }
       leaderboard_on: { Args: { p_workout: string }; Returns: boolean }
+      member_email: { Args: { p_user: string }; Returns: string }
       move_workouts: {
         Args: { p_days: number; p_ids: string[] }
         Returns: undefined

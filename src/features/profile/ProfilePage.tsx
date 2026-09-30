@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
 import { programColor } from '../../components/ProgramBadges'
 import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../components/ui'
-import { GENDERS, type Gender } from '../../domain/profile'
+import { fullName, GENDERS, type Gender } from '../../domain/profile'
 import { removeAvatar, uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
 import { roleLabel, useAuth } from '../auth/AuthProvider'
@@ -12,6 +12,7 @@ import { PasswordForm } from '../auth/ResetPasswordPage'
 export function ProfilePage() {
   const { session, profile, refreshProfile } = useAuth()
   const [editingName, setEditingName] = useState(false)
+  const [editingNames, setEditingNames] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
@@ -32,7 +33,7 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string; gender?: Gender }) {
+  async function update(values: { display_name?: string; first_name?: string; last_name?: string; gender?: Gender }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
@@ -100,6 +101,14 @@ export function ProfilePage() {
             <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={changePhoto} />
           </div>
           <Row label="Email">{session?.user.email}</Row>
+          <Row label="Prénom et nom">
+            <span className="flex items-center justify-between gap-2">
+              <span className="min-w-0 truncate">{fullName({ first_name: profile?.first_name, last_name: profile?.last_name })}</span>
+              <button className="shrink-0 rounded-lg bg-zinc-800 px-3 py-1 text-sm" onClick={() => setEditingNames(true)}>
+                Modifier
+              </button>
+            </span>
+          </Row>
           <Row label="Pseudo">
             <span className="flex items-center justify-between gap-2">
               <span className="min-w-0 truncate">{profile?.display_name}</span>
@@ -159,6 +168,15 @@ export function ProfilePage() {
         </button>
       </div>
 
+      {editingNames && (
+        <NamesDialog
+          initial={{ first_name: profile?.first_name ?? '', last_name: profile?.last_name ?? '' }}
+          onCancel={() => setEditingNames(false)}
+          onSave={async (names) => {
+            if (await update(names)) setEditingNames(false)
+          }}
+        />
+      )}
       {editingName && (
         <NameDialog
           initial={profile?.display_name ?? ''}
@@ -209,6 +227,50 @@ function NameDialog({ initial, onCancel, onSave }: { initial: string; onCancel: 
       >
         <h2 className="font-semibold">Modifier mon pseudo</h2>
         <Input label="Pseudo (visible par le groupe)" required maxLength={40} autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+        <div className="flex gap-2">
+          <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
+            Annuler
+          </Button>
+          <Button className="flex-1">Enregistrer</Button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
+type Names = { first_name: string; last_name: string }
+
+function NamesDialog({ initial, onCancel, onSave }: { initial: Names; onCancel: () => void; onSave: (names: Names) => void }) {
+  const [names, setNames] = useState(initial)
+  const submit = (e: FormEvent) => {
+    e.preventDefault()
+    onSave({ first_name: names.first_name.trim(), last_name: names.last_name.trim() })
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onCancel}>
+      <form
+        onSubmit={submit}
+        onClick={(e) => e.stopPropagation()}
+        className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl"
+      >
+        <h2 className="font-semibold">Modifier mon prénom et mon nom</h2>
+        <Input
+          label="Prénom"
+          required
+          maxLength={40}
+          autoFocus
+          autoComplete="given-name"
+          value={names.first_name}
+          onChange={(e) => setNames({ ...names, first_name: e.target.value })}
+        />
+        <Input
+          label="Nom"
+          required
+          maxLength={40}
+          autoComplete="family-name"
+          value={names.last_name}
+          onChange={(e) => setNames({ ...names, last_name: e.target.value })}
+        />
         <div className="flex gap-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
             Annuler

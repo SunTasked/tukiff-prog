@@ -14,19 +14,19 @@ const PASSWORD = 'a'
 const OWNER = 'guillaume.kheng@gmail.com' // real coach, added to the CrossFit program when the account exists
 // skill: 0-1 (drives scores), skip: share of workouts not done, levels: levels they score in.
 const USERS = [
-  { name: 'c1', display: 'Max', role: 'coach', admin: true, gender: 'male', avatar: true, levels: ['elite', 'rx'], skill: 0.85, skip: 0.3 },
-  { name: 'c2', display: 'Julie', role: 'coach', gender: 'female', avatar: true, levels: ['rx'], skill: 0.7, skip: 0.4 },
-  { name: 'a1', display: 'Léa', role: 'athlete', gender: 'female', avatar: true, levels: ['rx', 'elite'], skill: 0.9, skip: 0 },
-  { name: 'a2', display: 'Tom', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.65, skip: 0.1 },
-  { name: 'a3', display: 'Sarah', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.5, skip: 0.2 },
-  { name: 'a4', display: 'Hugo', role: 'athlete', gender: 'male', avatar: true, levels: ['elite'], skill: 0.95, skip: 0 },
-  { name: 'a5', display: 'Inès', role: 'athlete', gender: 'female', levels: ['foundation'], skill: 0.3, skip: 0.2 },
-  { name: 'a6', display: 'Nico', role: 'athlete', gender: 'male', levels: ['scaled', 'rx'], skill: 0.45, skip: 0.2 },
-  { name: 'a7', display: 'Emma', role: 'athlete', gender: 'female', levels: ['rx'], skill: 0.6, skip: 0.15 },
-  { name: 'a8', display: 'Paul', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.5, skip: 1 }, // never scores (UC-report)
-  { name: 'a9', display: 'Chloé', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.4, skip: 0.25 },
-  { name: 'a10', display: 'Karim', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.75, skip: 0.1 },
-  // Onboarding: nickname set but gender missing -> the app asks for it (UC-02).
+  { name: 'c1', first: 'Maxime', last: 'Durand', display: 'Max', role: 'coach', admin: true, gender: 'male', avatar: true, levels: ['elite', 'rx'], skill: 0.85, skip: 0.3 },
+  { name: 'c2', first: 'Julie', last: 'Bernard', display: 'Julie', role: 'coach', gender: 'female', avatar: true, levels: ['rx'], skill: 0.7, skip: 0.4 },
+  { name: 'a1', first: 'Léa', last: 'Martin', display: 'Léa', role: 'athlete', gender: 'female', avatar: true, levels: ['rx', 'elite'], skill: 0.9, skip: 0 },
+  { name: 'a2', first: 'Thomas', last: 'Petit', display: 'Tom', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.65, skip: 0.1 },
+  { name: 'a3', first: 'Sarah', last: 'Robert', display: 'Sarah', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.5, skip: 0.2 },
+  { name: 'a4', first: 'Hugo', last: 'Richard', display: 'Hugo', role: 'athlete', gender: 'male', avatar: true, levels: ['elite'], skill: 0.95, skip: 0 },
+  { name: 'a5', first: 'Inès', last: 'Moreau', display: 'Inès', role: 'athlete', gender: 'female', levels: ['foundation'], skill: 0.3, skip: 0.2 },
+  { name: 'a6', first: 'Nicolas', last: 'Simon', display: 'Nico', role: 'athlete', gender: 'male', levels: ['scaled', 'rx'], skill: 0.45, skip: 0.2 },
+  { name: 'a7', first: 'Emma', last: 'Laurent', display: 'Emma', role: 'athlete', gender: 'female', levels: ['rx'], skill: 0.6, skip: 0.15 },
+  { name: 'a8', display: 'Paul', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.5, skip: 1 }, // never scores (UC-report), no first/last name: nickname fallback (UC-36)
+  { name: 'a9', first: 'Chloé', last: 'Michel', display: 'Chloé', role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.4, skip: 0.25 },
+  { name: 'a10', first: 'Karim', last: 'Lefèvre', display: 'Karim', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.75, skip: 0.1 },
+  // Onboarding: nickname set but names and gender missing -> the app asks for them (UC-02).
   { name: 'n1', display: 'n1', role: 'athlete', gender: null, levels: [], skip: 1 },
 ]
 const ALL = USERS.map((u) => u.name)
@@ -86,7 +86,8 @@ for (const u of USERS) {
   await sql(`
     update auth.users set encrypted_password = extensions.crypt(${q(PASSWORD)}, extensions.gen_salt('bf'))
       where id = ${q(data.user.id)};
-    update public.profiles set role = ${q(u.role)}, display_name = ${q(u.display)}, gender = ${u.gender ? q(u.gender) : 'null'},
+    update public.profiles set role = ${q(u.role)}, display_name = ${q(u.display)},
+      first_name = ${u.first ? q(u.first) : 'null'}, last_name = ${u.last ? q(u.last) : 'null'}, gender = ${u.gender ? q(u.gender) : 'null'},
       is_admin = ${!!u.admin}, enrolled_at = now() where id = ${q(data.user.id)};`)
 }
 const [owner] = await sql(`select id from auth.users where email = ${q(OWNER)}`)
@@ -119,6 +120,11 @@ for (const u of USERS.filter((x) => x.avatar)) {
 
 const coach = { c1: await clientFor('c1'), c2: await clientFor('c2') }
 const c1 = coach.c1
+
+// Invitation links (UC-37): one named single-use link, one unnamed 24 h link.
+const inDays = (d) => new Date(Date.now() + d * 86400e3).toISOString()
+must(await c1.from('invitations').insert({ role: 'athlete', max_uses: 1, expires_at: inDays(7), label: 'Julien Garnier' }))
+must(await c1.from('invitations').insert({ role: 'athlete', expires_at: inDays(1) }))
 
 const programId = {}
 const ownerOf = {}

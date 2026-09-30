@@ -9,3 +9,17 @@ export function initials(name: string | null | undefined): string {
   if (words.length === 1) return words[0].slice(0, 2).toUpperCase()
   return (words[0][0] + words[1][0]).toUpperCase()
 }
+
+type Names = { display_name?: string | null; first_name?: string | null; last_name?: string | null } | null | undefined
+
+/** "Prénom Nom" (member page), nickname when names are missing. */
+export function fullName(p: Names): string {
+  const name = [p?.first_name, p?.last_name].filter(Boolean).join(' ')
+  return name || p?.display_name || '—'
+}
+
+/** "Prénom N." (scores, leaderboards), nickname when names are missing. */
+export function scoreName(p: Names): string {
+  if (!p?.first_name) return p?.display_name || '—'
+  return p.last_name ? `${p.first_name} ${p.last_name[0].toUpperCase()}.` : p.first_name
+}
