@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Button, Card, ErrorText, Input, PageTitle, Spinner } from '../../components/ui'
 import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
+import { fullName } from '../../domain/profile'
 
 /**
  * Program detail. Owner: rename, archive, contributor coaches, emoji reactions and leaderboard on/off. Owner + contributors: athletes with access.
@@ -25,7 +26,7 @@ export function ProgramPage() {
       supabase.from('programs').select('*').eq('id', id!).single(),
       supabase.from('program_members').select('user_id').eq('program_id', id!),
       supabase.from('program_coaches').select('coach_id').eq('program_id', id!),
-      supabase.from('profiles').select('*').not('role', 'is', null).order('display_name'),
+      supabase.from('profiles').select('*').not('role', 'is', null).order('first_name'),
     ])
     setProgram(p.data)
     setName((n) => n || p.data?.name || '')
@@ -87,14 +88,14 @@ export function ProgramPage() {
       </Link>
       <PageTitle>{program.name}</PageTitle>
       <p className="-mt-3 mb-4 text-sm text-zinc-400">
-        Propriétaire : {isOwner ? 'toi' : (owner?.display_name ?? '—')}
+        Propriétaire : {isOwner ? 'toi' : fullName(owner)}
       </p>
       <div className="flex flex-col gap-4">
         <Card>
           <h2 className="mb-2 font-semibold">Athlètes ({memberIds.length})</h2>
           <ul>
             {everyone.map((m) => (
-              <li key={m.id}>{check(memberIds.includes(m.id), () => toggleMember(m.id), m.display_name ?? '—', m.role === 'coach' ? 'coach' : undefined)}</li>
+              <li key={m.id}>{check(memberIds.includes(m.id), () => toggleMember(m.id), fullName(m), m.role === 'coach' ? 'coach' : undefined)}</li>
             ))}
           </ul>
         </Card>
@@ -107,9 +108,9 @@ export function ProgramPage() {
             {otherCoaches.map((c) => (
               <li key={c.id}>
                 {isOwner ? (
-                  check(coachIds.includes(c.id), () => toggleCoach(c.id), c.display_name ?? '—')
+                  check(coachIds.includes(c.id), () => toggleCoach(c.id), fullName(c))
                 ) : (
-                  <span className={`block py-1.5 ${coachIds.includes(c.id) ? '' : 'hidden'}`}>{c.display_name}</span>
+                  <span className={`block py-1.5 ${coachIds.includes(c.id) ? '' : 'hidden'}`}>{fullName(c)}</span>
                 )}
               </li>
             ))}
@@ -153,7 +154,7 @@ export function ProgramPage() {
               <option value="">Choisir un coach…</option>
               {otherCoaches.map((c) => (
                 <option key={c.id} value={c.id}>
-                  {c.display_name}
+                  {fullName(c)}
                 </option>
               ))}
             </select>
@@ -161,7 +162,7 @@ export function ProgramPage() {
               variant="secondary"
               disabled={!heir}
               onClick={() => {
-                const name = otherCoaches.find((c) => c.id === heir)?.display_name
+                const name = fullName(otherCoaches.find((c) => c.id === heir))
                 if (confirm(`Transférer « ${program.name} » à ${name} ?`))
                   run(supabase.rpc('transfer_program', { p_program: id!, p_new_owner: heir }))
               }}

@@ -33,7 +33,7 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string; first_name?: string; last_name?: string; gender?: Gender }) {
+  async function update(values: { display_name?: string | null; first_name?: string; last_name?: string; gender?: Gender }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
@@ -87,7 +87,7 @@ export function ProfilePage() {
       <div className="flex flex-col gap-4">
         <Card className="flex flex-col gap-3">
           <div className="flex items-center gap-4">
-            <Avatar url={profile?.avatar_url} name={profile?.display_name} className="size-16 text-xl" />
+            <Avatar url={profile?.avatar_url} name={fullName(profile)} className="size-16 text-xl" />
             <div className="flex flex-col items-start gap-1 text-sm">
               <button className="font-semibold text-lime-400" onClick={() => fileInput.current?.click()}>
                 {profile?.avatar_url ? 'Changer la photo' : 'Ajouter une photo'}
@@ -111,7 +111,7 @@ export function ProfilePage() {
           </Row>
           <Row label="Pseudo">
             <span className="flex items-center justify-between gap-2">
-              <span className="min-w-0 truncate">{profile?.display_name}</span>
+              <span className="min-w-0 truncate">{profile?.display_name ?? <span className="text-zinc-500">Aucun</span>}</span>
               <button className="shrink-0 rounded-lg bg-zinc-800 px-3 py-1 text-sm" onClick={() => setEditingName(true)}>
                 Modifier
               </button>
@@ -182,7 +182,7 @@ export function ProfilePage() {
           initial={profile?.display_name ?? ''}
           onCancel={() => setEditingName(false)}
           onSave={async (display_name) => {
-            if (await update({ display_name })) setEditingName(false)
+            if (await update({ display_name: display_name || null })) setEditingName(false)
           }}
         />
       )}
@@ -226,7 +226,7 @@ function NameDialog({ initial, onCancel, onSave }: { initial: string; onCancel: 
         className="flex w-full max-w-sm flex-col gap-3 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 shadow-2xl"
       >
         <h2 className="font-semibold">Modifier mon pseudo</h2>
-        <Input label="Pseudo (visible par le groupe)" required maxLength={40} autoFocus value={name} onChange={(e) => setName(e.target.value)} />
+        <Input label="Pseudo (optionnel, affiché dans les classements à la place de « Prénom N. »)" maxLength={40} autoFocus value={name} onChange={(e) => setName(e.target.value)} />
         <div className="flex gap-2">
           <Button type="button" variant="secondary" className="flex-1" onClick={onCancel}>
             Annuler

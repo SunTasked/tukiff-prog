@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { scoreName, type Gender } from '../../domain/profile'
+import { AthleteName } from './AthleteName'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
 import { compactRows, formatScore, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
 import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
@@ -182,7 +183,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
               <li key={r.id} className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}>
                 <div className="flex items-center gap-2">
                   <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
-                  <span className="min-w-0 truncate">{scoreName(r.profiles)}</span>
+                  <AthleteName profile={r.profiles} />
                 </div>
                 <p className="mt-0.5 pl-8 text-xs whitespace-pre-line text-zinc-400">{r.comment}</p>
               </li>
@@ -260,7 +261,7 @@ function Board({
             <div className="flex items-center gap-2">
               {type !== 'none' && <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>}
               <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
-              <span className="min-w-0 truncate">{scoreName(r.profiles)}</span>
+              <AthleteName profile={r.profiles} />
               {leaders.has(r.athlete_id) && <LeaderBadge />}
               <span className="flex-1" />
               <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">

@@ -6,7 +6,7 @@ import { GENDERS, type Gender } from '../../domain/profile'
 import { supabase } from '../../lib/supabase'
 import { hasPassword, useAuth } from './AuthProvider'
 
-/** First sign-in (via magic link): first and last name, a nickname, a gender (for the leaderboards) and a password. */
+/** First sign-in (via magic link): first and last name, an optional nickname, a gender (for the leaderboards) and a password. */
 export function OnboardingPage() {
   const { session, profile, refreshProfile, refreshSession } = useAuth()
   const needsPassword = !hasPassword(session)
@@ -34,7 +34,7 @@ export function OnboardingPage() {
         return setError(error.message)
       }
     }
-    const { error } = await supabase.from('profiles').update({ first_name: firstName.trim(), last_name: lastName.trim(), display_name: name.trim(), gender }).eq('id', profile!.id)
+    const { error } = await supabase.from('profiles').update({ first_name: firstName.trim(), last_name: lastName.trim(), display_name: name.trim() || null, gender }).eq('id', profile!.id)
     setBusy(false)
     if (error) return setError(error.message)
     await Promise.all([refreshProfile(), refreshSession()])
@@ -44,7 +44,7 @@ export function OnboardingPage() {
     <Centered>
       <h1 className="text-2xl font-bold">Bienvenue !</h1>
       <p className="text-sm text-zinc-400">
-        Indique ton prénom, ton nom, ton pseudo, ton genre{needsPassword && ' et un mot de passe : tu t’en serviras pour te reconnecter'}.
+        Indique ton prénom, ton nom, ton genre{needsPassword && ' et un mot de passe : tu t’en serviras pour te reconnecter'}.
       </p>
       <form onSubmit={submit} className="flex flex-col gap-3">
         <div className="grid grid-cols-2 gap-2">
@@ -66,8 +66,7 @@ export function OnboardingPage() {
           />
         </div>
         <Input
-          label="Pseudo (visible par le groupe)"
-          required
+          label="Pseudo (optionnel, affiché dans les classements)"
           maxLength={40}
           autoComplete="nickname"
           value={name}

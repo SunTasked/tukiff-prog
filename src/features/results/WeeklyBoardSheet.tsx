@@ -3,6 +3,7 @@ import { Avatar } from '../../components/Avatar'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, formatWeek, mondayOf } from '../../domain/dates'
 import { scoreName, type Gender } from '../../domain/profile'
+import { AthleteName } from './AthleteName'
 import { useAuth } from '../auth/AuthProvider'
 import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
@@ -109,7 +110,7 @@ export function WeeklyBoardSheet({
                     <div className="flex items-center gap-2">
                       <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>
                       <Avatar url={a.profiles?.avatar_url} name={scoreName(a.profiles)} className="size-6 text-[10px]" />
-                      <span className="min-w-0 truncate">{scoreName(a.profiles)}</span>
+                      <AthleteName profile={a.profiles} />
                       {rank === 1 && <LeaderBadge />}
                       <span className="flex-1" />
                       <span className="shrink-0 font-semibold tabular-nums">{total} pts</span>

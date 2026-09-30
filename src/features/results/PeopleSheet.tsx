@@ -1,8 +1,9 @@
 import { Avatar } from '../../components/Avatar'
+import { scoreName } from '../../domain/profile'
 
 export type Person = {
   id: string
-  profiles: { display_name: string | null; avatar_url: string | null } | null
+  profiles: { display_name: string | null; first_name: string | null; last_name: string | null; avatar_url: string | null } | null
   /** Shown right after the name (the emoji). */
   mark?: string
   /** My own row: removes my contribution. */
@@ -34,8 +35,8 @@ export function PeopleSheet({
         <ul className="flex flex-col gap-1 overflow-y-auto p-3">
           {people.map((p) => (
             <li key={p.id} className="flex items-center gap-2 px-2 py-1.5">
-              <Avatar url={p.profiles?.avatar_url} name={p.profiles?.display_name} className="size-7 text-[10px]" />
-              <span className="min-w-0 truncate text-sm">{p.profiles?.display_name ?? '—'}</span>
+              <Avatar url={p.profiles?.avatar_url} name={scoreName(p.profiles)} className="size-7 text-[10px]" />
+              <span className="min-w-0 truncate text-sm">{scoreName(p.profiles)}</span>
               {p.mark && <span className="text-lg leading-none">{p.mark}</span>}
               {p.onRemove && (
                 <button

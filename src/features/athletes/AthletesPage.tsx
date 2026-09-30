@@ -3,21 +3,25 @@ import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
 import { invitationStatus } from '../../domain/invitations'
+import { fullName, isPending } from '../../domain/profile'
 import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { isAdmin, isCoach, roleLabel, useAuth } from '../auth/AuthProvider'
 import { InviteSheet, type InvitationRow } from './InviteSheet'
 
 type ProgramRow = Program & { program_members: { count: number }[]; program_coaches: { coach_id: string }[] }
 
-const byName = (a: Profile, b: Profile) =>
-  (a.display_name ?? '').localeCompare(b.display_name ?? '', 'fr', { sensitivity: 'base' })
+type MemberRow = Profile & { invitations: { label: string | null } | null }
+
+const byName = (a: Profile, b: Profile) => fullName(a).localeCompare(fullName(b), 'fr', { sensitivity: 'base' })
+const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
 
 export function AthletesPage() {
   const { session, profile } = useAuth()
   const me = session?.user.id
   const admin = isAdmin(profile)
   const [allPrograms, setAllPrograms] = useState<ProgramRow[]>([])
-  const [members, setMembers] = useState<Profile[]>([])
+  const [members, setMembers] = useState<MemberRow[]>([])
+  const [signups, setSignups] = useState<MemberRow[]>([])
   const [invitations, setInvitations] = useState<InvitationRow[]>([])
   const [programs, setPrograms] = useState<ProgramRow[]>([])
   const [error, setError] = useState('')
@@ -26,12 +30,14 @@ export function AthletesPage() {
 
   const load = useCallback(async () => {
     const [m, i, p] = await Promise.all([
-      supabase.from('profiles').select('*').not('role', 'is', null).order('display_name'),
+      supabase.from('profiles').select('*, invitations!profiles_invitation_id_fkey(label)').not('role', 'is', null),
       supabase.from('invitations').select('*, invitation_programs(program_id)').order('created_at', { ascending: false }),
       supabase.from('programs').select('*, program_members(count), program_coaches(coach_id)').is('archived_at', null).order('name'),
     ])
     setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
-    setMembers(m.data ?? [])
+    const rows = (m.data ?? []) as MemberRow[]
+    setMembers(rows.filter((r) => !isPending(r)))
+    setSignups(rows.filter(isPending).sort((a, b) => b.created_at.localeCompare(a.created_at)))
     setInvitations(((i.data ?? []) as InvitationRow[]).filter((inv) => invitationStatus(inv) === 'active'))
     setAllPrograms((p.data ?? []) as ProgramRow[])
     // Only the programs I own or contribute to.
@@ -43,6 +49,13 @@ export function AthletesPage() {
   useEffect(() => {
     load()
   }, [load])
+
+  async function deleteSignup(m: MemberRow) {
+    if (!confirm(`Supprimer l’inscription en cours « ${m.invitations?.label ?? 'lien sans nom'} » ? Un lien à usage unique redevient utilisable.`)) return
+    const { error } = await supabase.rpc('delete_pending_member', { p_user: m.id })
+    setError(error?.message ?? '')
+    load()
+  }
 
   async function createProgram(e: FormEvent) {
     e.preventDefault()
@@ -58,7 +71,7 @@ export function AthletesPage() {
   const owned = allPrograms.filter((p) => p.owner_id === me)
   const contributed = programs.filter((p) => p.owner_id !== me)
   const others = allPrograms.filter((p) => p.owner_id !== me && !programs.includes(p))
-  const ownerName = (p: ProgramRow) => members.find((m) => m.id === p.owner_id)?.display_name ?? '—'
+  const ownerName = (p: ProgramRow) => fullName(members.find((m) => m.id === p.owner_id))
 
   const programGroup = (title: string, list: ProgramRow[], linked: boolean) => (
     <section>
@@ -123,8 +136,11 @@ export function AthletesPage() {
         {list.map((m) => (
           <li key={m.id}>
             <Link to={`/athletes/${m.id}`} className="flex items-center gap-3 py-2">
-              <Avatar url={m.avatar_url} name={m.display_name} />
-              <span className="min-w-0 truncate">{m.display_name ?? '—'}</span>
+              <Avatar url={m.avatar_url} name={fullName(m)} />
+              <span className="min-w-0 truncate">
+                {fullName(m)}
+                {m.first_name && m.display_name && <span className="ml-1.5 text-xs text-zinc-500">{m.display_name}</span>}
+              </span>
               {m.gender && (
                 <span
                   className={`size-2 shrink-0 rounded-full ${m.gender === 'female' ? 'bg-pink-400' : 'bg-sky-400'}`}
@@ -148,6 +164,27 @@ export function AthletesPage() {
           {group('Coachs', staff, 'coach', admin)}
           <hr className="border-zinc-700" />
           {group('Athlètes', athletes, 'athlete', true)}
+          {signups.length > 0 && (
+            <section>
+              <h3 className="text-sm font-semibold text-zinc-400">Inscriptions en cours ({signups.length})</h3>
+              <p className="text-xs text-zinc-500">Lien utilisé mais inscription pas terminée. Supprimées après 7 jours.</p>
+              <ul className="mt-1 divide-y divide-zinc-800">
+                {signups.map((m) => (
+                  <li key={m.id} className="flex items-center gap-3 py-2">
+                    <span className="min-w-0 flex-1 truncate">
+                      {m.invitations?.label ?? 'Lien sans nom'}
+                      <span className="ml-1.5 text-xs text-zinc-500">
+                        {m.role === 'coach' ? 'coach · ' : ''}le {dateFmt.format(new Date(m.created_at))}
+                      </span>
+                    </span>
+                    <button className="shrink-0 text-sm text-red-400" onClick={() => deleteSignup(m)}>
+                      Supprimer
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </Card>
 
         <Card className="flex flex-col gap-4">
