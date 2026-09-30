@@ -7,7 +7,7 @@ import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
 import { StatusBadge } from '../calendar/StatusBadge'
-import { levelName, viewAs, type AccessLevel, type WorkoutDraft } from '../../domain/workout'
+import { viewAs, type AccessLevel, type WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
@@ -70,26 +70,30 @@ export function HomePage() {
   const [weekBoard, setWeekBoard] = useState<{ key: string; label: string } | null>(null)
   // Programs of the week with the leaderboard turned off: no link to their weekly board.
   const [boardOff, setBoardOff] = useState<Set<string>>(new Set())
-  // Programs I coach that have access levels: I see every block, and can preview what a level sees.
-  const [coached, setCoached] = useState<Map<string, AccessLevel[]>>(new Map())
-  const [previewLevel, setPreviewLevel] = useState<Record<string, number>>({})
+  // Programs I coach that have access levels, with my own level as a member: I see every block, and can switch to
+  // what an athlete of my level sees ("🔎 Athlète").
+  const [coached, setCoached] = useState<Map<string, number>>(new Map())
+  const [athleteView, setAthleteView] = useState<Set<string>>(new Set())
   const programIds = [...new Set((week ?? []).map((r) => r.program_id))].sort().join(',')
   useEffect(() => {
     if (!programIds) return
-    supabase
-      .from('programs')
-      .select('id, leaderboard_enabled, owner_id, access_levels, program_coaches(coach_id)')
-      .in('id', programIds.split(','))
-      .then(({ data }) => {
-        setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id)))
-        setCoached(
-          new Map(
-            (data ?? [])
-              .filter((p) => (p.owner_id === me || p.program_coaches.some((c) => c.coach_id === me)) && (p.access_levels as AccessLevel[]).length)
-              .map((p) => [p.id, p.access_levels as AccessLevel[]]),
-          ),
-        )
-      })
+    Promise.all([
+      supabase
+        .from('programs')
+        .select('id, leaderboard_enabled, owner_id, access_levels, program_coaches(coach_id)')
+        .in('id', programIds.split(',')),
+      supabase.from('program_members').select('program_id, level').eq('user_id', me!).in('program_id', programIds.split(',')),
+    ]).then(([{ data }, { data: mine }]) => {
+      setBoardOff(new Set((data ?? []).filter((p) => !p.leaderboard_enabled).map((p) => p.id)))
+      const myLevel = new Map((mine ?? []).map((m) => [m.program_id, m.level]))
+      setCoached(
+        new Map(
+          (data ?? [])
+            .filter((p) => (p.owner_id === me || p.program_coaches.some((c) => c.coach_id === me)) && (p.access_levels as AccessLevel[]).length)
+            .map((p) => [p.id, myLevel.get(p.id) ?? 0]),
+        ),
+      )
+    })
   }, [programIds, me])
 
   useEffect(() => {
@@ -161,11 +165,11 @@ export function HomePage() {
         </Card>
       ) : (
         groupByProgram(workouts).map((panel) => {
-          const levels = coached.get(panel.key)
-          const preview = previewLevel[panel.key]
+          const myLevel = coached.get(panel.key)
+          const asAthlete = myLevel !== undefined && athleteView.has(panel.key)
           return (
           <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
-            {(!boardOff.has(panel.key) || levels) && (
+            {(!boardOff.has(panel.key) || myLevel !== undefined) && (
               <div className="-mb-3 flex items-center justify-between gap-2">
                 {!boardOff.has(panel.key) ? (
                   <button className="text-sm whitespace-nowrap text-lime-400" onClick={() => setWeekBoard(panel)}>
@@ -174,30 +178,24 @@ export function HomePage() {
                 ) : (
                   <span />
                 )}
-                {levels && (
-                  <label className="flex min-w-0 items-center gap-1 text-xs whitespace-nowrap text-zinc-400">
-                    👁
-                    <select
-                      aria-label="Voir comme"
-                      className={`max-w-[8.5rem] min-w-0 rounded-lg border bg-zinc-950 px-1.5 py-1 text-xs ${preview === undefined ? 'border-zinc-800 text-zinc-300' : 'border-amber-400/60 text-amber-300'}`}
-                      value={preview ?? -1}
-                      onChange={(e) => {
-                        const level = Number(e.target.value)
-                        setPreviewLevel((prev) => {
-                          const next = { ...prev, [panel.key]: level }
-                          if (level < 0) delete next[panel.key]
-                          return next
-                        })
-                      }}
-                    >
-                      <option value={-1}>Vue coach</option>
-                      {Array.from({ length: levels.length + 1 }, (_, level) => (
-                        <option key={level} value={level}>
-                          Vue {levelName(levels, level)}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
+                {myLevel !== undefined && (
+                  <button
+                    role="switch"
+                    aria-checked={asAthlete}
+                    className={`flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap ${asAthlete ? 'text-amber-300' : 'text-zinc-400'}`}
+                    onClick={() =>
+                      setAthleteView((prev) => {
+                        const next = new Set(prev)
+                        if (!next.delete(panel.key)) next.add(panel.key)
+                        return next
+                      })
+                    }
+                  >
+                    🔎 Athlète
+                    <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${asAthlete ? 'bg-amber-400' : 'bg-zinc-700'}`}>
+                      <span className={`size-4 rounded-full bg-zinc-950 transition-transform ${asAthlete ? 'translate-x-4' : ''}`} />
+                    </span>
+                  </button>
                 )}
               </div>
             )}
@@ -216,7 +214,7 @@ export function HomePage() {
                       <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
                     </p>
                   )}
-                  <WorkoutWithResults workout={preview === undefined ? w : viewAs(w, preview)} canLog={published}
+                  <WorkoutWithResults workout={asAthlete ? viewAs(w, myLevel) : w} canLog={published}
                     // Unpublished: nothing to log, so never the auto-scroll target.
                     onDone={(ids) => report(w.id, published ? ids : new Set(w.blocks.map((b) => b.id)))}
                   />
