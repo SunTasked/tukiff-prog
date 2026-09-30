@@ -4,6 +4,7 @@ import { Button, Card, ErrorText, Input, PageTitle, Spinner } from '../../compon
 import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { fullName } from '../../domain/profile'
+import { BASE_LEVEL, type AccessLevel } from '../../domain/workout'
 
 /**
  * Program detail. Owner: rename, archive, contributor coaches, emoji reactions and leaderboard on/off. Owner + contributors: athletes with access.
@@ -15,8 +16,8 @@ export function ProgramPage() {
   const me = session?.user.id
   const [program, setProgram] = useState<Program | null>(null)
   const [name, setName] = useState('')
-  // Names of the 2 access levels (base, then the one that opens the restricted blocks).
-  const [levels, setLevels] = useState<string[] | null>(null)
+  // Access levels above Base, being edited (saved together; a deletion is immediate).
+  const [levels, setLevels] = useState<AccessLevel[] | null>(null)
   const [memberIds, setMemberIds] = useState<string[]>([])
   const [coachIds, setCoachIds] = useState<string[]>([])
   const [everyone, setEveryone] = useState<Profile[]>([])
@@ -32,7 +33,7 @@ export function ProgramPage() {
     ])
     setProgram(p.data)
     setName((n) => n || p.data?.name || '')
-    setLevels((l) => l ?? p.data?.access_levels ?? null)
+    setLevels((l) => l ?? ((p.data?.access_levels ?? null) as AccessLevel[] | null))
     setMemberIds((pm.data ?? []).map((r) => r.user_id))
     setCoachIds((pc.data ?? []).map((r) => r.coach_id))
     setEveryone(m.data ?? [])
@@ -44,6 +45,7 @@ export function ProgramPage() {
 
   if (!program) return <Spinner />
   const isOwner = program.owner_id === me
+  const savedLevels = program.access_levels as AccessLevel[]
   const canEdit = isOwner || coachIds.includes(me ?? '')
   if (!canEdit) return <p className="text-zinc-400">Cette programmation est gérée par un autre coach.</p>
 
@@ -150,30 +152,67 @@ export function ProgramPage() {
           </Card>
         )}
         {isOwner && levels && (
-          <Card className="flex flex-col gap-2">
-            <h2 className="font-semibold">Niveaux d’accès</h2>
-            <p className="text-xs text-zinc-500">
-              Chaque athlète a un niveau (onglet Accès de sa fiche). Les blocs réservés au 2ᵉ niveau apparaissent grisés et
-              verrouillés pour les autres.
-            </p>
-            <div className="grid grid-cols-2 gap-2">
-              {[0, 1].map((i) => (
-                <Input
-                  key={i}
-                  label={i === 0 ? 'Niveau de base' : 'Niveau supérieur'}
-                  maxLength={30}
-                  value={levels[i] ?? ''}
-                  onChange={(e) => setLevels(levels.map((l, j) => (j === i ? e.target.value : l)))}
-                />
-              ))}
+          <Card className="flex flex-col gap-3">
+            <div>
+              <h2 className="font-semibold">Niveaux d’accès</h2>
+              <p className="text-xs text-zinc-500">
+                Chaque athlète a un niveau (onglet Accès de sa fiche) et voit les blocs de son niveau et des niveaux en dessous.
+                Aperçu : les blocs du niveau apparaissent grisés et verrouillés aux niveaux inférieurs ; sinon ils sont masqués.
+              </p>
             </div>
-            <Button
-              variant="secondary"
-              disabled={levels.some((l) => !l.trim()) || levels.join('|') === program.access_levels.join('|')}
-              onClick={() => run(supabase.from('programs').update({ access_levels: levels.map((l) => l.trim()) }).eq('id', id!))}
-            >
-              Enregistrer les niveaux
-            </Button>
+            <p className="text-sm text-zinc-400">0 · {BASE_LEVEL} (tous les athlètes)</p>
+            {levels.map((level, i) => {
+              const set = (patch: Partial<AccessLevel>) => setLevels(levels.map((l, j) => (j === i ? { ...l, ...patch } : l)))
+              const saved = i < savedLevels.length
+              return (
+                <div key={i} className="flex flex-col gap-1 rounded-xl border border-zinc-800 p-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-zinc-400">{i + 1} ·</span>
+                    <input
+                      aria-label={`Nom du niveau ${i + 1}`}
+                      maxLength={30}
+                      placeholder="Nom du niveau"
+                      className="min-w-0 flex-1 rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-1.5 outline-none focus:border-lime-400"
+                      value={level.name}
+                      onChange={(e) => set({ name: e.target.value })}
+                    />
+                    <button
+                      type="button"
+                      aria-label={`Supprimer le niveau ${i + 1}`}
+                      className="px-2 text-red-400"
+                      onClick={() => {
+                        if (!saved) return setLevels(levels.filter((_, j) => j !== i))
+                        const below = i === 0 ? BASE_LEVEL : savedLevels[i - 1].name
+                        if (!confirm(`Supprimer « ${savedLevels[i].name} » ? Ses blocs et ses athlètes passent au niveau « ${below} ».`)) return
+                        setLevels(null)
+                        run(supabase.rpc('delete_access_level', { p_program: id!, p_level: i + 1 }))
+                      }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <label className="flex items-center gap-2 pl-5 text-sm text-zinc-300">
+                    <input type="checkbox" className="size-4 accent-lime-400" checked={level.preview} onChange={() => set({ preview: !level.preview })} />
+                    Aperçu pour les niveaux inférieurs
+                  </label>
+                </div>
+              )
+            })}
+            <div className="grid grid-cols-2 gap-2">
+              <Button variant="secondary" disabled={levels.length >= 9} onClick={() => setLevels([...levels, { name: '', preview: true }])}>
+                + Niveau
+              </Button>
+              <Button
+                disabled={levels.some((l) => !l.name.trim()) || JSON.stringify(levels) === JSON.stringify(savedLevels)}
+                onClick={() => {
+                  const next = levels.map((l) => ({ name: l.name.trim(), preview: l.preview }))
+                  setLevels(null)
+                  run(supabase.from('programs').update({ access_levels: next }).eq('id', id!))
+                }}
+              >
+                Enregistrer
+              </Button>
+            </div>
           </Card>
         )}
         {isOwner && otherCoaches.length > 0 && (

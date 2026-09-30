@@ -1,4 +1,5 @@
 import type {
+  AccessLevel,
   BlockDraft,
   BlockKind,
   Format,
@@ -87,7 +88,7 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
     date: data.date,
     days: data.days,
     section_id: data.section_id,
-    access_levels: data.programs?.access_levels,
+    access_levels: data.programs?.access_levels as AccessLevel[] | undefined,
     blocks,
     locked: (locked ?? []).map((b) => ({
       id: b.id,

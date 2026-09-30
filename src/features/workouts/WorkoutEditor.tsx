@@ -11,6 +11,7 @@ import {
   suggestedKind,
   usedExercises,
   validateWorkout,
+  type AccessLevel,
   type AltLevel,
   type BlockDraft,
   type WorkoutDraft,
@@ -56,7 +57,7 @@ export function WorkoutEditor() {
       .select('access_levels')
       .eq('id', newProgram)
       .maybeSingle()
-      .then(({ data }) => data && setDraft((d) => d && { ...d, access_levels: data.access_levels }))
+      .then(({ data }) => data && setDraft((d) => d && { ...d, access_levels: data.access_levels as AccessLevel[] }))
   }, [newProgram])
 
   useEffect(() => {
