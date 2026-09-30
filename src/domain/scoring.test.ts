@@ -137,7 +137,7 @@ describe('compact and weekly boards', () => {
     expect(boardPlaces(rows)).toEqual([1, 2, 2, 4])
   })
 
-  it('sums places, missed block = last + 1, per gender, lowest wins', () => {
+  it('scores places 10 to 1 per gender, missed block = 0, highest wins', () => {
     const boards = weeklyLeaderboards([
       { type: 'reps', results: [r('a', 'rx', { reps: 30 }), r('b', 'rx', { reps: 20 }), r('f', 'rx', { reps: 1 }, 'female')] },
       { type: 'time', results: [r('b', 'rx', { time_s: 100 }), r('c', 'rx', { time_s: 200 })] },
@@ -146,51 +146,49 @@ describe('compact and weekly boards', () => {
     const men = boards[0]
     expect(men.gender).toBe('male')
     expect(men.blocks).toBe(2)
-    // a: 1 + (2 + 1) = 4, b: 2 + 1 = 3, c: (2 + 1) + 2 = 5; d only did a block without score.
-    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:3', '2:a:4', '3:c:5'])
-    expect(men.rows[1].places).toEqual([{ place: 1, missed: false, counted: true }, { place: 3, missed: true, counted: true }])
-    expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 1, rank: 1 }] })
+    // a: 10 + 0, b: 9 + 10, c: 0 + 9; d only did a block without score.
+    expect(men.rows.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:b:19', '2:a:10', '3:c:9'])
+    expect(men.rows[1].places).toEqual([
+      { place: 1, missed: false, points: 10, counted: true },
+      { place: 3, missed: true, points: 0, counted: true },
+    ])
+    expect(boards[1]).toMatchObject({ gender: 'female', blocks: 1, rows: [{ total: 10, rank: 1 }] })
   })
 })
 
-describe('weekly total over 3 places', () => {
+describe('weekly total over 3 blocks', () => {
   const r = (athlete_id: string, reps: number) => ({ ...s({ reps }), athlete_id, level: 'rx', gender: 'male' as const })
-  // 5 blocks; filler athletes make the boards long enough: block i has i + 2 athletes scored.
-  const blocks = [0, 1, 2, 3, 4].map((i) => ({
+  const board = (ids: string[], extra: { bonus?: boolean } = {}) => ({
     type: 'reps' as const,
-    results: Array.from({ length: i + 2 }, (_, k) => r(`f${i}-${k}`, 50 - k)),
-  }))
-  const total = (extra: { block: number; reps: number }[]) => {
-    const withA = blocks.map((b, i) => ({ ...b, results: [...b.results, ...extra.filter((e) => e.block === i).map((e) => r('a', e.reps))] }))
-    const row = weeklyLeaderboards(withA)[0].rows.find((x) => x.athlete.athlete_id === 'a')!
-    return { total: row.total, counted: row.places.map((p) => p.counted) }
-  }
+    ...extra,
+    results: ids.map((id, k) => r(id, 100 - k)),
+  })
+  const fillers = (n: number) => Array.from({ length: n }, (_, k) => `f${k}`)
 
-  it('keeps the 3 best places when 3 or more blocks are scored', () => {
-    // Places: block0 1, block1 1, block2 5 (last of 5), block3 1.
-    expect(total([{ block: 0, reps: 99 }, { block: 1, reps: 99 }, { block: 2, reps: 0 }, { block: 3, reps: 99 }])).toEqual({
-      total: 3,
-      counted: [true, true, false, true, false],
-    })
+  it('keeps the 3 best blocks, 0 point beyond the 10th place, crown at 30', () => {
+    const men = weeklyLeaderboards([
+      board(['a', 'b']),
+      board(['a', 'b']),
+      board([...fillers(11), 'a', 'b']), // a 12th: 0 point
+      board(['a', 'b']),
+    ])[0].rows
+    const a = men.find((x) => x.athlete.athlete_id === 'a')!
+    expect(a.total).toBe(30)
+    expect(a.crown).toBe(true)
+    expect(a.places.map((p) => p.counted)).toEqual([true, true, false, true])
+    expect(men.find((x) => x.athlete.athlete_id === 'b')).toMatchObject({ total: 27, crown: false })
   })
 
-  it('fills missing scores with the worst missed blocks', () => {
-    // Scored block0 (place 1); missed places: block1 4, block2 5, block3 6, block4 7 -> 1 + 7 + 6.
-    expect(total([{ block: 0, reps: 99 }])).toEqual({ total: 14, counted: [true, false, false, true, true] })
+  it('breaks ties with the challenge only, which never adds points', () => {
+    const men = weeklyLeaderboards([board(['a', 'b', 'c']), board(['b', 'a', 'd']), board(['c', 'b'], { bonus: true })])[0].rows
+    // a and b: 10 + 9 = 19, b did the challenge (2nd); c: 8, won the challenge but gets no point for it.
+    expect(men.map((x) => `${x.rank}:${x.athlete.athlete_id}:${x.total}`)).toEqual(['1:b:19', '2:a:19', '3:c:8', '4:d:8'])
+    expect(men[2].places[2]).toMatchObject({ place: 1, points: 10, counted: false })
   })
 
-  it('never fills with a missed bonus block, counts it when scored', () => {
-    const bonus = { type: 'reps' as const, bonus: true, results: [r('b', 10), r('c', 5)] }
-    const plain = { type: 'reps' as const, results: [r('a', 10), r('b', 5)] }
-    const men = weeklyLeaderboards([plain, bonus])[0].rows
-    // a: 1, bonus missed not counted; b: 2 + 1; c: bonus 2 + missed plain 3.
-    expect(men.map((x) => `${x.athlete.athlete_id}:${x.total}`)).toEqual(['a:1', 'b:3', 'c:5'])
-    expect(men[0].places[1]).toEqual({ place: 3, missed: true, counted: false })
-  })
-
-  it('counts every block while fewer than 3 exist', () => {
-    const row = weeklyLeaderboards([{ type: 'reps', results: [r('a', 10), r('b', 5)] }])[0].rows
-    expect(row.map((x) => x.total)).toEqual([1, 2])
+  it('shares the rank on a full tie', () => {
+    const men = weeklyLeaderboards([board(['a', 'b']), board(['b', 'a'])])[0].rows
+    expect(men.map((x) => x.rank)).toEqual([1, 1])
   })
 })
 
