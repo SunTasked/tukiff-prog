@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
-import { firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain/grouping'
 import { useOnResume } from '../../lib/resume'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
@@ -82,7 +82,11 @@ export function HomePage() {
     setWorkouts(null)
     done.current = new Map()
     // Multi-day workouts (challenges) show every day of their range, after the day's workouts.
-    const rows = week.filter((r) => coversDay(r.date, r.days, day)).sort((a, b) => Number(a.days > 1) - Number(b.days > 1))
+    const rows = week.filter((r) => coversDay(r.date, r.days, day)).sort(
+        (a, b) =>
+          Number(a.days > 1) - Number(b.days > 1) ||
+          compareWorkouts({ ...a, program: a.program_name }, { ...b, program: b.program_name }),
+      )
     Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
       setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
     )

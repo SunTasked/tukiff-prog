@@ -15,6 +15,7 @@ import {
   today,
   weekDays,
 } from '../../domain/dates'
+import { compareWorkouts } from '../../domain/grouping'
 import { groupBySection } from '../../domain/sections'
 import { getItem, setItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
@@ -79,8 +80,14 @@ export function CalendarPage() {
       .order('date')
       .order('created_at')
     setError(error?.message ?? '')
-    setRows(((data ?? []) as Row[]).filter((r) => lastDay(r.date, r.days) >= monday))
-  }, [programs, shownIds, monday, end])
+    const name = (r: Row) => programById.get(r.program_id)?.name ?? ''
+    setRows(
+      ((data ?? []) as Row[])
+        .filter((r) => lastDay(r.date, r.days) >= monday)
+        // Within a day: program A→Z, then title, then publish time.
+        .sort((a, b) => compareWorkouts({ ...a, program: name(a) }, { ...b, program: name(b) })),
+    )
+  }, [programs, programById, shownIds, monday, end])
 
   useEffect(() => {
     load()
