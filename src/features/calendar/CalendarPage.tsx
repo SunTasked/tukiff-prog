@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
+import { Fragment, useCallback, useEffect, useMemo, useState, type DragEvent } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { DateField, DateTimeField } from '../../components/DatePicker'
 import { ProgramBadge, programColor } from '../../components/ProgramBadges'
@@ -251,6 +251,14 @@ export function CalendarPage() {
                 const dayRows = rows.filter((r) => r.date === day)
                 // Multi-day workouts running on this day but started earlier: a faded reminder line.
                 const running = rows.filter((r) => r.date < day && coversDay(r.date, r.days, day))
+                // One group per program (rows are already A→Z): its cards, multi-day ones last, then its reminders.
+                const groups = [...new Set([...dayRows, ...running].map((r) => r.program_id))]
+                  .sort((x, y) => rows.findIndex((r) => r.program_id === x) - rows.findIndex((r) => r.program_id === y))
+                  .map((id) => ({
+                    id,
+                    cards: dayRows.filter((r) => r.program_id === id).sort((x, y) => Number(x.days > 1) - Number(y.days > 1)),
+                    running: running.filter((r) => r.program_id === id),
+                  }))
                 return (
                   <div
                     key={day}
@@ -277,52 +285,62 @@ export function CalendarPage() {
                         +
                       </button>
                     </div>
-                    {dayRows.map((r) => {
-                      const isSel = selected.has(r.id)
-                      const program = programById.get(r.program_id)
-                      return (
-                        <div
-                          key={r.id}
-                          role="button"
-                          tabIndex={0}
-                          draggable
-                          onDragStart={(e) => onDragStart(e, r)}
-                          onClick={() => toggle(r.id)}
-                          onDoubleClick={() => navigate(`/calendar/workouts/${r.id}`)}
-                          className={`relative mt-2 block cursor-pointer rounded-xl p-3 select-none lg:p-2 ${
-                            isSel ? 'bg-lime-400/10 ring-2 ring-lime-400' : 'bg-zinc-950'
-                          }`}
-                        >
-                          {isSel && (
-                            <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-lime-400 text-xs font-bold text-zinc-950">
-                              ✓
-                            </span>
-                          )}
-                          {program && (
-                            <span className="block pr-5">
-                              <ProgramBadge name={program.name} />
-                            </span>
-                          )}
-                          <span className="mt-1 block pr-5 font-semibold lg:text-sm">{r.title}</span>
-                          {r.days > 1 && (
-                            <span className="mt-0.5 block text-xs text-amber-300">
-                              🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
-                            </span>
-                          )}
-                          <span className="mt-1 block text-xs">
-                            <StatusBadge publishAt={r.publish_at} />
-                          </span>
-                        </div>
-                      )
-                    })}
-                    {running.map((r) => (
-                      <button
-                        key={r.id}
-                        className="mt-2 block w-full truncate rounded-xl border border-dashed border-amber-300/30 px-3 py-1.5 text-left text-xs text-amber-200/70 lg:px-2"
-                        onClick={() => navigate(`/calendar/workouts/${r.id}`)}
-                      >
-                        ↳ {r.title} · jusqu’au {formatDay(lastDay(r.date, r.days))}
-                      </button>
+                    {groups.map((g) => (
+                      <Fragment key={g.id}>
+                        {g.cards.length === 0 && (
+                          <div className="mt-2 rounded-xl border border-dashed border-zinc-800 p-3 lg:p-2">
+                            <ProgramBadge name={programById.get(g.id)?.name ?? ''} />
+                            <span className="mt-1 block text-xs text-zinc-500">Aucune séance</span>
+                          </div>
+                        )}
+                        {g.cards.map((r) => {
+                          const isSel = selected.has(r.id)
+                          const program = programById.get(r.program_id)
+                          return (
+                            <div
+                              key={r.id}
+                              role="button"
+                              tabIndex={0}
+                              draggable
+                              onDragStart={(e) => onDragStart(e, r)}
+                              onClick={() => toggle(r.id)}
+                              onDoubleClick={() => navigate(`/calendar/workouts/${r.id}`)}
+                              className={`relative mt-2 block cursor-pointer rounded-xl p-3 select-none lg:p-2 ${
+                                isSel ? 'bg-lime-400/10 ring-2 ring-lime-400' : 'bg-zinc-950'
+                              }`}
+                            >
+                              {isSel && (
+                                <span className="absolute top-1 right-1 flex size-5 items-center justify-center rounded-full bg-lime-400 text-xs font-bold text-zinc-950">
+                                  ✓
+                                </span>
+                              )}
+                              {program && (
+                                <span className="block pr-5">
+                                  <ProgramBadge name={program.name} />
+                                </span>
+                              )}
+                              <span className="mt-1 block pr-5 font-semibold lg:text-sm">{r.title}</span>
+                              {r.days > 1 && (
+                                <span className="mt-0.5 block text-xs text-amber-300">
+                                  🗓 {r.days} jours · jusqu’au {formatDay(lastDay(r.date, r.days))}
+                                </span>
+                              )}
+                              <span className="mt-1 block text-xs">
+                                <StatusBadge publishAt={r.publish_at} />
+                              </span>
+                            </div>
+                          )
+                        })}
+                        {g.running.map((r) => (
+                          <button
+                            key={r.id}
+                            className="mt-2 block w-full truncate rounded-xl border border-dashed border-amber-300/30 px-3 py-1.5 text-left text-xs text-amber-200/70 lg:px-2"
+                            onClick={() => navigate(`/calendar/workouts/${r.id}`)}
+                          >
+                            ↳ {r.title} · jusqu’au {formatDay(lastDay(r.date, r.days))}
+                          </button>
+                        ))}
+                      </Fragment>
                     ))}
                   </div>
                 )
