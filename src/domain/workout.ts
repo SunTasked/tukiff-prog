@@ -50,8 +50,15 @@ export type FormatParams = {
   ranked?: false
 }
 
-/** Access levels of a program member (program_members.level). */
-export const ACCESS_LEVELS = ['Free', 'Premium'] as const
+/**
+ * Access level of a program above "Base" (level 0): programs.access_levels[i] is level i + 1. Levels stack.
+ * preview: its blocks show greyed and locked to the lower levels; off, they are hidden.
+ */
+export type AccessLevel = { name: string; preview: boolean }
+export const BASE_LEVEL = 'Base'
+
+export const levelName = (levels: AccessLevel[] | undefined, level: number) =>
+  level === 0 ? BASE_LEVEL : levels?.[level - 1]?.name || `Niveau ${level}`
 
 export const isPremium = (b: Pick<BlockDraft, 'params'>) => (b.params.min_level ?? 0) > 0
 
@@ -120,6 +127,8 @@ export type WorkoutDraft = {
   /** Library templates only. */
   section_id?: string | null
   blocks: BlockDraft[]
+  /** The program's access levels (scheduled workouts). */
+  access_levels?: AccessLevel[]
   /** Blocks above my access level (title only), shown closed; before = index in blocks it precedes. */
   locked?: LockedBlock[]
 }

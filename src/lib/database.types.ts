@@ -514,6 +514,7 @@ export type Database = {
       }
       programs: {
         Row: {
+          access_levels: Json
           archived_at: string | null
           created_at: string
           description: string | null
@@ -524,6 +525,7 @@ export type Database = {
           reactions_enabled: boolean
         }
         Insert: {
+          access_levels?: Json
           archived_at?: string | null
           created_at?: string
           description?: string | null
@@ -534,6 +536,7 @@ export type Database = {
           reactions_enabled?: boolean
         }
         Update: {
+          access_levels?: Json
           archived_at?: string | null
           created_at?: string
           description?: string | null
@@ -808,6 +811,10 @@ export type Database = {
         }
         Returns: string
       }
+      delete_access_level: {
+        Args: { p_level: number; p_program: string }
+        Returns: undefined
+      }
       delete_my_account: { Args: never; Returns: undefined }
       delete_pending_member: { Args: { p_user: string }; Returns: undefined }
       duplicate_workouts: {
@@ -822,6 +829,10 @@ export type Database = {
         Returns: boolean
       }
       leaderboard_on: { Args: { p_workout: string }; Returns: boolean }
+      level_preview: {
+        Args: { p_level: number; p_workout: string }
+        Returns: boolean
+      }
       locked_blocks: {
         Args: { p_workouts: string[] }
         Returns: {

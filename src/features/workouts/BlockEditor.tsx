@@ -2,14 +2,15 @@ import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
 import { SCORE_TYPES, defaultScoreType, scoreType, type ScoreType } from '../../domain/scoring'
 import {
-  ACCESS_LEVELS,
   BLOCK_KINDS,
   blockSettings,
+  levelName,
   DEFAULT_FORMAT,
   FORMATS,
   defaultParams,
   itemRuns,
   removeGroup,
+  type AccessLevel,
   type AltLevel,
   type BlockDraft,
   type BlockKind,
@@ -31,11 +32,13 @@ type Props = {
   onRemove: () => void
   /** itemIndex null = new item, appended to the block or to sub-block `group`. */
   onPick: (itemIndex: number | null, level?: AltLevel, group?: number | null) => void
+  /** The program's access levels above Base. */
+  accessLevels?: AccessLevel[]
 }
 
 const int = (v: number | null) => (v == null ? undefined : Math.round(v))
 
-export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMove, onRemove, onPick }: Props) {
+export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMove, onRemove, onPick, accessLevels }: Props) {
   const set = (patch: Partial<BlockDraft>) => onChange({ ...block, ...patch })
   const setParams = (patch: Partial<FormatParams>) => set({ params: { ...block.params, ...patch } })
 
@@ -48,6 +51,8 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
   }
   const setFormat = (format: Format) => set({ format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
   const p = block.params
+  // Levels offered: the program's, and at least the block's own (library templates have no program).
+  const levelCount = Math.max(accessLevels?.length ?? 0, p.min_level ?? 0)
   // Stored only when it differs from the format's default.
   const setScore = (score: ScoreType) => setParams({ score: score === defaultScoreType(block.format) ? undefined : score })
   const setGroup = (g: number, patch: Partial<BlockDraft['groups'][number]>) =>
@@ -146,14 +151,18 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
           <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
         </div>
 
-        <div>
-          <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
-          <Chips
-            options={{ '0': 'Tous', '1': `🔒 ${ACCESS_LEVELS[1]}` }}
-            value={String(p.min_level ?? 0) as '0' | '1'}
-            onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
-          />
-        </div>
+        {levelCount > 0 && (
+          <div>
+            <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
+            <Chips
+              options={Object.fromEntries(
+                Array.from({ length: levelCount + 1 }, (_, l) => [String(l), l ? `🔒 ${levelName(accessLevels, l)}` : 'Tous']),
+              )}
+              value={String(p.min_level ?? 0)}
+              onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
+            />
+          </div>
+        )}
         {scoreType(block.format, p) !== 'none' && (
           <label className={`flex items-center gap-2 text-sm ${p.min_level ? 'text-zinc-500' : 'text-zinc-300'}`}>
             <input
@@ -166,7 +175,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             />
             <span>
               Compte pour le classement de la semaine
-              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc Premium</span>}
+              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc réservé</span>}
             </span>
           </label>
         )}
