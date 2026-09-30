@@ -11,14 +11,22 @@ export const BLOCK_KINDS = {
 export type BlockKind = keyof typeof BLOCK_KINDS
 
 export const FORMATS = {
+  none: 'Libre',
   for_time: 'For Time',
   amrap: 'AMRAP',
   emom: 'EMOM',
   tabata: 'Tabata',
   sets_reps: 'Séries × reps',
-  none: 'Libre',
 } as const
 export type Format = keyof typeof FORMATS
+/** Formats offered in the editor: "Séries × reps" is only kept for older blocks. */
+export const FORMAT_CHOICES = (({ sets_reps: _legacy, ...rest }) => rest)(FORMATS)
+/** "Fran — For Time · cap 12'"; the summary alone once when the title repeats it. */
+export const blockHeading = (b: Pick<BlockDraft, 'title' | 'format' | 'params'>) =>
+  [...new Set([b.title, formatSummary(b.format, b.params)].filter(Boolean))].join(' — ')
+/** Name of a block where no category is shown any more: its title, else its format summary. */
+export const blockName = (b: Pick<BlockDraft, 'title' | 'format' | 'params'>) =>
+  b.title || formatSummary(b.format, b.params) || 'Bloc'
 
 export const MEASURES = {
   reps: 'Répétitions',
@@ -316,6 +324,7 @@ export const hasOverride = (o: LevelOverride | undefined) => !!o && Object.value
 export function validateWorkout(w: WorkoutDraft): string | null {
   if (!w.title.trim()) return 'Donne un titre à la séance.'
   for (const [i, b] of w.blocks.entries()) {
+    if (!b.title.trim()) return `Bloc ${String.fromCharCode(65 + i)} : donne-lui un titre.`
     if (b.items.some((it) => !it.exercise_id && !it.label.trim())) return `Bloc ${i + 1} : un mouvement n’a pas d’exercice.`
   }
   return null

@@ -1,8 +1,7 @@
 import { Markdown } from '../../components/Markdown'
 import { SCORE_TYPES, scoreType } from '../../domain/scoring'
 import {
-  BLOCK_KINDS,
-  formatSummary,
+  blockHeading,
   isPremium,
   itemRuns,
   itemSummary,
@@ -31,13 +30,14 @@ export function BlockLines({
   return (
     <ol className="mt-2 flex flex-col gap-1.5 border-t border-zinc-800 pt-2 text-xs">
       {blocks.map((b, i) => {
-        const head = [b.title, formatSummary(b.format, b.params)].filter(Boolean).join(' — ')
+        const head = blockHeading(b)
         const score = scoreType(b.format, b.params)
         return (
           <li key={b.id} className="min-w-0">
             <p className={full ? '' : 'truncate'}>
               <span className="font-semibold text-zinc-500">
-                {String.fromCharCode(65 + i)} · {BLOCK_KINDS[b.kind]}
+                {String.fromCharCode(65 + i)}
+                {head ? ' ·' : ''}
               </span>
               {head && <span className="text-zinc-200"> {head}</span>}
               {isPremium(b) && (

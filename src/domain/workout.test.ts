@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
   addItem,
+  blockHeading,
   blockLevels,
   itemRuns,
   removeGroup,
@@ -134,6 +135,8 @@ describe('blocks & validation', () => {
   it('validates', () => {
     expect(validateWorkout({ title: ' ', notes: '', blocks: [] })).toMatch(/titre/)
     const b = { ...newBlock('metcon', 'x'), items: [emptyItem()] }
+    expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toMatch(/Bloc A : donne-lui un titre/)
+    b.title = 'Fran'
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toMatch(/Bloc 1/)
     b.items[0] = emptyItem('t')
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toBeNull()
@@ -226,4 +229,10 @@ describe('viewAs', () => {
     expect(viewAs(w, 1).locked).toEqual([])
     expect(viewAs(w, 2).blocks).toHaveLength(4)
   })
+})
+
+it('block heading does not repeat a title copied from the format', () => {
+  const b = { ...newBlock('metcon', 'h'), format: 'amrap' as const, params: { duration_s: 1200 } }
+  expect(blockHeading({ ...b, title: "AMRAP 20'" })).toBe("AMRAP 20'")
+  expect(blockHeading({ ...b, title: 'DB DT' })).toBe("DB DT — AMRAP 20'")
 })

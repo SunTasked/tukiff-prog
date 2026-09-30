@@ -11,7 +11,7 @@ import {
   type SessionStatus,
 } from '../../domain/report'
 import { isRanked, scoreType } from '../../domain/scoring'
-import { BLOCK_KINDS, LEVELS, formatSummary, type BlockKind, type Format, type FormatParams } from '../../domain/workout'
+import { LEVELS, formatSummary, type Format, type FormatParams } from '../../domain/workout'
 import { supabase, type PersonalRecord } from '../../lib/supabase'
 
 const PERIODS = { '7': '7 jours', '30': '30 jours' }
@@ -72,7 +72,7 @@ export function AthleteReport({
           .flatMap((b, i) => {
             const params = b.params as FormatParams
             if ((params.min_level ?? 0) > (programs.find((p) => p.id === w.program_id)?.level ?? 0)) return []
-            const name = b.title || formatSummary(b.format as Format, params) || BLOCK_KINDS[b.kind as BlockKind]
+            const name = b.title || formatSummary(b.format as Format, params) || 'Bloc'
             return {
               id: b.id,
               label: `${String.fromCharCode(65 + i)} · ${name}`,

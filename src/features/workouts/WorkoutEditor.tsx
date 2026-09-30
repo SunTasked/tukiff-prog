@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase'
 import { useNavigate, useParams, useSearchParams } from 'react-router'
 import { Button, ErrorText, Input, Spinner, Textarea } from '../../components/ui'
 import {
-  BLOCK_KINDS,
+  blockName,
   addItem,
   invalidatedBlocks,
   newBlock,
@@ -131,7 +131,7 @@ export function WorkoutEditor() {
     const lines = original!.blocks
       .map((b, i) => ({ b, i }))
       .filter(({ b }) => counts.has(b.id))
-      .map(({ b, i }) => `• ${String.fromCharCode(65 + i)} · ${b.title || BLOCK_KINDS[b.kind]} : ${counts.get(b.id)} score(s)`)
+      .map(({ b, i }) => `• ${String.fromCharCode(65 + i)} · ${blockName(b)} : ${counts.get(b.id)} score(s)`)
     return confirm(
       `Attention : ces blocs ont été modifiés ou supprimés, leurs scores seront définitivement supprimés.\n\n${lines.join('\n')}\n\nEnregistrer quand même ?`,
     )
