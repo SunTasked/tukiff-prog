@@ -10,7 +10,7 @@ import {
   type ReportWorkout,
   type SessionStatus,
 } from '../../domain/report'
-import { scoreType } from '../../domain/scoring'
+import { isRanked, scoreType } from '../../domain/scoring'
 import { BLOCK_KINDS, LEVELS, formatSummary, type BlockKind, type Format, type FormatParams } from '../../domain/workout'
 import { supabase, type PersonalRecord } from '../../lib/supabase'
 
@@ -36,7 +36,8 @@ export function AthleteReport({
   records,
 }: {
   athleteId: string
-  programs: { id: string; name: string }[]
+  /** level: the athlete's access level in the program (blocks above it are not theirs to do). */
+  programs: { id: string; name: string; level: number }[]
   records: PersonalRecord[]
 }) {
   const [period, setPeriod] = useState<Period>('7')
@@ -56,7 +57,7 @@ export function AthleteReport({
       if (!programIds.length) return setData({ workouts: [], results: [], skipped: new Set(), emojis: new Map() })
       const { data: rows } = await supabase
         .from('workouts')
-        .select('id, title, date, programs(name), workout_blocks(id, position, kind, title, format, params, block_items(exercise_id))')
+        .select('id, title, date, program_id, programs(name), workout_blocks(id, position, kind, title, format, params, block_items(exercise_id))')
         .in('program_id', programIds)
         .gte('date', from)
         .lte('date', to)
@@ -68,13 +69,15 @@ export function AthleteReport({
         program: w.programs?.name ?? '',
         blocks: [...w.workout_blocks]
           .sort((a, b) => a.position - b.position)
-          .map((b, i) => {
+          .flatMap((b, i) => {
             const params = b.params as FormatParams
+            if ((params.min_level ?? 0) > (programs.find((p) => p.id === w.program_id)?.level ?? 0)) return []
             const name = b.title || formatSummary(b.format as Format, params) || BLOCK_KINDS[b.kind as BlockKind]
             return {
               id: b.id,
               label: `${String.fromCharCode(65 + i)} · ${name}`,
               type: scoreType(b.format as Format, params),
+              ranked: isRanked(b.format as Format, params),
               exerciseIds: b.block_items.flatMap((it) => (it.exercise_id ? [it.exercise_id] : [])),
             }
           }),

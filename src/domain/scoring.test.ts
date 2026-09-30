@@ -1,8 +1,17 @@
 import { describe, expect, it } from 'vitest'
-import { boardPlaces, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { boardPlaces, isRanked, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
 const names = <T extends { name: string }>(rows: { result: T; rank: number }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
+
+describe('isRanked', () => {
+  it('ranks scored blocks unless the coach opted out or the block is premium', () => {
+    expect(isRanked('for_time')).toBe(true)
+    expect(isRanked('emom')).toBe(false)
+    expect(isRanked('for_time', { ranked: false })).toBe(false)
+    expect(isRanked('for_time', { min_level: 1 })).toBe(false)
+  })
+})
 
 describe('scoreType', () => {
   it('derives the score from the format', () => {

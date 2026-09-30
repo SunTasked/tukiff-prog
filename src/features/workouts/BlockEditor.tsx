@@ -2,7 +2,9 @@ import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Chips, Field, SmallInput } from '../../components/ui'
 import { SCORE_TYPES, defaultScoreType, scoreType, type ScoreType } from '../../domain/scoring'
 import {
+  ACCESS_LEVELS,
   BLOCK_KINDS,
+  blockSettings,
   DEFAULT_FORMAT,
   FORMATS,
   defaultParams,
@@ -41,10 +43,10 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
     // Switching kind on an untouched block also switches to that kind's usual format.
     if (block.items.length === 0) {
       const format = DEFAULT_FORMAT[kind]
-      set({ kind, format, params: defaultParams(format) })
+      set({ kind, format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
     } else set({ kind })
   }
-  const setFormat = (format: Format) => set({ format, params: defaultParams(format) })
+  const setFormat = (format: Format) => set({ format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
   const p = block.params
   // Stored only when it differs from the format's default.
   const setScore = (score: ScoreType) => setParams({ score: score === defaultScoreType(block.format) ? undefined : score })
@@ -143,6 +145,31 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
           <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
           <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
         </div>
+
+        <div>
+          <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
+          <Chips
+            options={{ '0': 'Tous', '1': `🔒 ${ACCESS_LEVELS[1]}` }}
+            value={String(p.min_level ?? 0) as '0' | '1'}
+            onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
+          />
+        </div>
+        {scoreType(block.format, p) !== 'none' && (
+          <label className={`flex items-center gap-2 text-sm ${p.min_level ? 'text-zinc-500' : 'text-zinc-300'}`}>
+            <input
+              type="checkbox"
+              className="size-4 accent-lime-400"
+              // Premium blocks are never ranked.
+              disabled={!!p.min_level}
+              checked={!p.min_level && p.ranked !== false}
+              onChange={(e) => setParams({ ranked: e.target.checked ? undefined : false })}
+            />
+            <span>
+              Compte pour le classement de la semaine
+              {!!p.min_level && <span className="block text-xs">Jamais pour un bloc Premium</span>}
+            </span>
+          </label>
+        )}
 
         {itemRuns(block).map((run) =>
           run.group === null ? (
