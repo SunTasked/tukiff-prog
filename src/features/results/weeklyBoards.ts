@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { addDays, fromISODate, mondayOf, publicationStatus } from '../../domain/dates'
 import type { Gender } from '../../domain/profile'
-import { scoreType, weeklyLeaderboards } from '../../domain/scoring'
+import { isRanked, scoreType, weeklyLeaderboards } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
 import { loadWorkout } from '../workouts/api'
 import type { ResultRow } from './useWorkoutResults'
@@ -33,7 +33,8 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   const boards = weeklyLeaderboards(
     workouts.flatMap((w, i) =>
       (w?.blocks ?? []).map((b) => ({
-        type: scoreType(b.format, b.params),
+        // Unranked blocks count as unscored: out of the week.
+        type: isRanked(b.format, b.params) ? scoreType(b.format, b.params) : 'none',
         results: rows.filter((r) => r.block_id === b.id),
         // A multi-day workout (challenge of the week) is a bonus.
         bonus: published[i].days > 1,

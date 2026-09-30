@@ -44,7 +44,22 @@ export type FormatParams = {
   sets?: number // sets_reps
   /** Score type chosen by the coach; absent = the format's default (see scoring.ts). */
   score?: 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
+  /** Minimum access level of the program member (ACCESS_LEVELS); absent = everyone. Checked by RLS. */
+  min_level?: number
+  /** false = scored, but out of the weekly leaderboard and without a block leaderboard. */
+  ranked?: false
 }
+
+/** Access levels of a program member (program_members.level). */
+export const ACCESS_LEVELS = ['Free', 'Premium'] as const
+
+export const isPremium = (b: Pick<BlockDraft, 'params'>) => (b.params.min_level ?? 0) > 0
+
+/** Settings that are not the format's own: kept when the format changes, ignored by score invalidation. */
+export const blockSettings = ({ min_level, ranked }: FormatParams): FormatParams => ({
+  ...(min_level ? { min_level } : {}),
+  ...(ranked === false ? { ranked } : {}),
+})
 
 export type LevelOverride = {
   reps?: string
@@ -105,7 +120,11 @@ export type WorkoutDraft = {
   /** Library templates only. */
   section_id?: string | null
   blocks: BlockDraft[]
+  /** Blocks above my access level (title only), shown closed; before = index in blocks it precedes. */
+  locked?: LockedBlock[]
 }
+
+export type LockedBlock = { id: string; kind: BlockKind; title: string; before: number }
 
 export function defaultParams(format: Format): FormatParams {
   switch (format) {
@@ -287,7 +306,10 @@ export function validateWorkout(w: WorkoutDraft): string | null {
 }
 
 /** What a score depends on: title and notes excluded (fixing a typo keeps the scores). */
-const scoringSignature = (b: BlockDraft) => JSON.stringify([b.kind, b.format, b.params, b.items])
+const scoringSignature = (b: BlockDraft) => {
+  const { min_level: _level, ranked: _ranked, ...params } = b.params
+  return JSON.stringify([b.kind, b.format, params, b.items])
+}
 
 /** Blocks of the original workout whose scores become invalid: scoring content changed, or removed. */
 export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): { changed: string[]; removed: string[] } {

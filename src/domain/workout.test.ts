@@ -165,6 +165,11 @@ describe('invalidatedBlocks', () => {
     e.blocks[1].params = { time_cap_s: 600 }
     expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
+  it('keeps the scores when only the access level or the ranking changes', () => {
+    const d = base()
+    d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false }
+    expect(invalidatedBlocks(base(), d)).toEqual({ changed: [], removed: [] })
+  })
 })
 
 it('offers only RX and the levels defined in the block', () => {

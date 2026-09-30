@@ -26,6 +26,11 @@ export function scoreType(format: Format, params: FormatParams = {}): ScoreType 
   return params.score ?? defaultScoreType(format)
 }
 
+/** Scored and counted in the leaderboards: premium blocks never are, other blocks unless the coach said no. */
+export function isRanked(format: Format, params: FormatParams = {}): boolean {
+  return scoreType(format, params) !== 'none' && !params.min_level && params.ranked !== false
+}
+
 export function defaultScoreType(format: Format): ScoreType {
   switch (format) {
     case 'for_time':

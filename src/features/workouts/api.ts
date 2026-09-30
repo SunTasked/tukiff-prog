@@ -37,12 +37,17 @@ function toStored(b: BlockDraft): StoredParams {
 }
 
 export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
-  const { data } = await supabase
-    .from('workouts')
-    .select('id, title, notes, date, days, section_id, workout_blocks(*, block_items(*))')
-    .eq('id', id)
-    .maybeSingle()
+  // Blocks above my access level are not readable: they come back through an RPC, without their content.
+  const [{ data }, { data: locked }] = await Promise.all([
+    supabase
+      .from('workouts')
+      .select('id, title, notes, date, days, section_id, workout_blocks(*, block_items(*))')
+      .eq('id', id)
+      .maybeSingle(),
+    supabase.rpc('locked_blocks', { p_workouts: [id] }),
+  ])
   if (!data) return null
+  const positions = data.workout_blocks.map((b) => b.position)
   const blocks: BlockDraft[] = [...data.workout_blocks]
     .sort((a, b) => a.position - b.position)
     .map((b) => {
@@ -83,6 +88,12 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
     days: data.days,
     section_id: data.section_id,
     blocks,
+    locked: (locked ?? []).map((b) => ({
+      id: b.id,
+      kind: b.kind as BlockKind,
+      title: b.title ?? '',
+      before: positions.filter((p) => p < b.position).length,
+    })),
   }
 }
 
