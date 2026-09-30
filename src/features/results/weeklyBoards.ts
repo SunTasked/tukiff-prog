@@ -36,7 +36,7 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
         // Unranked blocks count as unscored: out of the week.
         type: isRanked(b.format, b.params) ? scoreType(b.format, b.params) : 'none',
         results: rows.filter((r) => r.block_id === b.id),
-        // A multi-day workout (challenge of the week) is a bonus.
+        // A multi-day workout (challenge of the week) only breaks ties.
         bonus: published[i].days > 1,
         label:
           published[i].days > 1
