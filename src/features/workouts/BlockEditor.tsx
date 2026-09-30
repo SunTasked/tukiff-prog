@@ -46,6 +46,8 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
   const [preview, setPreview] = useState(false)
   const setFormat = (format: Format) => set({ format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
   const p = block.params
+  // Libre = free text only: no movements or sub-blocks added (older ones stay listed, to remove or keep).
+  const libre = block.format === 'none'
   // Levels offered: the program's, and at least the block's own (library templates have no program).
   const levelCount = Math.max(accessLevels?.length ?? 0, p.min_level ?? 0)
   // Stored only when it differs from the format's default.
@@ -111,7 +113,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
       <div className="flex flex-col gap-2">
         <Chips options={FORMATS} value={block.format} onChange={setFormat} />
 
-        {block.format !== 'none' && (
+        {!libre && (
           <div className="grid grid-cols-3 gap-2">
             {block.format === 'for_time' && (
               <>
@@ -159,7 +161,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
           </div>
         )}
 
-        {block.format === 'none' && (
+        {libre && (
           <div>
             <div className="mb-0.5 flex items-center justify-between text-xs text-zinc-500">
               <span>Texte libre (markdown)</span>
@@ -206,13 +208,15 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 </button>
               </div>
               {run.items.map(({ item, index }) => itemEditor(item, index))}
-              <button
-                type="button"
-                className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-                onClick={() => onPick(null, undefined, run.group)}
-              >
-                + Mouvement dans le sous-bloc
-              </button>
+              {!libre && (
+                <button
+                  type="button"
+                  className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+                  onClick={() => onPick(null, undefined, run.group)}
+                >
+                  + Mouvement dans le sous-bloc
+                </button>
+              )}
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Rounds au 1er tour">
                   <NumberInput
@@ -241,24 +245,32 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             </div>
           ),
         )}
-        <div className="grid grid-cols-2 gap-2">
-          <button
-            type="button"
-            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-            onClick={() => onPick(null)}
-          >
-            + Mouvement
-          </button>
-          <button
-            type="button"
-            className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-            onClick={() => set({ groups: [...block.groups, { title: '', note: '' }] })}
-          >
-            + Sous-bloc
-          </button>
-        </div>
+        {libre ? (
+          (block.items.length > 0 || block.groups.length > 0) && (
+            <p className="text-xs text-zinc-500">
+              Le mode Libre n’accepte plus de mouvements : retire ceux-ci ou choisis un autre format.
+            </p>
+          )
+        ) : (
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+              onClick={() => onPick(null)}
+            >
+              + Mouvement
+            </button>
+            <button
+              type="button"
+              className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
+              onClick={() => set({ groups: [...block.groups, { title: '', note: '' }] })}
+            >
+              + Sous-bloc
+            </button>
+          </div>
+        )}
 
-        {block.format !== 'none' && (
+        {!libre && (
           <Field label="Notes du bloc">
             <textarea
               rows={2}
