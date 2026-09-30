@@ -212,35 +212,36 @@ export function CalendarPage() {
     <div className={selected.size ? 'pb-40 lg:pb-24' : ''}>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
         <PageTitle>Programmation</PageTitle>
-        <label className="flex items-center gap-2 text-sm text-zinc-400">
-          Afficher
-          <select
-            className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-zinc-100"
-            value={weeks}
-            onChange={(e) => setWeeks(Number(e.target.value))}
-          >
-            {WEEK_CHOICES.map((n) => (
-              <option key={n} value={n}>
-                {n} semaine{n > 1 ? 's' : ''}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      {/* Zoom: how much of each workout the cards show */}
-      <div className="mb-3 flex items-center gap-2 text-sm text-zinc-400">
-        Détail
-        <div className="flex rounded-full bg-zinc-900 p-0.5">
-          {(Object.keys(DETAILS) as Detail[]).map((d) => (
-            <button
-              key={d}
-              className={`rounded-full px-3 py-1 text-sm ${detail === d ? 'bg-lime-400 font-semibold text-zinc-950' : 'text-zinc-400'}`}
-              onClick={() => setDetail(d)}
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-sm text-zinc-400">
+            Afficher
+            <select
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-zinc-100"
+              value={weeks}
+              onChange={(e) => setWeeks(Number(e.target.value))}
             >
-              {DETAILS[d]}
-            </button>
-          ))}
+              {WEEK_CHOICES.map((n) => (
+                <option key={n} value={n}>
+                  {n} semaine{n > 1 ? 's' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          {/* Zoom: how much of each workout the cards show */}
+          <label className="flex items-center gap-2 text-sm text-zinc-400">
+            Détail
+            <select
+              className="rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 text-zinc-100"
+              value={detail}
+              onChange={(e) => setDetail(e.target.value as Detail)}
+            >
+              {(Object.keys(DETAILS) as Detail[]).map((d) => (
+                <option key={d} value={d}>
+                  {DETAILS[d]}
+                </option>
+              ))}
+            </select>
+          </label>
         </div>
       </div>
 
