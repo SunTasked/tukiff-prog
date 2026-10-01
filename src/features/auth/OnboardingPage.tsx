@@ -1,12 +1,15 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
+import { Avatar } from '../../components/Avatar'
+import { AvatarCropper } from '../../components/AvatarCropper'
 import { PasswordFields } from '../../components/PasswordFields'
 import { Button, Centered, Chips, ErrorText, Input } from '../../components/ui'
 import { isValidPassword } from '../../domain/password'
-import { GENDERS, type Gender } from '../../domain/profile'
+import { fullName, GENDERS, type Gender } from '../../domain/profile'
+import { uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
 import { hasPassword, useAuth } from './AuthProvider'
 
-/** First sign-in (via magic link): first and last name, an optional nickname, a gender (for the leaderboards) and a password. */
+/** First sign-in (via magic link): first and last name, an optional nickname and photo, a gender (for the leaderboards) and a password. */
 export function OnboardingPage() {
   const { session, profile, refreshProfile, refreshSession } = useAuth()
   const needsPassword = !hasPassword(session)
@@ -18,6 +21,24 @@ export function OnboardingPage() {
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const fileInput = useRef<HTMLInputElement>(null)
+  const [cropping, setCropping] = useState<File | null>(null)
+  // Cropped picture, uploaded with the rest of the form.
+  const [picture, setPicture] = useState<Blob | null>(null)
+  const [preview, setPreview] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!picture) return setPreview(null)
+    const url = URL.createObjectURL(picture)
+    setPreview(url)
+    return () => URL.revokeObjectURL(url)
+  }, [picture])
+
+  function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0]
+    e.target.value = ''
+    if (file) setCropping(file)
+  }
 
   async function submit(e: FormEvent) {
     e.preventDefault()
@@ -35,8 +56,10 @@ export function OnboardingPage() {
       }
     }
     const { error } = await supabase.from('profiles').update({ first_name: firstName.trim(), last_name: lastName.trim(), display_name: name.trim() || null, gender }).eq('id', profile!.id)
+    const err = !error && picture ? await uploadAvatar(profile!.id, picture) : null
     setBusy(false)
     if (error) return setError(error.message)
+    if (err) return setError(err)
     await Promise.all([refreshProfile(), refreshSession()])
   }
 
@@ -47,6 +70,20 @@ export function OnboardingPage() {
         Indique ton prénom, ton nom, ton genre{needsPassword && ' et un mot de passe : tu t’en serviras pour te reconnecter'}.
       </p>
       <form onSubmit={submit} className="flex flex-col gap-3">
+        <div className="flex items-center gap-4">
+          <Avatar url={preview} name={fullName({ first_name: firstName, last_name: lastName })} className="size-16 text-xl" />
+          <div className="flex flex-col items-start gap-1 text-sm">
+            <button type="button" className="font-semibold text-lime-400" onClick={() => fileInput.current?.click()}>
+              {picture ? 'Changer la photo' : 'Ajouter une photo (optionnel)'}
+            </button>
+            {picture && (
+              <button type="button" className="text-zinc-400" onClick={() => setPicture(null)}>
+                Retirer
+              </button>
+            )}
+          </div>
+          <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
+        </div>
         <div className="grid grid-cols-2 gap-2">
           <Input
             label="Prénom"
@@ -82,6 +119,16 @@ export function OnboardingPage() {
         <Button disabled={busy}>Continuer</Button>
         <ErrorText>{error}</ErrorText>
       </form>
+      {cropping && (
+        <AvatarCropper
+          file={cropping}
+          onCancel={() => setCropping(null)}
+          onSave={(p) => {
+            setCropping(null)
+            setPicture(p)
+          }}
+        />
+      )}
     </Centered>
   )
 }
