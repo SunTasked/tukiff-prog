@@ -314,6 +314,17 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             />
           )}
 
+          {scoreType(block.format, p) !== 'none' && (
+            <div>
+              <span className="mb-0.5 block text-xs text-zinc-500">Équipe</span>
+              <Chips
+                options={{ '0': 'Individuel', '2': 'Par 2', '3': 'Par 3', '4': 'Par 4' }}
+                value={String(p.team_size ?? 0)}
+                onChange={(v) => setParams({ team_size: v === '0' ? undefined : Number(v) })}
+              />
+            </div>
+          )}
+
           {levelCount > 0 && (
             <div>
               <span className="mb-0.5 block text-xs text-zinc-500">Accès</span>
@@ -340,8 +351,9 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 onChange={(e) => setParams({ ranked: e.target.checked ? undefined : false })}
               />
               <span>
-                Compte pour le classement de la semaine
+                {p.team_size ? 'Classement des équipes' : 'Compte pour le classement de la semaine'}
                 {!!p.min_level && <span className="block text-xs">Jamais pour un bloc réservé</span>}
+                {!p.min_level && !!p.team_size && <span className="block text-xs text-zinc-500">Hors classement de la semaine</span>}
               </span>
             </label>
           )}

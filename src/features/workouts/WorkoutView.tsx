@@ -161,7 +161,10 @@ function ScoreLine({ block }: { block: BlockDraft }) {
   if (type === 'none') return null
   return (
     <p className="mt-2 text-sm text-zinc-400">
-      <span className="font-semibold text-zinc-300">Score : {SCORE_TYPES[type]}</span>
+      <span className="font-semibold text-zinc-300">
+        Score : {SCORE_TYPES[type]}
+        {block.params.team_size && ` · équipe de ${block.params.team_size}`}
+      </span>
       {block.params.score_note && <> · {block.params.score_note}</>}
     </p>
   )

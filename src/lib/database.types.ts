@@ -608,6 +608,8 @@ export type Database = {
           reps: number | null
           rounds: number | null
           rx: boolean
+          team_guests: Json | null
+          team_id: string | null
           time_s: number | null
           updated_at: string
           workout_id: string
@@ -624,6 +626,8 @@ export type Database = {
           reps?: number | null
           rounds?: number | null
           rx?: boolean
+          team_guests?: Json | null
+          team_id?: string | null
           time_s?: number | null
           updated_at?: string
           workout_id: string
@@ -640,6 +644,8 @@ export type Database = {
           reps?: number | null
           rounds?: number | null
           rx?: boolean
+          team_guests?: Json | null
+          team_id?: string | null
           time_s?: number | null
           updated_at?: string
           workout_id?: string
@@ -839,6 +845,34 @@ export type Database = {
       accept_invitation: { Args: { p_code: string }; Returns: string }
       admin_usage: { Args: never; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
+      delete_team_result: { Args: { p_team: string }; Returns: undefined }
+      save_team_result: {
+        Args: {
+          p_block: string
+          p_team: string | null
+          p_members: string[]
+          p_guests: Json
+          p_time_s: number | null
+          p_capped: boolean
+          p_rounds: number | null
+          p_reps: number | null
+          p_load_kg: number | null
+          p_rx: boolean
+          p_comment: string | null
+        }
+        Returns: string
+      }
+      team_candidates: {
+        Args: { p_block: string }
+        Returns: {
+          id: string
+          first_name: string | null
+          last_name: string | null
+          display_name: string | null
+          gender: string | null
+          avatar_url: string | null
+        }[]
+      }
       block_min_level: { Args: { p_params: Json }; Returns: number }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }

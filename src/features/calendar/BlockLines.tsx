@@ -66,6 +66,7 @@ export function BlockLines({
                 {score !== 'none' && (
                   <p className="text-zinc-500">
                     Score : {SCORE_TYPES[score]}
+                    {b.params.team_size && ` · équipe de ${b.params.team_size}`}
                     {b.params.ranked === false && ' · hors classement'}
                   </p>
                 )}

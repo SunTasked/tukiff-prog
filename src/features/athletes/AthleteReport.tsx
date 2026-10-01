@@ -78,6 +78,7 @@ export function AthleteReport({
               label: `${String.fromCharCode(65 + i)} · ${name}`,
               type: scoreType(b.format as Format, params),
               ranked: isRanked(b.format as Format, params),
+              team: !!params.team_size,
               exerciseIds: b.block_items.flatMap((it) => (it.exercise_id ? [it.exercise_id] : [])),
             }
           }),
@@ -190,6 +191,7 @@ function Row({ row }: { row: ReportRow }) {
           {row.rx && row.block.type !== 'none' && row.block.ranked !== false && (
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300 uppercase">RX</span>
           )}
+          {row.block.team && row.status === 'done' && <span>Équipe</span>}
           {row.rank && (
             <span>
               {row.rank.rank <= 3 ? ['🥇', '🥈', '🥉'][row.rank.rank - 1] + ' ' : ''}
