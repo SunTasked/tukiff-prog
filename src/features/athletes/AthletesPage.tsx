@@ -179,13 +179,13 @@ export function AthletesPage() {
                 <Avatar url={m.avatar_url} name={fullName(m)} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-1.5">
-                    <span className="truncate">{fullName(m)}</span>
                     {m.gender && (
                       <span
                         className={`size-2 shrink-0 rounded-full ${m.gender === 'female' ? 'bg-pink-400' : 'bg-sky-400'}`}
                         aria-label={m.gender === 'female' ? 'Femme' : 'Homme'}
                       />
                     )}
+                    <span className="truncate">{fullName(m)}</span>
                   </span>
                   {((m.first_name && m.display_name) || m.is_admin) && (
                     <span className="truncate text-xs text-zinc-500">
