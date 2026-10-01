@@ -117,7 +117,7 @@ export function HomePage() {
         {/* mix-blend-screen makes the logo's black background disappear on the dark page */}
         <img src="/tkf-logo.jpg" alt="TKF Programming" className="h-14 w-auto mix-blend-screen lg:invisible" />
         <Link to="/timer" className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-semibold">
-          ⏱ Timer
+          ⏱️ Timer
         </Link>
       </div>
 

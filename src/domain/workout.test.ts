@@ -60,6 +60,8 @@ it('parses numbers with comma', () => {
 describe('formatSummary', () => {
   it('covers each format', () => {
     expect(formatSummary('for_time', { time_cap_s: 720 })).toBe("For Time · cap 12'")
+    expect(formatSummary('for_time', { time_cap_s: 1200, stage_s: 240 })).toBe("For Time · cap 20' · paliers 4'")
+    expect(formatSummary('for_time', { time_cap_s: 720, stage_s: 360, stage_step_s: 180 })).toBe("For Time · cap 12' · paliers 6' +3'")
     expect(formatSummary('for_time', { rounds: 5 })).toBe('5 rounds For Time')
     expect(formatSummary('amrap', { duration_s: 900 })).toBe("AMRAP 15'")
     expect(formatSummary('emom', { interval_s: 60, rounds: 10 })).toBe("EMOM 10'")
