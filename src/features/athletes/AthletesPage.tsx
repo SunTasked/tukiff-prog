@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
 import { Button, Card, ErrorText, PageTitle } from '../../components/ui'
+import { seenAgo } from '../../domain/dates'
 import { invitationStatus } from '../../domain/invitations'
 import { fullName, isPending } from '../../domain/profile'
 import { supabase, type Profile, type Program } from '../../lib/supabase'
@@ -27,13 +28,16 @@ export function AthletesPage() {
   const [error, setError] = useState('')
   const [inviting, setInviting] = useState<'athlete' | 'coach' | null>(null)
   const [newProgram, setNewProgram] = useState('')
+  const [lastSeen, setLastSeen] = useState<Map<string, string | null>>(new Map())
 
   const load = useCallback(async () => {
-    const [m, i, p] = await Promise.all([
+    const [m, i, p, s] = await Promise.all([
       supabase.from('profiles').select('*, invitations!profiles_invitation_id_fkey(label)').not('role', 'is', null),
       supabase.from('invitations').select('*, invitation_programs(program_id, level)').order('created_at', { ascending: false }),
       supabase.from('programs').select('*, program_members(count), program_coaches(coach_id)').is('archived_at', null).order('name'),
+      supabase.rpc('members_last_seen'),
     ])
+    setLastSeen(new Map((s.data ?? []).map((r) => [r.user_id, r.last_at])))
     setError(m.error?.message ?? i.error?.message ?? p.error?.message ?? '')
     const rows = (m.data ?? []) as MemberRow[]
     setMembers(rows.filter((r) => !isPending(r)))
@@ -137,9 +141,15 @@ export function AthletesPage() {
           <li key={m.id}>
             <Link to={`/athletes/${m.id}`} className="flex items-center gap-3 py-2">
               <Avatar url={m.avatar_url} name={fullName(m)} />
-              <span className="min-w-0 truncate">
-                {fullName(m)}
-                {m.first_name && m.display_name && <span className="ml-1.5 text-xs text-zinc-500">{m.display_name}</span>}
+              <span className="flex min-w-0 flex-col">
+                <span className="truncate">
+                  {fullName(m)}
+                  {m.first_name && m.display_name && <span className="ml-1.5 text-xs text-zinc-500">{m.display_name}</span>}
+                </span>
+                <span className="truncate text-xs text-zinc-500">
+                  Inscrit le {dateFmt.format(new Date(m.created_at))}
+                  {lastSeen.get(m.id) && ` · vu ${seenAgo(lastSeen.get(m.id)!)}`}
+                </span>
               </span>
               {m.gender && (
                 <span

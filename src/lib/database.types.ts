@@ -847,6 +847,10 @@ export type Database = {
         }[]
       }
       member_email: { Args: { p_user: string }; Returns: string }
+      members_last_seen: {
+        Args: never
+        Returns: { last_at: string | null; user_id: string }[]
+      }
       move_workouts: {
         Args: { p_days: number; p_ids: string[] }
         Returns: undefined

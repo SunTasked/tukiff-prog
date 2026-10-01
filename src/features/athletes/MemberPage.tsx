@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { Card, Chips, ErrorText, PageTitle, Spinner } from '../../components/ui'
+import { formatDateTime } from '../../domain/dates'
 import { fullName } from '../../domain/profile'
 import { levelName, type AccessLevel } from '../../domain/workout'
 import { supabase, type Profile } from '../../lib/supabase'
@@ -10,6 +11,8 @@ import { useExercises } from '../exercises/useExercises'
 import { RecordsList } from '../records/RecordsList'
 import { useRecords } from '../records/useRecords'
 import { AthleteReport } from './AthleteReport'
+
+const signupFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
 
 const TABS = { report: 'Compte rendu', access: 'Accès', records: 'Records' }
 
@@ -30,6 +33,7 @@ export function MemberPage() {
   const [levelNames, setLevelNames] = useState<Map<string, AccessLevel[]>>(new Map())
   const [allPrograms, setAllPrograms] = useState<{ id: string; name: string }[]>([])
   const [email, setEmail] = useState<string | null>(null)
+  const [lastSeen, setLastSeen] = useState<string | null>(null)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<keyof typeof TABS>('report')
   // Report: only the programs I edit that the member follows.
@@ -40,11 +44,13 @@ export function MemberPage() {
   )
 
   const load = useCallback(async () => {
-    const [m, pm] = await Promise.all([
+    const [m, pm, seen] = await Promise.all([
       supabase.from('profiles').select('*').eq('id', id!).single(),
       supabase.from('program_members').select('program_id, level, programs(name, archived_at, access_levels)').eq('user_id', id!),
+      supabase.rpc('members_last_seen'),
     ])
     setMember(m.data)
+    setLastSeen(seen.data?.find((r) => r.user_id === id)?.last_at ?? null)
     setProgramIds((pm.data ?? []).map((r) => r.program_id))
     setLevels(new Map((pm.data ?? []).map((r) => [r.program_id, r.level])))
     setLevelNames(new Map((pm.data ?? []).map((r) => [r.program_id, (r.programs?.access_levels ?? []) as AccessLevel[]])))
@@ -106,6 +112,11 @@ export function MemberPage() {
       <p className={`${admin && email ? '' : '-mt-3 '}mb-4 text-sm text-zinc-400`}>
         {roleLabel(member)}
         {member.is_app_owner ? ' · propriétaire de l’app' : ''}
+      </p>
+      <p className="-mt-3 mb-4 text-xs text-zinc-500">
+        Inscrit le {signupFmt.format(new Date(member.created_at))}
+        <br />
+        Dernier accès : {lastSeen ? formatDateTime(lastSeen) : 'inconnu'}
       </p>
       <div className="mb-4">
         <Chips options={TABS} value={tab} onChange={setTab} />
