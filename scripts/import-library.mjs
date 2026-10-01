@@ -7,9 +7,10 @@
 //   "templates": [{ "title", "section", "notes", "blocks": [{
 //     "kind": "warmup|strength|skill|metcon|accessory|cooldown", "format": "for_time|amrap|emom|tabata|sets_reps|none",
 //     "title", "notes", "params": { "time_cap_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets",
-//                                   "scaling": "Pull-up → ring row" },
+//                                   "scaling": "Pull-up → ring row", "score": "time|rounds_reps|load|reps|none", "score_note" },
+//     "groups": [{ "title": "3 rounds", "note", "start": 3, "step": 0 }],  // sub-blocks; items join one with "group": index
 //     "items": [{ "exercise" | "label", "reps": "21-15-9", "load_kg", "load_kg_f", "pct_1rm", "distance_m", "calories", "duration_s",
-//                 "notes" }] }] }] }
+//                 "notes", "group" }] }] }] }
 import { readFileSync } from 'node:fs'
 import { sql, target } from './lib.mjs'
 
@@ -25,7 +26,8 @@ const FORMATS = ['for_time', 'amrap', 'emom', 'tabata', 'sets_reps', 'none']
 const MEASURES = ['reps', 'load', 'distance', 'time', 'calories']
 const PARAMS = ['time_cap_s', 'duration_s', 'interval_s', 'rounds', 'work_s', 'rest_s', 'sets']
 const NUMBERS = ['load_kg', 'load_kg_f', 'pct_1rm', 'distance_m', 'calories', 'duration_s']
-const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', ...NUMBERS]
+const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', 'group', ...NUMBERS]
+const SCORES = ['time', 'rounds_reps', 'load', 'reps', 'none']
 
 const q = (s) => `'${String(s).replaceAll("'", "''")}'`
 const key = (s) => String(s ?? '').trim().toLowerCase()
@@ -74,7 +76,9 @@ for (const t of templates) {
     check(FORMATS.includes(b.format), `${bw} : format invalide (${b.format})`)
     for (const [k, v] of Object.entries(b.params ?? {}))
       check(
-        k === 'scaling' ? typeof v === 'string' : PARAMS.includes(k) && Number.isInteger(v) && v >= 0,
+        k === 'scaling' || k === 'score_note' ? typeof v === 'string'
+          : k === 'score' ? SCORES.includes(v)
+            : PARAMS.includes(k) && Number.isInteger(v) && v >= 0,
         `${bw} : paramètre invalide ${k}=${v}`,
       )
     for (const [j, it] of (b.items ?? []).entries()) {
@@ -83,7 +87,12 @@ for (const t of templates) {
       check(it.exercise || it.label?.trim(), `${iw} : exercise ou label requis`)
       check(!it.exercise || knownExercise(it.exercise), `${iw} : exercice inconnu "${it.exercise}" (à ajouter dans exercises)`)
       for (const k of NUMBERS) check(it[k] == null || (typeof it[k] === 'number' && it[k] >= 0), `${iw} : ${k} doit être un nombre ≥ 0`)
+      check(it.group == null || (Number.isInteger(it.group) && it.group >= 0 && it.group < (b.groups ?? []).length),
+        `${iw} : group doit désigner un sous-bloc du bloc`)
     }
+    for (const [g, gr] of (b.groups ?? []).entries())
+      check(typeof gr.title === 'string' && ['start', 'step'].every((k) => gr[k] == null || (Number.isInteger(gr[k]) && gr[k] >= 0)),
+        `${bw}, sous-bloc ${g + 1} : title requis, start/step entiers ≥ 0`)
   }
 }
 if (errors.length) {
@@ -150,8 +159,12 @@ const toWorkout = (t, id) => ({
     format: b.format,
     title: b.title ?? '',
     notes: b.notes ?? '',
-    params: b.params ?? {},
-    items: (b.items ?? []).map(({ exercise, ...it }) => ({ ...it, exercise_id: exercise ? ex(exercise) : null })),
+    // Sub-blocks are stored in params, with the positions of their items (see src/features/workouts/api.ts).
+    params: b.groups?.length
+      ? { ...b.params, groups: b.groups.map(({ title, note = '', start, step }, g) => ({
+          title, note, start, step, items: (b.items ?? []).flatMap((it, i) => (it.group === g ? [i] : [])) })) }
+      : b.params ?? {},
+    items: (b.items ?? []).map(({ exercise, group: _g, ...it }) => ({ ...it, exercise_id: exercise ? ex(exercise) : null })),
   })),
 })
 const toWrite = update ? templates : newTemplates
