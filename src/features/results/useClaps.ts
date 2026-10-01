@@ -43,7 +43,7 @@ export function useClaps(workoutId: string | undefined, me: string | undefined, 
   useOnResume(reload)
 
   async function clap(resultId: string) {
-    // Optimistic: the clap is final, a failure (own score, leaderboard off) just reloads.
+    // Optimistic; a failure (own score, leaderboard off) just reloads.
     setClaps((c) => ({
       ...c,
       given: new Set([...c.given, resultId]),
@@ -53,5 +53,15 @@ export function useClaps(workoutId: string | undefined, me: string | undefined, 
     if (error) reload()
   }
 
-  return { claps, clap }
+  async function unclap(resultId: string) {
+    setClaps((c) => {
+      const given = new Set(c.given)
+      given.delete(resultId)
+      return { ...c, given, counts: new Map(c.counts).set(resultId, Math.max(0, (c.counts.get(resultId) ?? 1) - 1)) }
+    })
+    const { error } = await supabase.from('result_claps').delete().eq('result_id', resultId).eq('from_user', me!)
+    if (error) reload()
+  }
+
+  return { claps, clap, unclap }
 }

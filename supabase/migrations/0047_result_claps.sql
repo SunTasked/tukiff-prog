@@ -1,4 +1,4 @@
--- Claps on someone else's score: one per member and score, final (no update or delete policy).
+-- Claps on someone else's score: one per member and score, the clapper can take it back (delete own).
 -- Only where the program has reactions and its leaderboard on. The athlete who receives them sees who
 -- clapped; the others only see the count (clap_counts).
 create table public.result_claps (
@@ -32,6 +32,7 @@ create policy "claps: insert own" on public.result_claps for insert to authentic
     where w.id = result_claps.workout_id and p.reactions_enabled
   )
 );
+create policy "claps: delete own" on public.result_claps for delete to authenticated using (from_user = auth.uid());
 
 -- Clap count per score of a workout, for the scores the caller can read (same rule as "results: read").
 create function public.clap_counts(p_workout uuid) returns table (result_id uuid, claps int)

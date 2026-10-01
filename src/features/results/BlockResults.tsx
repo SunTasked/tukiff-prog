@@ -30,6 +30,7 @@ type Props = {
   /** Claps of the workout (absent when the program's reactions are off). */
   claps?: Claps
   onClap: (resultId: string) => void
+  onUnclap: (resultId: string) => void
   onChange: () => void
 }
 
@@ -40,7 +41,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
  * "My score" / "Je passe" buttons + one leaderboard per gender: the RX ranked, the scaled scores under them, unranked.
  * Compact: my gender only, its RX top 3 plus me; the full board opens in a sheet.
  */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, claps, onClap, onChange }: Props) {
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, claps, onClap, onUnclap, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
@@ -67,7 +68,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
   const [clappers, setClappers] = useState<string | null>(null)
-  const clapping: Clapping | undefined = claps && { claps, me, canClap: canLog, onClap, onShow: setClappers }
+  const clapping: Clapping | undefined = claps && { claps, me, canClap: canLog, onClap, onUnclap, onShow: setClappers }
   // Blocks without score have no leaderboard, only the athletes' comments.
   const commented = results.filter((r) => r.comment?.trim())
   // Unranked blocks (coach's choice, premium): my score only, the others' in a plain list by name.
@@ -344,11 +345,12 @@ type Clapping = {
   /** I can clap others' scores when the workout is assigned to me. */
   canClap: boolean
   onClap: (resultId: string) => void
+  onUnclap: (resultId: string) => void
   onShow: (resultId: string) => void
 }
 
 /**
- * Others' scores: a grey 👏 to clap (final, once per score), coloured with the count once clapped.
+ * Others' scores: a grey 👏 to clap (once per score), coloured with the count once clapped; a tap again takes it back.
  * My score: the count, a tap shows who clapped.
  */
 function ClapButton({ result, clapping }: { result: ResultRow; clapping: Clapping }) {
@@ -361,7 +363,12 @@ function ClapButton({ result, clapping }: { result: ResultRow; clapping: Clappin
         👏{label}
       </button>
     ) : null
-  if (clapping.claps.given.has(result.id)) return <span className={`${pill} font-semibold text-lime-300`}>👏{label}</span>
+  if (clapping.claps.given.has(result.id))
+    return (
+      <button className={`${pill} font-semibold text-lime-300`} aria-label="Retirer mon clap" onClick={() => clapping.onUnclap(result.id)}>
+        👏{label}
+      </button>
+    )
   if (clapping.canClap)
     return (
       <button className={`${pill} text-zinc-500`} aria-label="Clapper ce score" onClick={() => clapping.onClap(result.id)}>
