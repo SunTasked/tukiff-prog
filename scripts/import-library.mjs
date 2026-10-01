@@ -6,10 +6,10 @@
 //   "sections": ["Benchmark CrossFit"],  // library (template) sections; exercise sections come from exercises[].section
 //   "templates": [{ "title", "section", "notes", "blocks": [{
 //     "kind": "warmup|strength|skill|metcon|accessory|cooldown", "format": "for_time|amrap|emom|tabata|sets_reps|none",
-//     "title", "notes", "params": { "time_cap_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets" },
+//     "title", "notes", "params": { "time_cap_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets",
+//                                   "scaling": "Pull-up → ring row" },
 //     "items": [{ "exercise" | "label", "reps": "21-15-9", "load_kg", "load_kg_f", "pct_1rm", "distance_m", "calories", "duration_s",
-//                 "notes", "levels": { "elite|scaled|foundation": { "exercise", "reps", "load_kg", "load_kg_f", "pct_1rm", "distance_m",
-//                 "calories", "duration_s", "note" } } }] }] }] }
+//                 "notes" }] }] }] }
 import { readFileSync } from 'node:fs'
 import { sql, target } from './lib.mjs'
 
@@ -25,9 +25,7 @@ const FORMATS = ['for_time', 'amrap', 'emom', 'tabata', 'sets_reps', 'none']
 const MEASURES = ['reps', 'load', 'distance', 'time', 'calories']
 const PARAMS = ['time_cap_s', 'duration_s', 'interval_s', 'rounds', 'work_s', 'rest_s', 'sets']
 const NUMBERS = ['load_kg', 'load_kg_f', 'pct_1rm', 'distance_m', 'calories', 'duration_s']
-const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', 'levels', ...NUMBERS]
-const LEVELS = ['elite', 'scaled', 'foundation']
-const LEVEL_KEYS = ['exercise', 'reps', 'note', ...NUMBERS]
+const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', ...NUMBERS]
 
 const q = (s) => `'${String(s).replaceAll("'", "''")}'`
 const key = (s) => String(s ?? '').trim().toLowerCase()
@@ -75,19 +73,16 @@ for (const t of templates) {
     check(KINDS.includes(b.kind), `${bw} : kind invalide (${b.kind})`)
     check(FORMATS.includes(b.format), `${bw} : format invalide (${b.format})`)
     for (const [k, v] of Object.entries(b.params ?? {}))
-      check(PARAMS.includes(k) && Number.isInteger(v) && v >= 0, `${bw} : paramètre invalide ${k}=${v}`)
+      check(
+        k === 'scaling' ? typeof v === 'string' : PARAMS.includes(k) && Number.isInteger(v) && v >= 0,
+        `${bw} : paramètre invalide ${k}=${v}`,
+      )
     for (const [j, it] of (b.items ?? []).entries()) {
       const iw = `${bw}, ligne ${j + 1}`
       for (const k of Object.keys(it)) check(ITEM_KEYS.includes(k), `${iw} : champ inconnu ${k}`)
       check(it.exercise || it.label?.trim(), `${iw} : exercise ou label requis`)
       check(!it.exercise || knownExercise(it.exercise), `${iw} : exercice inconnu "${it.exercise}" (à ajouter dans exercises)`)
       for (const k of NUMBERS) check(it[k] == null || (typeof it[k] === 'number' && it[k] >= 0), `${iw} : ${k} doit être un nombre ≥ 0`)
-      for (const [lvl, o] of Object.entries(it.levels ?? {})) {
-        check(LEVELS.includes(lvl), `${iw} : niveau invalide ${lvl} (elite, scaled, foundation)`)
-        for (const k of Object.keys(o)) check(LEVEL_KEYS.includes(k), `${iw} : champ de niveau inconnu ${lvl}.${k}`)
-        for (const k of NUMBERS) check(o[k] == null || (typeof o[k] === 'number' && o[k] >= 0), `${iw} : ${lvl}.${k} doit être un nombre ≥ 0`)
-        check(!o.exercise || knownExercise(o.exercise), `${iw} : exercice inconnu "${o.exercise}" (niveau ${lvl})`)
-      }
     }
   }
 }
@@ -156,13 +151,7 @@ const toWorkout = (t, id) => ({
     title: b.title ?? '',
     notes: b.notes ?? '',
     params: b.params ?? {},
-    items: (b.items ?? []).map(({ exercise, levels = {}, ...it }) => ({
-      ...it,
-      exercise_id: exercise ? ex(exercise) : null,
-      levels: Object.fromEntries(
-        Object.entries(levels).map(([lvl, { exercise: le, ...o }]) => [lvl, { ...o, ...(le && { exercise_id: ex(le) }) }]),
-      ),
-    })),
+    items: (b.items ?? []).map(({ exercise, ...it }) => ({ ...it, exercise_id: exercise ? ex(exercise) : null })),
   })),
 })
 const toWrite = update ? templates : newTemplates

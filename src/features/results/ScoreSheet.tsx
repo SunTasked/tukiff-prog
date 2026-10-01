@@ -1,9 +1,8 @@
 import { useState } from 'react'
 import { DurationInput, NumberInput } from '../../components/inputs'
-import { Button, Chips, ErrorText, Field, Textarea } from '../../components/ui'
+import { Button, ErrorText, Field, Textarea } from '../../components/ui'
 import { emptyScore, formatScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
-import { LEVELS, type BlockDraft, type Level } from '../../domain/workout'
-import { getItem } from '../../lib/storage'
+import type { BlockDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { RepCounter } from './RepCounter'
 import type { ResultRow } from './useWorkoutResults'
@@ -17,8 +16,8 @@ type Props = {
   type: ScoreType
   /** The block, for the reps counter of AMRAPs scored in reps. */
   block?: BlockDraft
-  /** Levels offered for this block (RX + those defined by the coach). */
-  levels: Level[]
+  /** Ranked block: the "RX" box is offered (unticked = scaled, not ranked). */
+  ranked: boolean
   existing: ResultRow | undefined
   onClose: () => void
   onSaved: () => void
@@ -27,12 +26,9 @@ type Props = {
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
 
-export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, block, levels, existing, onClose, onSaved }: Props) {
+export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, block, ranked, existing, onClose, onSaved }: Props) {
   const [score, setScore] = useState<Score>(existing ?? emptyScore())
-  const [level, setLevel] = useState<Level>(() => {
-    const preferred = (existing?.level ?? getItem('level')) as Level | null
-    return preferred && levels.includes(preferred) ? preferred : 'rx'
-  })
+  const [rx, setRx] = useState(existing?.rx ?? true)
   const [comment, setComment] = useState(existing?.comment ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
@@ -44,7 +40,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
     if (type === 'time' && !score.capped && timeCap && score.time_s! > timeCap)
       return setError('Ton temps dépasse le time cap : coche « Time cap atteint ».')
     setBusy(true)
-    const row = { ...normalizeScore(type, score), level, comment: comment.trim() || null }
+    const row = { ...normalizeScore(type, score), rx: !ranked || rx, comment: comment.trim() || null }
     const { error } = existing
       ? await supabase.from('results').update(row).eq('id', existing.id)
       : await supabase.from('results').insert({ ...row, workout_id: workoutId, block_id: blockId })
@@ -69,13 +65,6 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
         </button>
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
-        {levels.length > 1 && (
-          <Chips
-            options={Object.fromEntries(levels.map((l) => [l, LEVELS[l]])) as Record<Level, string>}
-            value={level}
-            onChange={setLevel}
-          />
-        )}
 
         {block?.params.score_note && <p className="text-sm text-zinc-400">{block.params.score_note}</p>}
 
@@ -126,6 +115,14 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
           <p className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-zinc-400">
             Ton score s’affichera : <span className="font-semibold text-zinc-100">{formatScore(type, normalizeScore(type, score))}</span>
           </p>
+        )}
+
+        {ranked && (
+          <label className="flex items-center gap-3">
+            <input type="checkbox" className="size-5 accent-lime-400" checked={rx} onChange={(e) => setRx(e.target.checked)} />
+            <span className="font-semibold">RX</span>
+            {!rx && <span className="text-sm text-zinc-400">Adapté : non classé</span>}
+          </label>
         )}
 
         <Textarea label="Commentaire" maxLength={500} value={comment} onChange={(e) => setComment(e.target.value)} />

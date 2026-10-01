@@ -37,11 +37,6 @@ export const MEASURES = {
 } as const
 export type Measure = keyof typeof MEASURES
 
-export const LEVELS = { elite: 'Elite', rx: 'RX', scaled: 'Scaled', foundation: 'Foundation' } as const
-export type Level = keyof typeof LEVELS
-export type AltLevel = Exclude<Level, 'rx'>
-export const ALT_LEVELS: AltLevel[] = ['elite', 'scaled', 'foundation']
-
 export type FormatParams = {
   time_cap_s?: number // for_time
   duration_s?: number // amrap
@@ -54,6 +49,8 @@ export type FormatParams = {
   score?: 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
   /** Coach's optional note on how to enter the score, shown next to the score type; absent = nothing. */
   score_note?: string
+  /** Coach's scaling options (markdown), shown to athletes under the block; absent = none. Not chosen at score entry. */
+  scaling?: string
   /** Minimum access level of the program member (ACCESS_LEVELS); absent = everyone. Checked by RLS. */
   min_level?: number
   /** false = scored, but out of the weekly leaderboard and without a block leaderboard. */
@@ -73,23 +70,12 @@ export const levelName = (levels: AccessLevel[] | undefined, level: number) =>
 export const isPremium = (b: Pick<BlockDraft, 'params'>) => (b.params.min_level ?? 0) > 0
 
 /** Settings that are not the format's own: kept when the format changes, ignored by score invalidation. */
-export const blockSettings = ({ min_level, ranked, score_note }: FormatParams): FormatParams => ({
+export const blockSettings = ({ min_level, ranked, score_note, scaling }: FormatParams): FormatParams => ({
   ...(score_note ? { score_note } : {}),
+  ...(scaling !== undefined ? { scaling } : {}),
   ...(min_level ? { min_level } : {}),
   ...(ranked === false ? { ranked } : {}),
 })
-
-export type LevelOverride = {
-  reps?: string
-  load_kg?: number
-  load_kg_f?: number
-  pct_1rm?: number
-  distance_m?: number
-  calories?: number
-  duration_s?: number
-  exercise_id?: string
-  note?: string
-}
 
 export type ItemDraft = {
   exercise_id: string | null
@@ -104,7 +90,6 @@ export type ItemDraft = {
   calories: number | null
   duration_s: number | null
   notes: string
-  levels: Partial<Record<AltLevel, LevelOverride>>
   /** Index of the sub-block (BlockDraft.groups) the item belongs to; null = directly in the block. */
   group: number | null
 }
@@ -192,7 +177,6 @@ export function emptyItem(exercise_id: string | null = null, label = ''): ItemDr
     calories: null,
     duration_s: null,
     notes: '',
-    levels: {},
     group: null,
   }
 }
@@ -280,29 +264,6 @@ export function formatSummary(format: Format, p: FormatParams): string {
   }
 }
 
-/** Prescription of an item for a level: the RX base with the level's overrides applied. */
-export function resolveItem(item: ItemDraft, level: Level): ItemDraft {
-  if (level === 'rx') return item
-  const o = item.levels[level]
-  if (!o) return item
-  // Distance, calories and duration are one quantity: overriding one replaces the RX's (20 cal -> 500 m).
-  const quantity = o.distance_m !== undefined || o.calories !== undefined || o.duration_s !== undefined
-  const q = (v: number | undefined, rx: number | null) => (quantity ? (v ?? null) : rx)
-  return {
-    ...item,
-    exercise_id: o.exercise_id ?? item.exercise_id,
-    reps: o.reps ?? item.reps,
-    load_kg: o.load_kg ?? item.load_kg,
-    // A level load given without a women's load applies to everyone.
-    load_kg_f: o.load_kg_f ?? (o.load_kg !== undefined ? null : item.load_kg_f),
-    pct_1rm: o.pct_1rm ?? item.pct_1rm,
-    distance_m: q(o.distance_m, item.distance_m),
-    calories: q(o.calories, item.calories),
-    duration_s: q(o.duration_s, item.duration_s),
-    notes: o.note ?? item.notes,
-  }
-}
-
 /** "43" or, with a different women's load, "43/29". */
 export const formatLoad = (kg: number, kgF: number | null) =>
   kgF != null && kgF !== kg ? `${formatNumber(kg)}/${formatNumber(kgF)}` : formatNumber(kg)
@@ -322,8 +283,6 @@ export function itemSummary(item: ItemDraft, exerciseName: (id: string) => strin
   return loads.length ? `${parts.join(' ')} @ ${loads.join(' / ')}` : parts.join(' ')
 }
 
-export const hasOverride = (o: LevelOverride | undefined) => !!o && Object.values(o).some((v) => v !== undefined)
-
 export function validateWorkout(w: WorkoutDraft): string | null {
   if (!w.title.trim()) return 'Donne un titre à la séance.'
   for (const [i, b] of w.blocks.entries()) {
@@ -333,9 +292,9 @@ export function validateWorkout(w: WorkoutDraft): string | null {
   return null
 }
 
-/** What a score depends on: kind, title and notes excluded (fixing a typo keeps the scores). */
+/** What a score depends on: kind, title, notes and scaling options excluded (fixing a typo keeps the scores). */
 const scoringSignature = (b: BlockDraft) => {
-  const { min_level: _level, ranked: _ranked, ...params } = b.params
+  const { min_level: _level, ranked: _ranked, scaling: _scaling, ...params } = b.params
   return JSON.stringify([b.format, params, b.items])
 }
 
@@ -350,13 +309,6 @@ export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): 
     else if (scoringSignature(now) !== scoringSignature(b)) changed.push(b.id)
   }
   return { changed, removed }
-}
-
-/** Levels offered for a block: RX plus the levels the coach defined in its items, in LEVELS order. */
-export function blockLevels(block: BlockDraft): Level[] {
-  return (Object.keys(LEVELS) as Level[]).filter(
-    (l) => l === 'rx' || block.items.some((i) => hasOverride(i.levels[l as AltLevel])),
-  )
 }
 
 // Faster entry ------------------------------------------------------------------
@@ -374,21 +326,11 @@ export function usedExercises(w: WorkoutDraft, blockIndex: number): string[] {
   return [...new Set(ids)]
 }
 
-/** New item for an exercise, with the loads (and level loads) of its nearest use in the workout: only the reps change. */
+/** New item for an exercise, with the loads of its nearest use in the workout: only the reps change. */
 export function prefilledItem(w: WorkoutDraft, blockIndex: number, exerciseId: string): ItemDraft {
   const prev = itemsNearest(w, blockIndex).find((i) => i.exercise_id === exerciseId)
   if (!prev) return emptyItem(exerciseId)
-  const levels: ItemDraft['levels'] = {}
-  for (const l of ALT_LEVELS) {
-    const o = prev.levels[l]
-    if (!o) continue
-    const { exercise_id, load_kg, load_kg_f, pct_1rm } = o
-    const kept = Object.fromEntries(
-      Object.entries({ exercise_id, load_kg, load_kg_f, pct_1rm }).filter(([, v]) => v !== undefined),
-    ) as LevelOverride
-    if (hasOverride(kept)) levels[l] = kept
-  }
-  return { ...emptyItem(exerciseId), load_kg: prev.load_kg, load_kg_f: prev.load_kg_f, pct_1rm: prev.pct_1rm, levels }
+  return { ...emptyItem(exerciseId), load_kg: prev.load_kg, load_kg_f: prev.load_kg_f, pct_1rm: prev.pct_1rm }
 }
 
 // Sub-blocks --------------------------------------------------------------------

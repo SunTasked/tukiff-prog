@@ -11,7 +11,6 @@ import {
   itemRuns,
   removeGroup,
   type AccessLevel,
-  type AltLevel,
   type BlockDraft,
   type Format,
   type FormatParams,
@@ -31,7 +30,7 @@ type Props = {
   onMove: (delta: -1 | 1) => void
   onRemove: () => void
   /** itemIndex null = new item, appended to the block or to sub-block `group`. */
-  onPick: (itemIndex: number | null, level?: AltLevel, group?: number | null) => void
+  onPick: (itemIndex: number | null, group?: number | null) => void
   /** The program's access levels above Base. */
   accessLevels?: AccessLevel[]
 }
@@ -63,7 +62,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
       onChange={(it) => set({ items: block.items.map((x, j) => (j === i ? it : x)) })}
       onRemove={() => set({ items: block.items.filter((_, j) => j !== i) })}
       onDuplicate={() => set({ items: block.items.toSpliced(i + 1, 0, structuredClone(item)) })}
-      onPick={(level) => onPick(i, level)}
+      onPick={() => onPick(i)}
     />
   )
 
@@ -203,7 +202,7 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 <button
                   type="button"
                   className="rounded-xl border border-dashed border-zinc-700 py-2 text-sm text-zinc-300"
-                  onClick={() => onPick(null, undefined, run.group)}
+                  onClick={() => onPick(null, run.group)}
                 >
                   + Mouvement dans le sous-bloc
                 </button>
@@ -273,6 +272,27 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
         )}
 
         <div className="mt-1 flex flex-col gap-2 border-t border-zinc-800 pt-2">
+          <label className="flex items-center gap-2 text-sm text-zinc-300">
+            <input
+              type="checkbox"
+              className="size-4 accent-lime-400"
+              checked={p.scaling !== undefined}
+              onChange={(e) => {
+                if (e.target.checked) return setParams({ scaling: '' })
+                if (!p.scaling?.trim() || confirm('Supprimer les adaptations ?')) setParams({ scaling: undefined })
+              }}
+            />
+            <span>Adaptations</span>
+          </label>
+          {p.scaling !== undefined && (
+            <textarea
+              rows={3}
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm outline-none focus:border-lime-400"
+              placeholder={'Ex. : Pull-up → ring row\nThruster 30/20 kg'}
+              value={p.scaling}
+              onChange={(e) => setParams({ scaling: e.target.value })}
+            />
+          )}
           <div>
             <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
             <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />

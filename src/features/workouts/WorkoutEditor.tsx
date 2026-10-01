@@ -12,7 +12,6 @@ import {
   usedExercises,
   validateWorkout,
   type AccessLevel,
-  type AltLevel,
   type BlockDraft,
   type WorkoutDraft,
 } from '../../domain/workout'
@@ -24,7 +23,7 @@ import { loadWorkout, saveWorkout } from './api'
 import { BlockEditor } from './BlockEditor'
 import { WorkoutView } from './WorkoutView'
 
-type PickTarget = { block: number; item: number | null; level?: AltLevel; group?: number | null }
+type PickTarget = { block: number; item: number | null; group?: number | null }
 
 export function WorkoutEditor() {
   const { id } = useParams()
@@ -93,15 +92,11 @@ export function WorkoutEditor() {
   }
 
   function onPicked(ex: Exercise) {
-    const { block: bi, item: ii, level, group } = pick!
+    const { block: bi, item: ii, group } = pick!
     const block = draft!.blocks[bi]
     let items
     if (ii === null) items = addItem(block, prefilledItem(draft!, bi, ex.id), group)
-    else if (level) {
-      items = block.items.map((it, j) =>
-        j === ii ? { ...it, levels: { ...it.levels, [level]: { ...it.levels[level], exercise_id: ex.id } } } : it,
-      )
-    } else items = block.items.map((it, j) => (j === ii ? { ...it, exercise_id: ex.id } : it))
+    else items = block.items.map((it, j) => (j === ii ? { ...it, exercise_id: ex.id } : it))
     updateBlock(bi, { ...block, items })
     setPick(null)
   }
@@ -198,7 +193,7 @@ export function WorkoutEditor() {
             onChange={(nb) => updateBlock(i, nb)}
             onMove={(d) => moveBlock(i, d)}
             onRemove={() => setBlocks(draft.blocks.filter((_, j) => j !== i))}
-            onPick={(item, level, group) => setPick({ block: i, item, level, group })}
+            onPick={(item, group) => setPick({ block: i, item, group })}
             accessLevels={draft.access_levels}
           />
         ))}

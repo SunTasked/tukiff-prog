@@ -6,7 +6,6 @@ import type {
   FormatParams,
   GroupDraft,
   ItemDraft,
-  LevelOverride,
   WorkoutDraft,
 } from '../../domain/workout'
 import type { Tables } from '../../lib/database.types'
@@ -63,7 +62,6 @@ export function toBlock(b: Tables<'workout_blocks'> & { block_items: Tables<'blo
           calories: i.calories,
           duration_s: i.duration_s,
           notes: i.notes ?? '',
-          levels: i.levels as Record<string, LevelOverride>,
           group: groupOf(index),
         }),
       ),

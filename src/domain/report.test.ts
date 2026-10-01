@@ -6,7 +6,7 @@ const res = (block_id: string, athlete_id: string, extra: Partial<ReportResult> 
   ...score,
   block_id,
   athlete_id,
-  level: 'rx',
+  rx: true,
   comment: null,
   gender: 'male',
   ...extra,
@@ -47,7 +47,7 @@ describe('buildReport', () => {
   const results = [
     res('b1', 'me', { load_kg: 100, comment: 'dur' }),
     res('b1', 'x', { load_kg: 120 }),
-    res('b1', 'y', { load_kg: 130, level: 'scaled' }),
+    res('b1', 'y', { load_kg: 130, rx: false }),
     res('b1', 'z', { load_kg: 140, gender: 'female' }),
     res('b3', 'me'),
   ]
@@ -63,9 +63,11 @@ describe('buildReport', () => {
     ])
   })
 
-  it('ranks within the same gender and level', () => {
+  it('ranks among the RX of the same gender, never a scaled score', () => {
     const row = sessions[1].rows[0]
     expect(row).toMatchObject({ status: 'done', score: '100 kg', rank: { rank: 2, of: 2 }, comment: 'dur', emoji: '🔥', record: true })
+    const scaled = buildReport('y', workouts, results, new Set(), new Map(), [])[1].rows[0]
+    expect(scaled).toMatchObject({ score: '130 kg', rx: false, rank: undefined })
   })
 
   it('marks skipped blocks, done blocks without score, and records only on the same day', () => {
