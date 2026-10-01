@@ -62,9 +62,9 @@ describe('multi-day workouts', () => {
 describe('seenAgo', () => {
   const now = new Date(2026, 9, 1, 9, 0)
   it('counts calendar days', () => {
-    expect(seenAgo(new Date(2026, 9, 1, 1, 0).toISOString(), now)).toBe('aujourd’hui')
+    expect(seenAgo(new Date(2026, 9, 1, 1, 0).toISOString(), now)).toBe('auj.')
     expect(seenAgo(new Date(2026, 8, 30, 23, 0).toISOString(), now)).toBe('hier')
-    expect(seenAgo(new Date(2026, 8, 28, 10, 0).toISOString(), now)).toBe('il y a 3 j')
-    expect(seenAgo(new Date(2026, 5, 1).toISOString(), now)).toBe('il y a 4 mois')
+    expect(seenAgo(new Date(2026, 8, 28, 10, 0).toISOString(), now)).toBe('3 j')
+    expect(seenAgo(new Date(2026, 5, 1).toISOString(), now)).toBe('4 mois')
   })
 })
