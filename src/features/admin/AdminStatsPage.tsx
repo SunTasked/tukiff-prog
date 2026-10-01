@@ -33,7 +33,7 @@ type Stats = {
   avg_view_ms: number | null
   scores: number
   scorers: number
-  reactions: number
+  claps: number
   records: number
   daily: { day: string; users: number; views: number }[]
   load_slots: { at: string; avg_ms: number; max_ms: number; n: number }[]
@@ -184,7 +184,7 @@ export function AdminStatsPage() {
             <Tile label="Ouverture de l’appli" value={seconds(s.avg_launch_ms)} hint="lancement → appli utilisable" />
             <Tile label="Chargement d’un écran" value={seconds(s.avg_view_ms)} hint="moyenne, données comprises" />
             <Tile label="Scores saisis" value={s.scores} hint={`par ${s.scorers} membre${s.scorers > 1 ? 's' : ''}`} />
-            <Tile label="Réactions" value={s.reactions} />
+            <Tile label="Claps" value={s.claps} />
             <Tile label="Records ajoutés" value={s.records} />
             <Tile label="Erreurs" value={s.errors.reduce((n, e) => n + e.count, 0)} hint="remontées par l’appli" />
           </div>

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useRef, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
@@ -39,7 +39,7 @@ type Props = {
   skipped: boolean
   /** Other athletes' scores (off when the program's leaderboard is disabled, for athletes). */
   showBoard: boolean
-  /** Leaders of the program's weekly leaderboard (LEADER badge). */
+  /** Leaders of the program's weekly leaderboard ("L" badge). */
   leaders: Set<string>
   /** Claps of the workout (absent when the program's reactions are off). */
   claps?: Claps
@@ -326,8 +326,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
       {clapping && clappers && (
         <PeopleSheet
-          title={`👏 Claps (${clapping.claps.received.get(clappers)?.length ?? 0})`}
-          people={clapping.claps.received.get(clappers) ?? []}
+          title={`👏 Claps (${clapping.claps.by.get(clappers)?.length ?? 0})`}
+          people={clapping.claps.by.get(clappers) ?? []}
           onClose={() => setClappers(null)}
         />
       )}
@@ -396,7 +396,7 @@ function Board({
               )}
               <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
               <AthleteName profile={r.profiles} />
-              {leaders.has(r.athlete_id) && <LeaderBadge />}
+              {leaders.has(r.athlete_id) && <LeaderBadge short />}
               <span className="flex-1" />
               {clapping && <ClapButton resultId={r.id} mine={r.athlete_id === me} clapping={clapping} />}
               {rank !== null && <RxTag />}
@@ -481,32 +481,58 @@ type Clapping = {
   onShow: (resultId: string) => void
 }
 
+/** Tap runs onTap; a long press (500 ms) runs onLong instead. */
+function useLongPress(onTap: () => void, onLong: () => void) {
+  const timer = useRef<number | undefined>(undefined)
+  const fired = useRef(false)
+  const cancel = () => window.clearTimeout(timer.current)
+  return {
+    onPointerDown: () => {
+      fired.current = false
+      timer.current = window.setTimeout(() => {
+        fired.current = true
+        onLong()
+      }, 500)
+    },
+    onPointerUp: cancel,
+    onPointerLeave: cancel,
+    onPointerCancel: cancel,
+    onContextMenu: (e: React.MouseEvent) => e.preventDefault(),
+    onClick: () => {
+      if (!fired.current) onTap()
+    },
+  }
+}
+
 /**
- * Others' scores: a grey 👏 to clap (once per score), coloured with the count once clapped; a tap again takes it back.
- * My score: the count, a tap shows who clapped.
+ * Others' scores: a grey 👏 to clap (once per score), coloured with the count once clapped; a tap again takes it back,
+ * a long press shows who clapped. My score (or when I can't clap): the count, a tap shows who clapped.
  */
 function ClapButton({ resultId, mine, clapping }: { resultId: string; mine: boolean; clapping: Clapping }) {
   const count = clapping.claps.counts.get(resultId) ?? 0
   const label = count > 0 ? ` ${count}` : ''
-  const pill = 'shrink-0 rounded-full px-1.5 py-0.5 text-xs leading-none tabular-nums'
-  if (mine)
+  const pill = 'shrink-0 rounded-full px-1.5 py-0.5 text-xs leading-none tabular-nums select-none [-webkit-touch-callout:none]'
+  const show = () => {
+    if (count > 0) clapping.onShow(resultId)
+  }
+  const given = clapping.claps.given.has(resultId)
+  const press = useLongPress(() => (given ? clapping.onUnclap(resultId) : clapping.onClap(resultId)), show)
+  if (mine || !clapping.canClap)
     return count > 0 ? (
-      <button className={`${pill} bg-zinc-800 text-zinc-200`} aria-label="Voir qui a clappé" onClick={() => clapping.onShow(resultId)}>
+      <button className={`${pill} bg-zinc-800 text-zinc-200`} aria-label="Voir qui a clappé" onClick={show}>
         👏{label}
       </button>
     ) : null
-  if (clapping.claps.given.has(resultId))
+  if (given)
     return (
-      <button className={`${pill} font-semibold text-lime-300`} aria-label="Retirer mon clap" onClick={() => clapping.onUnclap(resultId)}>
+      <button className={`${pill} font-semibold text-lime-300`} aria-label="Retirer mon clap (appui long : qui a clappé)" {...press}>
         👏{label}
       </button>
     )
-  if (clapping.canClap)
-    return (
-      <button className={`${pill} text-zinc-500`} aria-label="Clapper ce score" onClick={() => clapping.onClap(resultId)}>
-        <span className="opacity-50 grayscale">👏</span>
-        {label}
-      </button>
-    )
-  return count > 0 ? <span className={`${pill} text-zinc-400`}>👏{label}</span> : null
+  return (
+    <button className={`${pill} text-zinc-500`} aria-label="Clapper ce score (appui long : qui a clappé)" {...press}>
+      <span className="opacity-50 grayscale">👏</span>
+      {label}
+    </button>
+  )
 }

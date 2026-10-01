@@ -28,7 +28,7 @@ Les scores ne sont saisis que sur les séances déjà publiées : relancer le sc
 
 ## Programmes
 
-| Programme | Owner | Contributeurs | Membres | Réactions | Classement |
+| Programme | Owner | Contributeurs | Membres | Claps | Classement |
 |---|---|---|---|---|---|
 | CrossFit (équivalent de « Kanda WOD » en prod) | c1 | c2 | tous | oui | oui |
 | Haltéro | c1 | | c1, a1, a2, a4, a10 | non | **non** |
@@ -105,7 +105,6 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-26 | Top 3 RX + ma ligne (même adaptée), classement complet en modale avec onglets Hommes/Femmes ouverts sur mon genre | a2 (H), a1 (F) | Josh |
 | UC-27 | Classement de la semaine (somme des rangs, bloc non scoré = dernier + 1) + badge LEADER par genre | a2 | semaines -1 et en cours ; Hugo et Léa attendus en tête |
 | UC-28 | Classement désactivé : l'athlète ne voit que son score, pas de classement hebdo ; le coach voit tout | a2 vs c1 | Haltéro |
-| UC-29 | Réactions à côté du titre : seulement les émojis utilisés + « + » (5 visages), masqué une fois réagi ; tap = liste avec « − » pour retirer la sienne | a2 | CrossFit ; absent sur Hyrox et Haltéro |
 
 ### Coach et admin
 

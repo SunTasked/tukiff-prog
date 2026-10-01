@@ -165,7 +165,7 @@ export function ProgramPage() {
             {check(
               program.reactions_enabled,
               () => run(supabase.from('programs').update({ reactions_enabled: !program.reactions_enabled }).eq('id', id!)),
-              'Réactions emoji sur les blocs',
+              'Claps 👏 sur les scores',
             )}
             {check(
               program.leaderboard_enabled,
@@ -173,7 +173,7 @@ export function ProgramPage() {
               'Classement des scores',
             )}
             <p className="text-xs text-zinc-500">
-              Décoché : emojis masqués pour tous ; sans classement, chaque athlète ne voit que son score (les coachs voient tout).
+              Décoché : claps masqués pour tous ; sans classement, chaque athlète ne voit que son score (les coachs voient tout).
             </p>
           </Card>
         )}
