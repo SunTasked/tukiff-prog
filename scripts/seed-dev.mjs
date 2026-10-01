@@ -157,7 +157,7 @@ const warmup = () =>
   block('warmup', 'none', {}, [item('Row', { calories: 15 }), item('Air Squat', { reps: '20' }), item('Push-up', { reps: '10' })], { notes: '2 rounds, rythme tranquille' })
 const newIds = (blocks) => blocks.map((b) => ({ ...b, id: crypto.randomUUID() }))
 
-// Block sponsor (UC-40): kept across reseeds (sponsors belong to no account).
+// Block sponsor (UC-41): kept across reseeds (sponsors belong to no account).
 const sponsorId = (
   must(await c1.from('sponsors').select('id').eq('name', 'Kanda Fitness').maybeSingle()) ??
   must(await c1.from('sponsors').insert({ name: 'Kanda Fitness' }).select().single())
