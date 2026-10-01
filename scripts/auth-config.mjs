@@ -41,6 +41,7 @@ await api('/config/auth', {
     uri_allow_list: [
       'https://tukiff-prog-*-tukiff.vercel.app/**', // Vercel previews
       'https://tukiff-prog.vercel.app/**',
+      'https://tukiff-prog-staging.vercel.app/**', // stable staging (branch staging)
       'http://localhost:5173/**',
     ].join(','),
     disable_signup: true, // accounts are created only by the join Edge Function

@@ -4,6 +4,7 @@ PWA de programmation CrossFit pour un petit groupe (coachs et athlètes), en fra
 
 - **Production** : https://tukiff-prog.vercel.app (branche `main`)
 - **Previews** : chaque branche poussée est déployée par Vercel (`tukiff-prog-git-<branche>-tukiff.vercel.app`)
+- **Staging** : https://tukiff-prog-staging.vercel.app, branche `staging` recopiée depuis `main` à chaque push (workflow `staging.yml`), sur Supabase staging
 
 ## Stack
 
