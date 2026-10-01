@@ -6,7 +6,7 @@
 //   "sections": ["Benchmark CrossFit"],  // library (template) sections; exercise sections come from exercises[].section
 //   "templates": [{ "title", "section", "notes", "blocks": [{
 //     "kind": "warmup|strength|skill|metcon|accessory|cooldown", "format": "for_time|amrap|emom|tabata|sets_reps|none",
-//     "title", "notes", "params": { "time_cap_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets",
+//     "title", "notes", "params": { "time_cap_s", "stage_s", "stage_step_s", "duration_s", "interval_s", "rounds", "work_s", "rest_s", "sets",
 //                                   "scaling": "Pull-up → ring row", "score": "time|rounds_reps|load|reps|none", "score_note" },
 //     "groups": [{ "title": "3 rounds", "note", "start": 3, "step": 0 }],  // sub-blocks; items join one with "group": index
 //     "items": [{ "exercise" | "label", "reps": "21-15-9", "load_kg", "load_kg_f", "pct_1rm", "distance_m", "calories", "duration_s",
@@ -24,7 +24,7 @@ const data = JSON.parse(readFileSync(file, 'utf8'))
 const KINDS = ['warmup', 'strength', 'skill', 'metcon', 'accessory', 'cooldown']
 const FORMATS = ['for_time', 'amrap', 'emom', 'tabata', 'sets_reps', 'none']
 const MEASURES = ['reps', 'load', 'distance', 'time', 'calories']
-const PARAMS = ['time_cap_s', 'duration_s', 'interval_s', 'rounds', 'work_s', 'rest_s', 'sets']
+const PARAMS = ['time_cap_s', 'stage_s', 'stage_step_s', 'duration_s', 'interval_s', 'rounds', 'work_s', 'rest_s', 'sets']
 const NUMBERS = ['load_kg', 'load_kg_f', 'pct_1rm', 'distance_m', 'calories', 'duration_s']
 const ITEM_KEYS = ['exercise', 'label', 'reps', 'notes', 'group', ...NUMBERS]
 const SCORES = ['time', 'rounds_reps', 'load', 'reps', 'none']

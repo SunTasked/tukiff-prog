@@ -113,6 +113,14 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 <Field label="Time cap" className="col-span-2">
                   <DurationPicker value={p.time_cap_s} onChange={(v) => setParams({ time_cap_s: v ?? undefined })} />
                 </Field>
+                <Field label="1er palier" className="col-span-3 sm:col-span-1">
+                  <DurationPicker value={p.stage_s} onChange={(v) => setParams({ stage_s: v || undefined })} />
+                </Field>
+                {!!p.stage_s && (
+                  <Field label="Paliers suivants" className="col-span-3 sm:col-span-2">
+                    <DurationPicker value={p.stage_step_s} onChange={(v) => setParams({ stage_step_s: v || undefined })} />
+                  </Field>
+                )}
               </>
             )}
             {block.format === 'amrap' && (

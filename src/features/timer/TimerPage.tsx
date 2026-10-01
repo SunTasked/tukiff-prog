@@ -37,9 +37,19 @@ export function TimerPage() {
       <Chips options={TIMER_MODES} value={c.mode} onChange={(m: TimerMode) => setConfig(defaultTimer(m))} />
 
       {c.mode === 'for_time' && (
-        <Field label="Time cap (optionnel)">
-          <DurationPicker size="lg" value={c.cap_s} onChange={(v) => setConfig({ ...c, cap_s: v })} />
-        </Field>
+        <>
+          <Field label="Time cap (optionnel)">
+            <DurationPicker size="lg" value={c.cap_s} onChange={(v) => setConfig({ ...c, cap_s: v })} />
+          </Field>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="1er palier (optionnel)">
+              <DurationPicker value={c.stage_s} onChange={(v) => setConfig({ ...c, stage_s: v || null })} />
+            </Field>
+            <Field label="Paliers suivants">
+              <DurationPicker value={c.stage_step_s} onChange={(v) => setConfig({ ...c, stage_step_s: v || null })} />
+            </Field>
+          </div>
+        </>
       )}
       {c.mode === 'amrap' && (
         <Field label="Durée">
@@ -80,7 +90,7 @@ export function TimerPage() {
         ▶ Démarrer
       </Button>
       <p className="text-xs text-zinc-500">
-        10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
+        10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle ou palier. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
       </p>
     </div>
   )
@@ -158,6 +168,11 @@ function RunningTimer({ config, title, onExit }: { config: TimerConfig; title: s
         {state.round !== null && (
           <p className="text-2xl text-zinc-300">
             Round <b>{state.round}</b> / {state.rounds}
+          </p>
+        )}
+        {state.stage !== null && (
+          <p className="text-2xl text-zinc-300">
+            Palier <b>{state.stage}</b> · fin dans {formatDuration(state.stage_left_s ?? 0)}
           </p>
         )}
         {state.progress !== null && (

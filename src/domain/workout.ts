@@ -39,6 +39,10 @@ export type Measure = keyof typeof MEASURES
 
 export type FormatParams = {
   time_cap_s?: number // for_time
+  /** for_time in stages: end of the first stage; the cap is extended by stage_step_s each time a stage is cleared. */
+  stage_s?: number
+  /** for_time: length of the following stages; absent = stage_s. */
+  stage_step_s?: number
   duration_s?: number // amrap
   interval_s?: number // emom
   rounds?: number // emom, tabata, for_time (rounds for time)
@@ -246,7 +250,9 @@ export function formatSummary(format: Format, p: FormatParams): string {
   switch (format) {
     case 'for_time': {
       const rounds = p.rounds && p.rounds > 1 ? `${p.rounds} rounds ` : ''
-      return `${rounds}For Time${p.time_cap_s ? ` · cap ${shortDuration(p.time_cap_s)}` : ''}`
+      const step = p.stage_step_s && p.stage_step_s !== p.stage_s ? ` +${shortDuration(p.stage_step_s)}` : ''
+      const stages = p.stage_s ? ` · paliers ${shortDuration(p.stage_s)}${step}` : ''
+      return `${rounds}For Time${p.time_cap_s ? ` · cap ${shortDuration(p.time_cap_s)}` : ''}${stages}`
     }
     case 'amrap':
       return `AMRAP${p.duration_s ? ` ${shortDuration(p.duration_s)}` : ''}`
