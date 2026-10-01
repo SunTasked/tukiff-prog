@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest'
 import {
   addItem,
   blockHeading,
-  blockLevels,
   itemRuns,
   removeGroup,
   emptyItem,
@@ -15,7 +14,6 @@ import {
   parseDuration,
   parseNumber,
   prefilledItem,
-  resolveItem,
   shortDuration,
   suggestedKind,
   usedExercises,
@@ -75,7 +73,7 @@ describe('formatSummary', () => {
 describe('items', () => {
   const names: Record<string, string> = { t: 'Thruster', p: 'Pull-up', r: 'Ring Row' }
   const lookup = (id: string) => names[id]
-  const thruster = { ...emptyItem('t'), reps: '21-15-9', load_kg: 43, levels: { scaled: { load_kg: 30 }, foundation: { load_kg: 15, reps: '15-12-9' } } }
+  const thruster = { ...emptyItem('t'), reps: '21-15-9', load_kg: 43 }
 
   it('summarizes', () => {
     expect(itemSummary(thruster, lookup)).toBe('21-15-9 Thruster @ 43 kg')
@@ -83,30 +81,15 @@ describe('items', () => {
     expect(itemSummary({ ...emptyItem('p'), reps: '5', pct_1rm: 80, load_kg: 100 }, lookup)).toBe('5 Pull-up @ 100 kg / 80 %')
   })
 
-  it('applies level overrides on top of RX', () => {
-    expect(resolveItem(thruster, 'rx').load_kg).toBe(43)
-    expect(resolveItem(thruster, 'elite').load_kg).toBe(43)
-    expect(resolveItem(thruster, 'scaled')).toMatchObject({ load_kg: 30, reps: '21-15-9' })
-    expect(resolveItem(thruster, 'foundation')).toMatchObject({ load_kg: 15, reps: '15-12-9' })
-    const pullup = { ...emptyItem('p'), reps: '10', levels: { foundation: { exercise_id: 'r' } } }
-    expect(itemSummary(resolveItem(pullup, 'foundation'), lookup)).toBe('10 Ring Row')
-    const row = { ...emptyItem(null, 'Row'), calories: 20, levels: { scaled: { calories: 15 }, foundation: { distance_m: 500 } } }
-    expect(itemSummary(resolveItem(row, 'scaled'), lookup)).toBe('15 cal Row')
-    expect(itemSummary(resolveItem(row, 'foundation'), lookup)).toBe('500 m Row')
-  })
-
   it('shows the women\'s load when it differs', () => {
     const ohs = { ...emptyItem('t'), reps: '21', load_kg: 43, load_kg_f: 29 }
     expect(itemSummary(ohs, lookup)).toBe('21 Thruster @ 43/29 kg')
     expect(itemSummary({ ...ohs, load_kg_f: 43 }, lookup)).toBe('21 Thruster @ 43 kg')
-    const levels = { scaled: { load_kg: 30 }, foundation: { load_kg_f: 15 } }
-    expect(resolveItem({ ...ohs, levels }, 'scaled')).toMatchObject({ load_kg: 30, load_kg_f: null })
-    expect(resolveItem({ ...ohs, levels }, 'foundation')).toMatchObject({ load_kg: 43, load_kg_f: 15 })
   })
 })
 
 describe('faster entry', () => {
-  const ohs = { ...emptyItem('ohs'), reps: '21', load_kg: 43, load_kg_f: 29, levels: { scaled: { load_kg: 30, reps: '15' } } }
+  const ohs = { ...emptyItem('ohs'), reps: '21', load_kg: 43, load_kg_f: 29 }
   const w: WorkoutDraft = {
     title: 'Josh',
     notes: '',
@@ -122,7 +105,7 @@ describe('faster entry', () => {
   })
 
   it('prefills loads from the nearest use, not the reps', () => {
-    expect(prefilledItem(w, 1, 'ohs')).toEqual({ ...emptyItem('ohs'), load_kg: 43, load_kg_f: 29, levels: { scaled: { load_kg: 30 } } })
+    expect(prefilledItem(w, 1, 'ohs')).toEqual({ ...emptyItem('ohs'), load_kg: 43, load_kg_f: 29 })
     expect(prefilledItem(w, 1, 'new')).toEqual(emptyItem('new'))
   })
 })
@@ -169,19 +152,11 @@ describe('invalidatedBlocks', () => {
     e.blocks[1].params = { time_cap_s: 600 }
     expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
-  it('keeps the scores when only the access level or the ranking changes', () => {
+  it('keeps the scores when only the access level, the ranking or the scaling options change', () => {
     const d = base()
-    d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false }
+    d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false, scaling: 'Ring row' }
     expect(invalidatedBlocks(base(), d)).toEqual({ changed: [], removed: [] })
   })
-})
-
-it('offers only RX and the levels defined in the block', () => {
-  const b = { ...newBlock('metcon', 'x'), items: [emptyItem('t'), { ...emptyItem('p'), levels: { foundation: { reps: '5' } } }] }
-  expect(blockLevels(b)).toEqual(['rx', 'foundation'])
-  b.items[0] = { ...emptyItem('t'), levels: { elite: { load_kg: 60 }, scaled: {} } }
-  expect(blockLevels(b)).toEqual(['elite', 'rx', 'foundation'])
-  expect(blockLevels(newBlock('warmup', 'w'))).toEqual(['rx'])
 })
 
 describe('sub-blocks', () => {

@@ -1,15 +1,7 @@
 import { useState } from 'react'
 import { DurationPicker, NumberInput } from '../../components/inputs'
 import { Field, SmallInput } from '../../components/ui'
-import {
-  ALT_LEVELS,
-  LEVELS,
-  hasOverride,
-  type AltLevel,
-  type ItemDraft,
-  type LevelOverride,
-  type Measure,
-} from '../../domain/workout'
+import type { ItemDraft, Measure } from '../../domain/workout'
 
 type Props = {
   item: ItemDraft
@@ -18,27 +10,14 @@ type Props = {
   onChange: (item: ItemDraft) => void
   onRemove: () => void
   onDuplicate: () => void
-  /** Opens the exercise picker for the item itself (level undefined) or a level substitution. */
-  onPick: (level?: AltLevel) => void
+  /** Opens the exercise picker for the item. */
+  onPick: () => void
 }
 
 export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onDuplicate, onPick }: Props) {
   const [expanded, setExpanded] = useState(false)
   const set = (patch: Partial<ItemDraft>) => onChange({ ...item, ...patch })
   const show = (m: Measure, value: unknown) => expanded || measure === m || value != null
-
-  function setOverride(level: AltLevel, patch: Partial<LevelOverride>) {
-    const next: LevelOverride = { ...item.levels[level], ...patch }
-    for (const k of Object.keys(next) as (keyof LevelOverride)[]) {
-      if (next[k] === undefined || next[k] === '') delete next[k]
-    }
-    const levels = { ...item.levels }
-    if (hasOverride(next)) levels[level] = next
-    else delete levels[level]
-    set({ levels })
-  }
-
-  const levelCount = ALT_LEVELS.filter((l) => hasOverride(item.levels[l])).length
 
   return (
     <div className="rounded-xl border border-zinc-800 p-3">
@@ -92,74 +71,13 @@ export function ItemEditor({ item, measure, nameOf, onChange, onRemove, onDuplic
       </div>
 
       {expanded && (
-        <>
-          <Field label="Note" className="mt-2">
-            <SmallInput value={item.notes} onChange={(e) => set({ notes: e.target.value })} />
-          </Field>
-          <p className="mt-3 text-xs text-zinc-500">Niveaux (seulement ce qui diffère du RX)</p>
-          {ALT_LEVELS.map((level) => {
-            const o = item.levels[level] ?? {}
-            return (
-              <div key={level} className="mt-2 rounded-lg bg-zinc-950 p-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="font-semibold">{LEVELS[level]}</span>
-                  <button type="button" className="truncate text-lime-400" onClick={() => onPick(level)}>
-                    {o.exercise_id ? `→ ${nameOf(o.exercise_id)}` : 'Remplacer l’exercice'}
-                  </button>
-                </div>
-                <div className="mt-1 grid grid-cols-3 gap-2">
-                  <Field label="Reps">
-                    <SmallInput value={o.reps ?? ''} onChange={(e) => setOverride(level, { reps: e.target.value })} />
-                  </Field>
-                  <Field label={o.load_kg_f != null ? 'Charge H (kg)' : 'Charge (kg)'}>
-                    <NumberInput value={o.load_kg} onChange={(v) => setOverride(level, { load_kg: v ?? undefined })} />
-                  </Field>
-                  {(item.load_kg_f != null || o.load_kg_f != null) && (
-                    <Field label="Charge F (kg)">
-                      <NumberInput value={o.load_kg_f} onChange={(v) => setOverride(level, { load_kg_f: v ?? undefined })} />
-                    </Field>
-                  )}
-                  {item.pct_1rm != null && (
-                    <Field label="% 1RM">
-                      <NumberInput value={o.pct_1rm} onChange={(v) => setOverride(level, { pct_1rm: v ?? undefined })} />
-                    </Field>
-                  )}
-                  {(measure === 'distance' || item.distance_m != null) && (
-                    <Field label="Distance (m)">
-                      <NumberInput value={o.distance_m} onChange={(v) => setOverride(level, { distance_m: v ?? undefined })} />
-                    </Field>
-                  )}
-                  {(measure === 'calories' || item.calories != null) && (
-                    <Field label="Calories">
-                      <NumberInput value={o.calories} onChange={(v) => setOverride(level, { calories: v ?? undefined })} />
-                    </Field>
-                  )}
-                  {(measure === 'time' || item.duration_s != null) && (
-                    <Field label="Durée" className="col-span-2">
-                      <DurationPicker value={o.duration_s ?? null} onChange={(v) => setOverride(level, { duration_s: v ?? undefined })} />
-                    </Field>
-                  )}
-                  <Field label="Note">
-                    <SmallInput value={o.note ?? ''} onChange={(e) => setOverride(level, { note: e.target.value })} />
-                  </Field>
-                </div>
-                {o.exercise_id && (
-                  <button
-                    type="button"
-                    className="mt-1 text-xs text-zinc-500 underline"
-                    onClick={() => setOverride(level, { exercise_id: undefined })}
-                  >
-                    Annuler le remplacement
-                  </button>
-                )}
-              </div>
-            )
-          })}
-        </>
+        <Field label="Note" className="mt-2">
+          <SmallInput value={item.notes} onChange={(e) => set({ notes: e.target.value })} />
+        </Field>
       )}
 
       <button type="button" className="mt-2 text-xs text-zinc-400" onClick={() => setExpanded(!expanded)}>
-        {expanded ? '▴ Moins' : `▾ Plus (note, niveaux${levelCount ? ` · ${levelCount}` : ''})`}
+        {expanded ? '▴ Moins' : '▾ Plus (note)'}
       </button>
     </div>
   )

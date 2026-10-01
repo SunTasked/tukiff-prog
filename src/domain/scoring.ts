@@ -1,6 +1,6 @@
-// Score types, formatting and leaderboard ranking. Levels and genders are never mixed: rank within one level.
+// Score types, formatting and leaderboard ranking. Genders are never mixed; only RX scores are ranked.
 import { GENDERS, type Gender } from './profile'
-import { LEVELS, formatDuration, type Format, type FormatParams, type Level } from './workout'
+import { formatDuration, type Format, type FormatParams } from './workout'
 
 export type ScoreType = 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
 
@@ -124,38 +124,27 @@ export function rankResults<T extends Score>(type: ScoreType, list: T[]): { resu
   })
 }
 
+/** A result as ranked in a board: its rank among the RX, null when scaled (shown, never ranked). */
+export type BoardRow<T> = { result: T; rank: number | null }
+
 /**
- * One leaderboard per gender (men first, skipping empty ones). Within a board, levels stay stacked in LEVELS order
- * (every elite above every RX, ...) and each row keeps its rank within its level.
+ * One leaderboard per gender (men first, skipping empty ones): the RX ranked, then the scaled scores unranked in entry
+ * order (done in different conditions, they can't be compared).
  */
-export function leaderboards<T extends Score & { level: string; gender: Gender | null }>(type: ScoreType, list: T[]) {
+export function leaderboards<T extends Score & { rx: boolean; gender: Gender | null; created_at?: string }>(type: ScoreType, list: T[]) {
   return (Object.keys(GENDERS) as Gender[])
-    .map((gender) => ({
-      gender,
-      rows: (Object.keys(LEVELS) as Level[]).flatMap((level) =>
-        rankResults(type, list.filter((r) => r.level === level && (r.gender ?? 'male') === gender)).map((row) => ({ ...row, level })),
-      ),
-    }))
+    .map((gender) => {
+      const mine = list.filter((r) => (r.gender ?? 'male') === gender)
+      const scaled = mine.filter((r) => !r.rx).sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+      const rows: BoardRow<T>[] = [...rankResults(type, mine.filter((r) => r.rx)), ...scaled.map((result) => ({ result, rank: null }))]
+      return { gender, rows }
+    })
     .filter((b) => b.rows.length > 0)
 }
 
-/** Compact block board: the top 3 of each level (medals), plus my row when I'm further down. */
-export function compactRows<R extends { level: Level; result: { athlete_id: string } }>(rows: R[], me: string | undefined): R[] {
-  const seen = new Map<Level, number>()
-  return rows.filter((row) => {
-    const n = (seen.get(row.level) ?? 0) + 1
-    seen.set(row.level, n)
-    return n <= 3 || row.result.athlete_id === me
-  })
-}
-
-/** Place of each row in a gender board with levels stacked: every RX comes after every elite, ties keep their rank. */
-export function boardPlaces<R extends { rank: number; level: Level }>(rows: R[]): number[] {
-  const firstOfLevel = new Map<Level, number>()
-  rows.forEach((row, i) => {
-    if (!firstOfLevel.has(row.level)) firstOfLevel.set(row.level, i)
-  })
-  return rows.map((row) => firstOfLevel.get(row.level)! + row.rank)
+/** Compact block board: the RX top 3 (medals), plus my row when I'm further down or scaled. */
+export function compactRows<R extends BoardRow<{ athlete_id: string }>>(rows: R[], me: string | undefined): R[] {
+  return rows.filter((row, i) => (row.rank !== null && i < 3) || row.result.athlete_id === me)
 }
 
 export type WeeklyPlace = { place: number; missed: boolean; points: number; counted: boolean }
@@ -168,27 +157,28 @@ export const weeklyPoints = (place: number) => Math.max(0, 11 - place)
 export const WEEKLY_MAX = WEEKLY_COUNTED * weeklyPoints(1)
 
 /**
- * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their place in the block's
- * board (levels stacked), worth 10 points for the 1st down to 1 for the 10th, 0 beyond or when not scored. The total
+ * Weekly leaderboard, one per gender: on each scored block of the week an athlete gets their RX rank in the block's
+ * board, worth 10 points for the 1st down to 1 for the 10th, 0 beyond or when not scored or scaled. The total
  * is the sum of the athlete's 3 best blocks, highest wins. A bonus block (challenge of the week) never adds points: it
  * only breaks ties, best place first, athletes who didn't do it last. Blocks without score, or that nobody of this
  * gender scored, don't count.
  */
-export function weeklyLeaderboards<T extends Score & { level: string; gender: Gender | null; athlete_id: string }>(
+export function weeklyLeaderboards<T extends Score & { rx: boolean; gender: Gender | null; athlete_id: string }>(
   blocks: { type: ScoreType; results: T[]; bonus?: boolean; label?: string }[],
 ) {
   return (Object.keys(GENDERS) as Gender[])
     .map((gender) => {
       const scored = blocks
         .filter((b) => b.type !== 'none')
-        .map((b) => ({ bonus: !!b.bonus, label: b.label ?? '', rows: leaderboards(b.type, b.results).find((x) => x.gender === gender)?.rows ?? [] }))
+        .map((b) => ({
+          bonus: !!b.bonus,
+          label: b.label ?? '',
+          rows: rankResults(b.type, b.results.filter((r) => r.rx && (r.gender ?? 'male') === gender)),
+        }))
         .filter((b) => b.rows.length > 0)
       const athletes = new Map<string, T>()
       for (const { rows } of scored) for (const { result } of rows) if (!athletes.has(result.athlete_id)) athletes.set(result.athlete_id, result)
-      const placesByBoard = scored.map(({ rows }) => {
-        const places = boardPlaces(rows)
-        return new Map(rows.map((row, i) => [row.result.athlete_id, places[i]]))
-      })
+      const placesByBoard = scored.map(({ rows }) => new Map(rows.map((row) => [row.result.athlete_id, row.rank])))
       const totals = [...athletes.values()].map((athlete) => {
         const places: WeeklyPlace[] = placesByBoard.map((byAthlete) => {
           const place = byAthlete.get(athlete.athlete_id)

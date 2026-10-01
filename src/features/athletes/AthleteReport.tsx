@@ -11,7 +11,7 @@ import {
   type SessionStatus,
 } from '../../domain/report'
 import { isRanked, scoreType } from '../../domain/scoring'
-import { LEVELS, formatSummary, type Format, type FormatParams } from '../../domain/workout'
+import { formatSummary, type Format, type FormatParams } from '../../domain/workout'
 import { supabase, type PersonalRecord } from '../../lib/supabase'
 
 const PERIODS = { '7': '7 jours', '30': '30 jours' }
@@ -187,8 +187,8 @@ function Row({ row }: { row: ReportRow }) {
       </div>
       {(row.status === 'done' || row.emoji || row.record) && (
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400">
-          {row.level && row.block.type !== 'none' && (
-            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300 uppercase">{LEVELS[row.level]}</span>
+          {row.rx === false && row.block.type !== 'none' && (
+            <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300 uppercase">Adapté</span>
           )}
           {row.rank && (
             <span>

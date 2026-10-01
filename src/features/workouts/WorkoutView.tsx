@@ -3,27 +3,21 @@ import { Link } from 'react-router'
 import { loadFromPct } from '../../domain/records'
 import { SCORE_TYPES, scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
-import { getItem, setItem } from '../../lib/storage'
-import { Chips } from '../../components/ui'
 import { Markdown } from '../../components/Markdown'
 import {
   blockName,
-  LEVELS,
-  blockLevels,
   isPremium,
   levelName,
   blockHeading,
   itemRuns,
   itemSummary,
-  resolveItem,
   type BlockDraft,
   type ItemDraft,
-  type Level,
   type LockedBlock,
   type WorkoutDraft,
 } from '../../domain/workout'
 
-/** Read-only rendering of a workout, with a level selector (Elite / RX / Scaled / Foundation). */
+/** Read-only rendering of a workout (RX), with the coach's scaling options under each block. */
 export function WorkoutView({
   workout,
   nameOf,
@@ -42,19 +36,6 @@ export function WorkoutView({
   /** Viewer's 1RM per exercise: shows the load for "% 1RM" prescriptions. */
   oneRmOf?: (exerciseId: string) => number | undefined
 }) {
-  // Level chosen per block; defaults to the athlete's usual level (remembered on the device) when offered.
-  const [chosen, setChosen] = useState<Record<string, Level>>({})
-  const preferred = getItem('level') as Level | null
-  const levelOf = (b: BlockDraft) => {
-    const offered = blockLevels(b)
-    const l = chosen[b.id] ?? preferred
-    return l && offered.includes(l) ? l : 'rx'
-  }
-  const choose = (blockId: string, l: Level) => {
-    setItem('level', l)
-    setChosen({ ...chosen, [blockId]: l })
-  }
-
   // Visible and locked blocks in the coach's order, lettered together.
   const entries = workout.blocks.flatMap((block, i) => [
     ...(workout.locked ?? []).filter((l) => l.before === i).map((locked) => ({ locked, block: undefined })),
@@ -88,22 +69,13 @@ export function WorkoutView({
               )}
               {blockHeader?.(b)}
             </div>
-            {blockLevels(b).length > 1 && (
-              <div className="mt-2">
-                <Chips
-                  options={Object.fromEntries(blockLevels(b).map((l) => [l, LEVELS[l]])) as Record<Level, string>}
-                  value={levelOf(b)}
-                  onChange={(l) => choose(b.id, l)}
-                />
-              </div>
-            )}
             {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
               {itemRuns(b).map(({ group, items }, k) => {
                 const lines = items.map(({ item, index }) => (
                   <ItemLine
                     key={index}
-                    item={resolveItem(item, levelOf(b))}
+                    item={item}
                     nameOf={nameOf}
                     videoOf={videoOf}
                     oneRmOf={oneRmOf}
@@ -121,6 +93,12 @@ export function WorkoutView({
               })}
             </ul>
             {b.format !== 'none' && b.notes && <p className="mt-2 text-sm whitespace-pre-line text-zinc-400">{b.notes}</p>}
+            {b.params.scaling?.trim() && (
+              <details className="mt-2 rounded-xl bg-zinc-950 px-3 py-2">
+                <summary className="cursor-pointer text-sm font-semibold text-zinc-300">Adaptations</summary>
+                <Markdown text={b.params.scaling} className="mt-1 text-sm text-zinc-400" />
+              </details>
+            )}
             <ScoreLine block={b} />
             {blockFooter?.(b, `${String.fromCharCode(65 + i)} · ${blockName(b)}`)}
           </section>

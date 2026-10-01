@@ -1,5 +1,5 @@
 // Staging dataset covering the use cases of docs/staging-use-cases.md (IDs UC-xx referenced below).
-// Users *@tkf.test (password "a"): 2 coaches, 10 athletes (men and women, every level), 1 account in onboarding.
+// Users *@tkf.test (password "a"): 2 coaches, 10 athletes (men and women, RX and scaled), 1 account in onboarding.
 // Programs, library templates, workouts from 2 weeks ago to next week (dates relative to today), scores,
 // "Fait", "Je passe", reactions, comments, records, avatars and 7 days of usage stats.
 // Current week of "CrossFit" (stand-in for prod "Kanda WOD") copies the prod week of 28/09/2026 (content only).
@@ -12,24 +12,24 @@ import { api, serviceKey, sql, target, url } from './lib.mjs'
 const DOMAIN = 'tkf.test'
 const PASSWORD = 'a'
 const OWNER = 'guillaume.kheng@gmail.com' // real coach, added to the CrossFit program when the account exists
-// skill: 0-1 (drives scores), skip: share of workouts not done, levels: levels they score in.
+// skill: 0-1 (drives scores), skip: share of workouts not done, rx: share of their scores done RX.
 const USERS = [
-  { name: 'c1', first: 'Maxime', last: 'Durand', display: 'Max', role: 'coach', admin: true, gender: 'male', avatar: true, levels: ['elite', 'rx'], skill: 0.85, skip: 0.3 },
-  { name: 'c2', first: 'Julie', last: 'Bernard', display: null, role: 'coach', gender: 'female', avatar: true, levels: ['rx'], skill: 0.7, skip: 0.4 },
-  { name: 'a1', first: 'Léa', last: 'Martin', display: null, role: 'athlete', gender: 'female', avatar: true, levels: ['rx', 'elite'], skill: 0.9, skip: 0 },
-  { name: 'a2', first: 'Thomas', last: 'Petit', display: 'Tom', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.65, skip: 0.1 },
-  { name: 'a3', first: 'Sarah', last: 'Robert', display: null, role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.5, skip: 0.2 },
-  { name: 'a4', first: 'Hugo', last: 'Richard', display: 'Hugo le Viking', role: 'athlete', gender: 'male', avatar: true, levels: ['elite'], skill: 0.95, skip: 0 },
-  { name: 'a5', first: 'Inès', last: 'Moreau', display: null, role: 'athlete', gender: 'female', levels: ['foundation'], skill: 0.3, skip: 0.2 },
-  { name: 'a6', first: 'Nicolas', last: 'Simon', display: 'Nico', role: 'athlete', gender: 'male', levels: ['scaled', 'rx'], skill: 0.45, skip: 0.2 },
-  { name: 'a7', first: 'Emma', last: 'Laurent', display: null, role: 'athlete', gender: 'female', levels: ['rx'], skill: 0.6, skip: 0.15 },
-  { name: 'a8', display: 'Paul', role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.5, skip: 1 }, // never scores (UC-report), no first/last name: nickname fallback (UC-36)
-  { name: 'a9', first: 'Chloé', last: 'Michel', display: null, role: 'athlete', gender: 'female', levels: ['scaled'], skill: 0.4, skip: 0.25 },
-  { name: 'a10', first: 'Karim', last: 'Lefèvre', display: null, role: 'athlete', gender: 'male', levels: ['rx'], skill: 0.75, skip: 0.1 },
+  { name: 'c1', first: 'Maxime', last: 'Durand', display: 'Max', role: 'coach', admin: true, gender: 'male', avatar: true, rx: 1, skill: 0.85, skip: 0.3 },
+  { name: 'c2', first: 'Julie', last: 'Bernard', display: null, role: 'coach', gender: 'female', avatar: true, rx: 1, skill: 0.7, skip: 0.4 },
+  { name: 'a1', first: 'Léa', last: 'Martin', display: null, role: 'athlete', gender: 'female', avatar: true, rx: 1, skill: 0.9, skip: 0 },
+  { name: 'a2', first: 'Thomas', last: 'Petit', display: 'Tom', role: 'athlete', gender: 'male', rx: 1, skill: 0.65, skip: 0.1 },
+  { name: 'a3', first: 'Sarah', last: 'Robert', display: null, role: 'athlete', gender: 'female', rx: 0, skill: 0.5, skip: 0.2 },
+  { name: 'a4', first: 'Hugo', last: 'Richard', display: 'Hugo le Viking', role: 'athlete', gender: 'male', avatar: true, rx: 1, skill: 0.95, skip: 0 },
+  { name: 'a5', first: 'Inès', last: 'Moreau', display: null, role: 'athlete', gender: 'female', rx: 0, skill: 0.3, skip: 0.2 },
+  { name: 'a6', first: 'Nicolas', last: 'Simon', display: 'Nico', role: 'athlete', gender: 'male', rx: 0.5, skill: 0.45, skip: 0.2 },
+  { name: 'a7', first: 'Emma', last: 'Laurent', display: null, role: 'athlete', gender: 'female', rx: 1, skill: 0.6, skip: 0.15 },
+  { name: 'a8', display: 'Paul', role: 'athlete', gender: 'male', rx: 1, skill: 0.5, skip: 1 }, // never scores (UC-report), no first/last name: nickname fallback (UC-36)
+  { name: 'a9', first: 'Chloé', last: 'Michel', display: null, role: 'athlete', gender: 'female', rx: 0, skill: 0.4, skip: 0.25 },
+  { name: 'a10', first: 'Karim', last: 'Lefèvre', display: null, role: 'athlete', gender: 'male', rx: 1, skill: 0.75, skip: 0.1 },
   // Onboarding: nickname set but names and gender missing -> the app asks for them (UC-02).
-  { name: 'n1', display: 'n1', role: 'athlete', gender: null, levels: [], skip: 1 },
+  { name: 'n1', display: 'n1', role: 'athlete', gender: null, rx: 1, skip: 1 },
   // Sign-up in progress: link used, nothing filled in (UC-38), shown under "Inscriptions en cours".
-  { name: 'p1', display: null, role: 'athlete', gender: null, levels: [], skip: 1, pending: true },
+  { name: 'p1', display: null, role: 'athlete', gender: null, rx: 1, skip: 1, pending: true },
 ]
 const ALL = USERS.map((u) => u.name)
 // name: { owner, contributors, members, reactions, leaderboard }
@@ -145,9 +145,9 @@ for (const [name, p] of Object.entries(PROGRAMS)) {
 }
 
 const ex = Object.fromEntries(must(await c1.from('exercises').select('id, name')).map((e) => [e.name, e.id]))
-const item = (name, fields = {}, levels = {}) => {
+const item = (name, fields = {}) => {
   if (!ex[name]) throw new Error(`Exercice inconnu : ${name}`)
-  return { exercise_id: ex[name], label: '', reps: '', levels, ...fields }
+  return { exercise_id: ex[name], label: '', reps: '', ...fields }
 }
 // groups: [{ title, note, start, step, items: [item indices] }] stored in params like the app does.
 const block = (kind, format, params, items, extra = {}) => ({
@@ -160,27 +160,27 @@ const newIds = (blocks) => blocks.map((b) => ({ ...b, id: crypto.randomUUID() })
 const TEMPLATES = {
   'Chipper DU': [
     warmup(),
-    block('metcon', 'for_time', { rounds: 3, time_cap_s: 25 * 60 }, [
-      item('Double-Under', { reps: '100' }, { scaled: { exercise_id: ex['Single-Under'], reps: '200' }, foundation: { exercise_id: ex['Single-Under'], reps: '100' } }),
-      item('Pull-up', { reps: '21' }, { foundation: { exercise_id: ex['Ring Row'] } }),
+    block('metcon', 'for_time', { rounds: 3, time_cap_s: 25 * 60, scaling: 'DU → 200 single-unders\nC2B → pull-ups, BMU → C2B' }, [
+      item('Double-Under', { reps: '100' }),
+      item('Pull-up', { reps: '21' }),
       item('Run', { distance_m: 400 }),
-      item('Chest-to-Bar Pull-up', { reps: '15' }, { scaled: { exercise_id: ex['Pull-up'] }, foundation: { exercise_id: ex['Ring Row'] } }),
-      item('Echo Bike', { calories: 20 }, { foundation: { calories: 15 } }),
-      item('Bar Muscle-up', { reps: '9' }, { elite: { exercise_id: ex['Ring Muscle-up'] }, scaled: { exercise_id: ex['Chest-to-Bar Pull-up'] }, foundation: { exercise_id: ex['Jumping Pull-up'] } }),
+      item('Chest-to-Bar Pull-up', { reps: '15' }),
+      item('Echo Bike', { calories: 20 }),
+      item('Bar Muscle-up', { reps: '9' }),
     ], { title: 'Chipper' }),
   ],
   Fran: [
     warmup(),
-    block('metcon', 'for_time', { time_cap_s: 10 * 60 }, [
-      item('Thruster', { reps: '21-15-9', load_kg: 43, load_kg_f: 29 }, { elite: { load_kg: 50, load_kg_f: 35 }, scaled: { load_kg: 30, load_kg_f: 20 }, foundation: { load_kg: 20, load_kg_f: 15, reps: '15-12-9' } }),
-      item('Pull-up', { reps: '21-15-9' }, { foundation: { exercise_id: ex['Ring Row'] } }),
+    block('metcon', 'for_time', { time_cap_s: 10 * 60, scaling: 'Thruster 30/20 kg\nPull-up → ring row' }, [
+      item('Thruster', { reps: '21-15-9', load_kg: 43, load_kg_f: 29 }),
+      item('Pull-up', { reps: '21-15-9' }),
     ], { title: 'Fran' }),
   ],
   'Squat lourd + Cindy': [
     warmup(),
     block('strength', 'sets_reps', { sets: 5 }, [item('Back Squat', { reps: '5', pct_1rm: 80 })], { title: 'Back Squat', notes: 'Repos 2 min entre les séries' }),
     block('metcon', 'amrap', { duration_s: 20 * 60 }, [
-      item('Pull-up', { reps: '5' }, { foundation: { exercise_id: ex['Ring Row'] } }),
+      item('Pull-up', { reps: '5' }),
       item('Push-up', { reps: '10' }),
       item('Air Squat', { reps: '15' }),
     ], { title: 'Cindy' }),
@@ -188,8 +188,8 @@ const TEMPLATES = {
   'EMOM gym': [
     warmup(),
     block('skill', 'emom', { interval_s: 60, rounds: 12 }, [
-      item('Toes-to-Bar', { reps: '10' }, { scaled: { exercise_id: ex['Knees-to-Elbows'] } }),
-      item('Wall Ball', { reps: '15', load_kg: 9, load_kg_f: 6 }, { scaled: { load_kg: 6, load_kg_f: 4 } }),
+      item('Toes-to-Bar', { reps: '10' }),
+      item('Wall Ball', { reps: '15', load_kg: 9, load_kg_f: 6 }),
       item('Burpee', { reps: '10' }),
     ], { title: 'EMOM 12', notes: 'Alterner les 3 mouvements chaque minute' }),
     block('accessory', 'tabata', { rounds: 8, work_s: 20, rest_s: 10 }, [item('Hollow Hold', { duration_s: 20 })], { title: 'Tabata gainage' }),
@@ -264,13 +264,13 @@ async function create(program, date, title, blocks, publish, days = 1) {
 const KANDA_WEEK = [
   [
     block('metcon', 'emom', { rounds: 12, interval_s: 60, score: 'load' }, [item('Squat Snatch', { reps: '1', pct_1rm: 80 })], { title: 'Squat snatch' }),
-    block('metcon', 'for_time', { time_cap_s: 720 }, [
-      item('Overhead Squat', { reps: '21', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
-      item('Pull-up', { reps: '42' }, { scaled: { exercise_id: ex['Ring Row'] } }),
-      item('Overhead Squat', { reps: '15', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
-      item('Pull-up', { reps: '30' }, { scaled: { exercise_id: ex['Ring Row'] } }),
-      item('Overhead Squat', { reps: '9', load_kg: 43, load_kg_f: 29 }, { scaled: { load_kg: 30, load_kg_f: 20 } }),
-      item('Pull-up', { reps: '18' }, { scaled: { exercise_id: ex['Ring Row'] } }),
+    block('metcon', 'for_time', { time_cap_s: 720, scaling: 'OHS 30/20 kg\nPull-up → jumping pull-up ou ring row' }, [
+      item('Overhead Squat', { reps: '21', load_kg: 43, load_kg_f: 29 }),
+      item('Pull-up', { reps: '42' }),
+      item('Overhead Squat', { reps: '15', load_kg: 43, load_kg_f: 29 }),
+      item('Pull-up', { reps: '30' }),
+      item('Overhead Squat', { reps: '9', load_kg: 43, load_kg_f: 29 }),
+      item('Pull-up', { reps: '18' }),
     ], { title: 'Josh' }),
   ],
   [
@@ -286,7 +286,7 @@ const KANDA_WEEK = [
       item('Sled Pull', { distance_m: 10 }),
       item('Dumbbell Bench Press', { reps: '8-10' }),
       item('Double Kettlebell Overhead Lunge', { distance_m: 10, notes: '2 KB' }),
-      item('Strict Toes-to-Bar', { reps: '4-6', notes: 'ou Strict Knee Raise' }, { scaled: { exercise_id: ex['Strict Knee Raise'] } }),
+      item('Strict Toes-to-Bar', { reps: '4-6', notes: 'ou Strict Knee Raise' }),
     ], { title: 'Renfo fonctionnel' }),
     block('metcon', 'for_time', { score: 'time' }, [item('Ski Erg', { distance_m: 2000 })], { title: 'Test 2000 m Ski' }),
   ],
@@ -411,15 +411,15 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
         continue
       }
       const type = typeOf(b)
-      const level = pick(u.levels)
+      const rx = rand() < u.rx
       if (type === 'none') {
         // "Fait" (null score), sometimes with a comment (UC-20, UC-21).
         if (rand() < 0.3) continue
-        must(await client.from('results').insert({ workout_id: w.id, block_id: b.id, level, comment: pick(DONE_COMMENTS) }))
+        must(await client.from('results').insert({ workout_id: w.id, block_id: b.id, comment: pick(DONE_COMMENTS) }))
         doneCount++
       } else {
         must(await client.from('results').insert({
-          workout_id: w.id, block_id: b.id, level, comment: pick(COMMENTS), ...scoreFor(type, b.params, u.skill, female),
+          workout_id: w.id, block_id: b.id, rx, comment: pick(COMMENTS), ...scoreFor(type, b.params, u.skill, female),
         }))
         resultCount++
       }

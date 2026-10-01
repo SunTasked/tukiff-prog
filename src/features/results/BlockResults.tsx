@@ -3,9 +3,8 @@ import { Avatar } from '../../components/Avatar'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
-import { compactRows, formatScore, isRanked, leaderboards, myGenderFirst, scoreType, type ScoreType } from '../../domain/scoring'
-import { LEVELS, blockLevels, type BlockDraft, type Level } from '../../domain/workout'
-import { getItem } from '../../lib/storage'
+import { compactRows, formatScore, isRanked, leaderboards, myGenderFirst, scoreType, type BoardRow, type ScoreType } from '../../domain/scoring'
+import type { BlockDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { GenderTabs } from './GenderTabs'
@@ -33,8 +32,8 @@ const MEDALS = ['🥇', '🥈', '🥉']
 const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
 
 /**
- * "My score" / "Je passe" buttons + one leaderboard per gender, levels stacked (elite, RX, ...) and ranked separately.
- * Compact: only my category (gender + level), its top 3 plus me; the full board opens in a sheet.
+ * "My score" / "Je passe" buttons + one leaderboard per gender: the RX ranked, the scaled scores under them, unranked.
+ * Compact: my gender only, its RX top 3 plus me; the full board opens in a sheet.
  */
 export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, onChange }: Props) {
   const [open, setOpen] = useState(false)
@@ -59,11 +58,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
   const boardOf = (g: Gender) => boards.find((b) => b.gender === g)?.rows ?? []
   const genderCounts = { male: boardOf('male').length, female: boardOf('female').length }
-  // My category: my gender, and the level of my score (else my usual level for this block).
   const myGender: Gender = profile?.gender === 'female' ? 'female' : 'male'
-  const preferred = getItem('level') as Level | null
-  const myLevel: Level = (mine?.level as Level | undefined) ?? (preferred && blockLevels(block).includes(preferred) ? preferred : 'rx')
-  const myRows = boardOf(myGender).filter((row) => row.level === myLevel)
   const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
   const checkable = type === 'none'
   // Blocks without score have no leaderboard, only the athletes' comments.
@@ -72,15 +67,12 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const ranked = isRanked(block.format, block.params)
   const byName = [...results].sort((a, b) => scoreName(a.profiles).localeCompare(scoreName(b.profiles), 'fr'))
 
-  // Blocks without score: one tap on the "Fait" box, the sheet stays available for level and comment.
+  // Blocks without score: one tap on the "Fait" box, the sheet stays available for the comment.
   async function toggleDone() {
     setBusy(true)
     if (mine) await supabase.from('results').delete().eq('id', mine.id)
     else {
-      const levels = blockLevels(block)
-      const preferred = getItem('level') as Level | null
-      const level = preferred && levels.includes(preferred) ? preferred : 'rx'
-      const { error } = await supabase.from('results').insert({ workout_id: workoutId, block_id: block.id, level })
+      const { error } = await supabase.from('results').insert({ workout_id: workoutId, block_id: block.id })
       if (!error && skipped) await supabase.from('block_skips').delete().eq('block_id', block.id).eq('athlete_id', me!)
     }
     setBusy(false)
@@ -136,7 +128,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         !checkable &&
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
-            Mon score : {formatScore(type, mine)} · {LEVELS[mine.level as Level]} ✎
+            Mon score : {formatScore(type, mine)}
+            {!mine.rx && ' · Adapté'} ✎
             {detail(mine) && <span className="block text-xs font-normal text-zinc-400">{detail(mine)}</span>}
           </button>
         ) : skipped ? (
@@ -177,8 +170,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         <>
           <Board
             gender={myGender}
-            title={`${BOARD_TITLES[myGender]} · ${LEVELS[myLevel]}`}
-            rows={compactRows(myRows, me)}
+            rows={compactRows(boardOf(myGender), me)}
             type={type}
             me={me}
             leaders={leaders}
@@ -227,9 +219,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
                   <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
                   <AthleteName profile={r.profiles} />
                   <span className="flex-1" />
-                  <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">
-                    {LEVELS[r.level as Level]}
-                  </span>
+                  {!r.rx && <ScaledTag />}
                   <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
                 </div>
                 {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}
@@ -263,7 +253,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           blockLabel={blockLabel}
           type={type}
           block={block}
-          levels={blockLevels(block)}
+          ranked={ranked}
           existing={mine}
           onClose={() => setOpen(false)}
           onSaved={async () => {
@@ -277,7 +267,9 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   )
 }
 
-type BoardRow = { result: ResultRow; rank: number; level: Level }
+const ScaledTag = () => (
+  <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">Adapté</span>
+)
 
 function Board({
   gender,
@@ -292,7 +284,7 @@ function Board({
   gender: Gender
   title?: string
   showTitle?: boolean
-  rows: BoardRow[]
+  rows: BoardRow<ResultRow>[]
   type: ScoreType
   me: string | undefined
   leaders: Set<string>
@@ -303,20 +295,20 @@ function Board({
       {showTitle && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title ?? BOARD_TITLES[gender]}</p>}
       {rows.length === 0 && <p className="text-sm text-zinc-500">Pas encore de score.</p>}
       <ol className="flex flex-col gap-1">
-        {rows.map(({ result: r, rank, level }) => (
+        {rows.map(({ result: r, rank }) => (
           <li
             key={r.id}
             className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-950'}`}
           >
             <div className="flex items-center gap-2">
-              {type !== 'none' && <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>}
+              {type !== 'none' && (
+                <span className="w-6 shrink-0 text-center text-zinc-500">{rank === null ? '–' : rank <= 3 ? MEDALS[rank - 1] : rank}</span>
+              )}
               <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
               <AthleteName profile={r.profiles} />
               {leaders.has(r.athlete_id) && <LeaderBadge />}
               <span className="flex-1" />
-              <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">
-                {LEVELS[level]}
-              </span>
+              {rank === null && <ScaledTag />}
               <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
             </div>
             {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}

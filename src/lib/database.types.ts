@@ -571,6 +571,7 @@ export type Database = {
           load_kg: number | null
           reps: number | null
           rounds: number | null
+          rx: boolean
           time_s: number | null
           updated_at: string
           workout_id: string
@@ -586,6 +587,7 @@ export type Database = {
           load_kg?: number | null
           reps?: number | null
           rounds?: number | null
+          rx?: boolean
           time_s?: number | null
           updated_at?: string
           workout_id: string
@@ -601,6 +603,7 @@ export type Database = {
           load_kg?: number | null
           reps?: number | null
           rounds?: number | null
+          rx?: boolean
           time_s?: number | null
           updated_at?: string
           workout_id?: string

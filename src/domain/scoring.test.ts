@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest'
-import { boardPlaces, isRanked, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { isRanked, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
-const names = <T extends { name: string }>(rows: { result: T; rank: number }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
+const names = <T extends { name: string }>(rows: { result: T; rank: number | null }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
 
 describe('isRanked', () => {
   it('ranks scored blocks unless the coach opted out or the block is premium', () => {
@@ -75,22 +75,17 @@ it('gives ties the same rank (1, 2, 2, 4)', () => {
   expect(rankResults('time', list).map((r) => r.rank)).toEqual([1, 2, 2, 4])
 })
 
-it('one board per gender, levels stacked in level order, ranked within each level', () => {
+it('one board per gender, RX ranked, scaled scores unranked below in entry order', () => {
   const list = [
-    { name: 'scaled-fast', level: 'scaled', gender: 'male' as const, ...s({ time_s: 200 }) },
-    { name: 'rx-slow', level: 'rx', gender: 'male' as const, ...s({ time_s: 600 }) },
-    { name: 'rx-fast', level: 'rx', gender: null, ...s({ time_s: 400 }) },
-    { name: 'elite', level: 'elite', gender: 'male' as const, ...s({ time_s: 500 }) },
-    { name: 'f-rx', level: 'rx', gender: 'female' as const, ...s({ time_s: 300 }) },
+    { name: 'scaled-fast', rx: false, created_at: '2026-10-01T10:00', gender: 'male' as const, ...s({ time_s: 200 }) },
+    { name: 'rx-slow', rx: true, gender: 'male' as const, ...s({ time_s: 600 }) },
+    { name: 'scaled-early', rx: false, created_at: '2026-10-01T09:00', gender: 'male' as const, ...s({ time_s: 900 }) },
+    { name: 'rx-fast', rx: true, gender: null, ...s({ time_s: 400 }) },
+    { name: 'f-rx', rx: true, gender: 'female' as const, ...s({ time_s: 300 }) },
   ]
   const boards = leaderboards('time', list)
   expect(boards.map((b) => b.gender)).toEqual(['male', 'female'])
-  expect(boards[0].rows.map((r) => `${r.level}:${r.rank}:${r.result.name}`)).toEqual([
-    'elite:1:elite',
-    'rx:1:rx-fast',
-    'rx:2:rx-slow',
-    'scaled:1:scaled-fast',
-  ])
+  expect(names(boards[0].rows)).toEqual(['1:rx-fast', '2:rx-slow', 'null:scaled-early', 'null:scaled-fast'])
   expect(names(boards[1].rows)).toEqual(['1:f-rx'])
 })
 
@@ -118,30 +113,34 @@ describe('format, validate, normalize', () => {
 })
 
 describe('compact and weekly boards', () => {
-  const r = (athlete_id: string, level: string, v: Partial<Score>, gender: 'male' | 'female' = 'male') => ({
+  const r = (athlete_id: string, rx: boolean, v: Partial<Score>, gender: 'male' | 'female' = 'male') => ({
     ...s(v),
     athlete_id,
-    level,
+    rx,
     gender,
   })
 
-  it('keeps the top 3 of each level plus me', () => {
-    const list = ['a', 'b', 'c', 'd', 'e'].map((id, i) => r(id, 'rx', { reps: 100 - i }))
-    const rows = leaderboards('reps', [...list, r('x', 'scaled', { reps: 1 })])[0].rows
-    expect(compactRows(rows, 'e').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'e', 'x'])
-    expect(compactRows(rows, 'b').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'x'])
+  it('keeps the RX top 3 plus me, scaled or not', () => {
+    const list = ['a', 'b', 'c', 'd', 'e'].map((id, i) => r(id, true, { reps: 100 - i }))
+    const rows = leaderboards('reps', [...list, r('x', false, { reps: 1000 })])[0].rows
+    expect(compactRows(rows, 'e').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'e'])
+    expect(compactRows(rows, 'b').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c'])
+    expect(compactRows(rows, 'x').map((row) => row.result.athlete_id)).toEqual(['a', 'b', 'c', 'x'])
+    expect(compactRows(leaderboards('reps', [r('x', false, { reps: 1 }), r('a', true, { reps: 1 })])[0].rows, 'a').map((row) => row.rank)).toEqual([1])
   })
 
-  it('places levels one after the other', () => {
-    const rows = leaderboards('reps', [r('a', 'elite', { reps: 5 }), r('b', 'rx', { reps: 50 }), r('c', 'rx', { reps: 50 }), r('d', 'rx', { reps: 10 })])[0].rows
-    expect(boardPlaces(rows)).toEqual([1, 2, 2, 4])
+  it('gives no weekly point to scaled scores, which never push RX athletes down', () => {
+    const men = weeklyLeaderboards([
+      { type: 'reps', results: [r('s', false, { reps: 99 }), r('a', true, { reps: 30 }), r('b', true, { reps: 20 })] },
+    ])[0].rows
+    expect(men.map((row) => `${row.rank}:${row.athlete.athlete_id}:${row.total}`)).toEqual(['1:a:10', '2:b:9'])
   })
 
   it('scores places 10 to 1 per gender, missed block = 0, highest wins', () => {
     const boards = weeklyLeaderboards([
-      { type: 'reps', results: [r('a', 'rx', { reps: 30 }), r('b', 'rx', { reps: 20 }), r('f', 'rx', { reps: 1 }, 'female')] },
-      { type: 'time', results: [r('b', 'rx', { time_s: 100 }), r('c', 'rx', { time_s: 200 })] },
-      { type: 'none', results: [r('d', 'rx', {})] },
+      { type: 'reps', results: [r('a', true, { reps: 30 }), r('b', true, { reps: 20 }), r('f', true, { reps: 1 }, 'female')] },
+      { type: 'time', results: [r('b', true, { time_s: 100 }), r('c', true, { time_s: 200 })] },
+      { type: 'none', results: [r('d', true, {})] },
     ])
     const men = boards[0]
     expect(men.gender).toBe('male')
@@ -157,7 +156,7 @@ describe('compact and weekly boards', () => {
 })
 
 describe('weekly total over 3 blocks', () => {
-  const r = (athlete_id: string, reps: number) => ({ ...s({ reps }), athlete_id, level: 'rx', gender: 'male' as const })
+  const r = (athlete_id: string, reps: number) => ({ ...s({ reps }), athlete_id, rx: true, gender: 'male' as const })
   const board = (ids: string[], extra: { bonus?: boolean } = {}) => ({
     type: 'reps' as const,
     ...extra,
