@@ -559,6 +559,42 @@ export type Database = {
           },
         ]
       }
+      result_claps: {
+        Row: {
+          created_at: string
+          from_user: string
+          result_id: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user?: string
+          result_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          result_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_claps_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_claps_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       results: {
         Row: {
           athlete_id: string
@@ -842,6 +878,13 @@ export type Database = {
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
       can_see_block: { Args: { p_block: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
+      clap_counts: {
+        Args: { p_workout: string }
+        Returns: {
+          claps: number
+          result_id: string
+        }[]
+      }
       copy_workout: {
         Args: {
           p_date: string

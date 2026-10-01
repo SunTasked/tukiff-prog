@@ -232,6 +232,7 @@ describe('team WODs', () => {
     const boards = teamBoards('time', list)
     expect(boards.map((b) => b.category)).toEqual(['male', 'female', 'mixed'])
     expect(boards[0].rows.map((x) => [x.rank, x.result.members.map((m) => m.id).join('')])).toEqual([[1, 'ab']])
+    expect(boards[0].rows[0].result.clapTarget).toBe('a')
     expect(boards[1].rows.map((x) => [x.rank, x.result.id])).toEqual([
       [1, 't3'],
       [null, 't4'],

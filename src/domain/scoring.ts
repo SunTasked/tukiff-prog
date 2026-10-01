@@ -167,7 +167,16 @@ export function parseGuests(json: unknown): TeamGuest[] {
 }
 
 type TeamRow = Score & { id: string; athlete_id: string; team_id: string | null; team_guests: unknown; rx: boolean; gender: Gender | null; created_at?: string }
-export type Team<T> = Score & { id: string; members: T[]; guests: TeamGuest[]; rx: boolean; created_at?: string; category: TeamCategory }
+export type Team<T> = Score & {
+  id: string
+  members: T[]
+  guests: TeamGuest[]
+  rx: boolean
+  created_at?: string
+  category: TeamCategory
+  /** Row that carries the team's claps: the smallest result id, the same for every viewer. */
+  clapTarget: string
+}
 
 /** Results of a team block grouped by team (rows sharing team_id; a row without team is a team of its own). */
 export function groupTeams<T extends TeamRow>(list: T[]): Team<T>[] {
@@ -191,6 +200,7 @@ export function groupTeams<T extends TeamRow>(list: T[]): Team<T>[] {
       rx: first.rx,
       created_at: first.created_at,
       category: teamCategory([...members.map((m) => m.gender), ...guests.map((g) => g.gender)]),
+      clapTarget: members.map((m) => m.id).sort()[0],
     }
   })
 }

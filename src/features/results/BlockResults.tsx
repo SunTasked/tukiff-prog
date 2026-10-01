@@ -23,7 +23,9 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
+import { PeopleSheet } from './PeopleSheet'
 import { ScoreSheet } from './ScoreSheet'
+import type { Claps } from './useClaps'
 import type { ResultRow } from './useWorkoutResults'
 
 type Props = {
@@ -39,6 +41,10 @@ type Props = {
   showBoard: boolean
   /** Leaders of the program's weekly leaderboard (LEADER badge). */
   leaders: Set<string>
+  /** Claps of the workout (absent when the program's reactions are off). */
+  claps?: Claps
+  onClap: (resultId: string) => void
+  onUnclap: (resultId: string) => void
   onChange: () => void
 }
 
@@ -49,7 +55,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
  * "My score" / "Je passe" buttons + one leaderboard per gender: the RX ranked, the scaled scores under them, unranked.
  * Compact: my gender only, its RX top 3 plus me; the full board opens in a sheet.
  */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, onChange }: Props) {
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, claps, onClap, onUnclap, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
@@ -75,6 +81,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const myGender: Gender = profile?.gender === 'female' ? 'female' : 'male'
   const enterLabel = type === 'none' ? 'Marquer comme fait' : block.params.team_size ? 'Saisir le score d’équipe' : 'Saisir mon score'
   const checkable = type === 'none'
+  const [clappers, setClappers] = useState<string | null>(null)
+  const clapping: Clapping | undefined = claps && { claps, me, canClap: canLog, onClap, onUnclap, onShow: setClappers }
   // Blocks without score have no leaderboard, only the athletes' comments.
   const commented = results.filter((r) => r.comment?.trim())
   // Unranked blocks (coach's choice, premium): my score only, the others' in a plain list by name.
@@ -197,7 +205,9 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
       {showBoard && teamSize && teamCount > 0 && (
         <>
-          {ranked && <TeamBoard title={TEAM_CATEGORIES[myCategory]} rows={compactRows(teamOf(myCategory), me)} type={type} me={me} />}
+          {ranked && (
+            <TeamBoard title={TEAM_CATEGORIES[myCategory]} rows={compactRows(teamOf(myCategory), me)} type={type} me={me} clapping={clapping} />
+          )}
           <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
             {ranked ? `Voir le classement complet (${teamCount}) ›` : `Voir les scores (${teamCount}) ›`}
           </button>
@@ -212,6 +222,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
             type={type}
             me={me}
             leaders={leaders}
+            clapping={clapping}
             detail={detail}
           />
           <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
@@ -266,6 +277,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
               rows={ranked ? teamOf(teamTab) : teamOf(teamTab).map((row) => ({ ...row, rank: null }))}
               type={type}
               me={me}
+              clapping={clapping}
               unranked={!ranked}
             />
           </div>
@@ -307,9 +319,17 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <GenderTabs value={tab} counts={genderCounts} onChange={setTab} />
-            <Board gender={tab} showTitle={false} rows={boardOf(tab)} type={type} me={me} leaders={leaders} detail={detail} />
+            <Board gender={tab} showTitle={false} rows={boardOf(tab)} type={type} me={me} leaders={leaders} clapping={clapping} detail={detail} />
           </div>
         </div>
+      )}
+
+      {clapping && clappers && (
+        <PeopleSheet
+          title={`👏 Claps (${clapping.claps.received.get(clappers)?.length ?? 0})`}
+          people={clapping.claps.received.get(clappers) ?? []}
+          onClose={() => setClappers(null)}
+        />
       )}
 
       {open && (
@@ -347,6 +367,7 @@ function Board({
   type,
   me,
   leaders,
+  clapping,
   detail,
 }: {
   gender: Gender
@@ -356,6 +377,7 @@ function Board({
   type: ScoreType
   me: string | undefined
   leaders: Set<string>
+  clapping?: Clapping
   detail: (r: ResultRow) => string | null
 }) {
   return (
@@ -376,6 +398,7 @@ function Board({
               <AthleteName profile={r.profiles} />
               {leaders.has(r.athlete_id) && <LeaderBadge />}
               <span className="flex-1" />
+              {clapping && <ClapButton resultId={r.id} mine={r.athlete_id === me} clapping={clapping} />}
               {rank !== null && <RxTag />}
               <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
             </div>
@@ -396,12 +419,14 @@ function TeamBoard({
   rows,
   type,
   me,
+  clapping,
   unranked = false,
 }: {
   title?: string
   rows: BoardRow<TeamResult>[]
   type: ScoreType
   me: string | undefined
+  clapping?: Clapping
   unranked?: boolean
 }) {
   return (
@@ -411,11 +436,12 @@ function TeamBoard({
       <ol className="flex flex-col gap-1">
         {rows.map(({ result: t, rank }) => {
           const comment = t.members.find((m) => m.comment)?.comment
+          const ours = t.members.some((m) => m.athlete_id === me)
           return (
             <li
               key={t.id}
               className={`rounded-lg px-2 py-1.5 text-sm ${
-                t.members.some((m) => m.athlete_id === me) ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-950'
+                ours ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-950'
               }`}
             >
               <div className="flex items-center gap-2">
@@ -431,6 +457,8 @@ function TeamBoard({
                   {t.members.map((m) => scoreName(m.profiles)).join(' · ')}
                   {t.guests.length > 0 && <span className="text-zinc-500"> · {t.guests.map((g) => g.name).join(' · ')}</span>}
                 </span>
+                {/* A clap goes to the whole team, stored on one teammate's row (see clapTarget). */}
+                {clapping && <ClapButton resultId={t.clapTarget} mine={ours} clapping={clapping} />}
                 {rank !== null && <RxTag />}
                 <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, t)}</span>
               </div>
@@ -441,4 +469,44 @@ function TeamBoard({
       </ol>
     </div>
   )
+}
+
+type Clapping = {
+  claps: Claps
+  me: string | undefined
+  /** I can clap others' scores when the workout is assigned to me. */
+  canClap: boolean
+  onClap: (resultId: string) => void
+  onUnclap: (resultId: string) => void
+  onShow: (resultId: string) => void
+}
+
+/**
+ * Others' scores: a grey 👏 to clap (once per score), coloured with the count once clapped; a tap again takes it back.
+ * My score: the count, a tap shows who clapped.
+ */
+function ClapButton({ resultId, mine, clapping }: { resultId: string; mine: boolean; clapping: Clapping }) {
+  const count = clapping.claps.counts.get(resultId) ?? 0
+  const label = count > 0 ? ` ${count}` : ''
+  const pill = 'shrink-0 rounded-full px-1.5 py-0.5 text-xs leading-none tabular-nums'
+  if (mine)
+    return count > 0 ? (
+      <button className={`${pill} bg-zinc-800 text-zinc-200`} aria-label="Voir qui a clappé" onClick={() => clapping.onShow(resultId)}>
+        👏{label}
+      </button>
+    ) : null
+  if (clapping.claps.given.has(resultId))
+    return (
+      <button className={`${pill} font-semibold text-lime-300`} aria-label="Retirer mon clap" onClick={() => clapping.onUnclap(resultId)}>
+        👏{label}
+      </button>
+    )
+  if (clapping.canClap)
+    return (
+      <button className={`${pill} text-zinc-500`} aria-label="Clapper ce score" onClick={() => clapping.onClap(resultId)}>
+        <span className="opacity-50 grayscale">👏</span>
+        {label}
+      </button>
+    )
+  return count > 0 ? <span className={`${pill} text-zinc-400`}>👏{label}</span> : null
 }
