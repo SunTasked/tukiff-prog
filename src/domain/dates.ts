@@ -77,3 +77,12 @@ export const lastDay = (date: string, days = 1) => addDays(date, Math.max(days, 
 
 /** Whether a workout starting on `date` and lasting `days` days is shown on `day`. */
 export const coversDay = (date: string, days: number | undefined, day: string) => date <= day && lastDay(date, days) >= day
+
+/** Compact "last seen" for a table column: calendar days back from now (local), months beyond 60 days. */
+export function seenAgo(ts: string, now = new Date()): string {
+  const days = Math.round((fromISODate(toISODate(now)).getTime() - fromISODate(toISODate(new Date(ts))).getTime()) / 86_400_000)
+  if (days <= 0) return 'auj.'
+  if (days === 1) return 'hier'
+  if (days < 60) return `${days} j`
+  return `${Math.floor(days / 30)} mois`
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, coversDay, lastDay, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
+import { addDays, seenAgo, coversDay, lastDay, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
 
 describe('weeks', () => {
   it('finds the Monday of a week', () => {
@@ -56,5 +56,15 @@ describe('multi-day workouts', () => {
     expect(coversDay('2026-09-28', 7, '2026-10-05')).toBe(false)
     expect(coversDay('2026-09-28', 1, '2026-09-28')).toBe(true)
     expect(coversDay('2026-09-28', 3, '2026-09-27')).toBe(false)
+  })
+})
+
+describe('seenAgo', () => {
+  const now = new Date(2026, 9, 1, 9, 0)
+  it('counts calendar days', () => {
+    expect(seenAgo(new Date(2026, 9, 1, 1, 0).toISOString(), now)).toBe('auj.')
+    expect(seenAgo(new Date(2026, 8, 30, 23, 0).toISOString(), now)).toBe('hier')
+    expect(seenAgo(new Date(2026, 8, 28, 10, 0).toISOString(), now)).toBe('3 j')
+    expect(seenAgo(new Date(2026, 5, 1).toISOString(), now)).toBe('4 mois')
   })
 })
