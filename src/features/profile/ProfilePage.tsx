@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
+import { AvatarCropper } from '../../components/AvatarCropper'
 import { programColor } from '../../components/ProgramBadges'
 import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../components/ui'
 import { fullName, GENDERS, type Gender } from '../../domain/profile'
@@ -15,6 +16,7 @@ export function ProfilePage() {
   const [editingName, setEditingName] = useState(false)
   const [editingNames, setEditingNames] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
+  const [cropping, setCropping] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [saved, setSaved] = useState(false)
   const [programs, setPrograms] = useState<{ name: string; level: string | null }[] | null>(null)
@@ -59,13 +61,17 @@ export function ProfilePage() {
     return true
   }
 
-  async function changePhoto(e: ChangeEvent<HTMLInputElement>) {
+  function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
     e.target.value = ''
-    if (!file) return
+    if (file) setCropping(file)
+  }
+
+  async function savePhoto(picture: Blob) {
+    setCropping(null)
     setError('')
     setSaved(false)
-    const err = await uploadAvatar(profile!.id, file).catch(() => 'Image illisible : essaie une autre photo (JPEG ou PNG).')
+    const err = await uploadAvatar(profile!.id, picture)
     if (err) return setError(err)
     await refreshProfile()
   }
@@ -111,7 +117,7 @@ export function ProfilePage() {
                 </button>
               )}
             </div>
-            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={changePhoto} />
+            <input ref={fileInput} type="file" accept="image/*" className="hidden" onChange={pickPhoto} />
           </div>
           <Row label="Email">{session?.user.email}</Row>
           <Row label="Prénom et nom">
@@ -182,6 +188,7 @@ export function ProfilePage() {
         </button>
       </div>
 
+      {cropping && <AvatarCropper file={cropping} onCancel={() => setCropping(null)} onSave={savePhoto} />}
       {editingNames && (
         <NamesDialog
           initial={{ first_name: profile?.first_name ?? '', last_name: profile?.last_name ?? '' }}
