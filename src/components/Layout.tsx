@@ -20,7 +20,6 @@ const tabs: Tab[] = [
     to: '/library',
     label: 'Biblio',
     longLabel: 'Bibliothèque',
-    coachOnly: true,
     icon: 'M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zm0 0a2 2 0 0 0 2 2h13M8 7h7',
   },
   {

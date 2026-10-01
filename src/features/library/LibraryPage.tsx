@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
+import { isCoach, useAuth } from '../auth/AuthProvider'
 import { supabase } from '../../lib/supabase'
 import { searchExercises, useExercises } from '../exercises/useExercises'
 import { SectionedList, useSectionActions, type Section } from './SectionedList'
@@ -16,6 +17,7 @@ const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short
 export function LibraryPage() {
   const { pathname } = useLocation()
   const child = pathname.replace(/\/$/, '') !== '/library'
+  const coach = isCoach(useAuth().profile)
   if (/\/(new|edit)$/.test(pathname)) return <Outlet />
 
   return (
@@ -27,7 +29,7 @@ export function LibraryPage() {
         {child ? (
           <Outlet />
         ) : (
-          <p className="mt-24 text-center text-zinc-500">Sélectionne une séance ou un exercice.</p>
+          <p className="mt-24 text-center text-zinc-500">Sélectionne une séance{coach ? ' ou un exercice' : ''}.</p>
         )}
       </div>
     </div>
@@ -38,7 +40,17 @@ function LibraryList() {
   const [params] = useSearchParams()
   const { pathname } = useLocation()
   const navigate = useNavigate()
-  const tab = pathname.startsWith('/library/exercises') || params.get('tab') === 'exercises' ? 'exercises' : 'workouts'
+  const coach = isCoach(useAuth().profile)
+  const tab = coach && (pathname.startsWith('/library/exercises') || params.get('tab') === 'exercises') ? 'exercises' : 'workouts'
+
+  // Athletes: sessions only, read-only.
+  if (!coach)
+    return (
+      <>
+        <PageTitle>Bibliothèque</PageTitle>
+        <WorkoutList readOnly />
+      </>
+    )
 
   return (
     <>
@@ -61,7 +73,7 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
-function WorkoutList() {
+function WorkoutList({ readOnly = false }: { readOnly?: boolean }) {
   const { pathname } = useLocation()
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
@@ -86,14 +98,16 @@ function WorkoutList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-          + Nouvelle séance
-        </Link>
-        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}>
-          + Section
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="flex gap-2">
+          <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
+            + Nouvelle séance
+          </Link>
+          <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}>
+            + Section
+          </button>
+        </div>
+      )}
       <input
         placeholder="Rechercher une séance"
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
@@ -106,9 +120,9 @@ function WorkoutList() {
         sections={sections}
         query={query}
         storageKey="librarySectionsExpanded"
-        actions={actions}
+        actions={readOnly ? undefined : actions}
         what="séances"
-        newHref={(s) => `/library/workouts/new?section=${s.id}`}
+        newHref={readOnly ? undefined : (s) => `/library/workouts/new?section=${s.id}`}
         renderItem={(w) => (
           <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
             <span className="truncate">{w.title}</span>

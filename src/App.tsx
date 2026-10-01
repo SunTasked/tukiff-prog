@@ -71,6 +71,18 @@ export default function App() {
         <Route path="workouts/:id" element={narrow(<AthleteWorkoutPage />)} />
         <Route path="records" element={narrow(<RecordsPage />)} />
         <Route path="timer" element={narrow(<TimerPage />)} />
+        {/* Athletes browse library sessions read-only; editors and exercises are coach-only. */}
+        <Route path="library" element={<LibraryPage />}>
+          <Route path="workouts/:id" element={<WorkoutPage />} />
+          {isCoach(profile) && (
+            <>
+              <Route path="workouts/new" element={<WorkoutEditor />} />
+              <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
+              <Route path="exercises/new" element={<ExerciseFormPage />} />
+              <Route path="exercises/:id" element={<ExerciseFormPage />} />
+            </>
+          )}
+        </Route>
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />
@@ -78,13 +90,6 @@ export default function App() {
             <Route path="programs/:id" element={narrow(<ProgramPage />)} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="calendar/workouts/:id" element={narrow(<ScheduledWorkoutPage />)} />
-            <Route path="library" element={<LibraryPage />}>
-              <Route path="workouts/new" element={<WorkoutEditor />} />
-              <Route path="workouts/:id" element={<WorkoutPage />} />
-              <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
-              <Route path="exercises/new" element={<ExerciseFormPage />} />
-              <Route path="exercises/:id" element={<ExerciseFormPage />} />
-            </Route>
           </>
         )}
         {isAdmin(profile) && <Route path="admin" element={<AdminStatsPage />} />}
