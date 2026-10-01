@@ -277,6 +277,14 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
             <span className="mb-0.5 block text-xs text-zinc-500">Score</span>
             <Chips options={SCORE_TYPES} value={scoreType(block.format, p)} onChange={setScore} />
           </div>
+          {scoreType(block.format, p) !== 'none' && (
+            <input
+              className="w-full rounded-lg border border-zinc-800 bg-zinc-950 px-2 py-2 text-sm outline-none focus:border-lime-400"
+              placeholder="Note de saisie (optionnelle)"
+              value={p.score_note ?? ''}
+              onChange={(e) => setParams({ score_note: e.target.value || undefined })}
+            />
+          )}
 
           {levelCount > 0 && (
             <div>

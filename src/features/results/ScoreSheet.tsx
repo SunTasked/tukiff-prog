@@ -77,7 +77,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
           />
         )}
 
-        {type !== 'none' && <p className="text-sm text-zinc-400">{SCORE_HINTS[type]}</p>}
+        {type !== 'none' && <p className="text-sm text-zinc-400">{block?.params.score_note || SCORE_HINTS[type]}</p>}
 
         {type === 'time' && (
           <>

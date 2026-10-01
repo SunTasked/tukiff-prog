@@ -7,12 +7,12 @@ export type ScoreType = 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
 export const SCORE_TYPES: Record<ScoreType, string> = {
   time: 'Temps',
   rounds_reps: 'Rounds + reps',
-  reps: 'Reps totales',
-  load: 'Charge max',
+  reps: 'Reps',
+  load: 'Charge',
   none: 'Aucun',
 }
 
-/** What the athlete enters, shown on the block and in the score sheet. */
+/** What the athlete enters, shown in the score sheet when the coach wrote no note. */
 export const SCORE_HINTS: Record<ScoreType, string> = {
   time: 'Ton temps final, ou les reps faites si le time cap est atteint.',
   rounds_reps: 'Les rounds complets, puis les reps faites dans le round entamé.',

@@ -52,6 +52,8 @@ export type FormatParams = {
   sets?: number // sets_reps
   /** Score type chosen by the coach; absent = the format's default (see scoring.ts). */
   score?: 'time' | 'rounds_reps' | 'load' | 'reps' | 'none'
+  /** Coach's optional note on how to enter the score, shown next to the score type; absent = nothing. */
+  score_note?: string
   /** Minimum access level of the program member (ACCESS_LEVELS); absent = everyone. Checked by RLS. */
   min_level?: number
   /** false = scored, but out of the weekly leaderboard and without a block leaderboard. */
@@ -71,7 +73,8 @@ export const levelName = (levels: AccessLevel[] | undefined, level: number) =>
 export const isPremium = (b: Pick<BlockDraft, 'params'>) => (b.params.min_level ?? 0) > 0
 
 /** Settings that are not the format's own: kept when the format changes, ignored by score invalidation. */
-export const blockSettings = ({ min_level, ranked }: FormatParams): FormatParams => ({
+export const blockSettings = ({ min_level, ranked, score_note }: FormatParams): FormatParams => ({
+  ...(score_note ? { score_note } : {}),
   ...(min_level ? { min_level } : {}),
   ...(ranked === false ? { ranked } : {}),
 })
