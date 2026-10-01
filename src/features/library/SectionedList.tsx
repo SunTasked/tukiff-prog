@@ -48,7 +48,8 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   sections: Section[]
   query: string
   storageKey: string
-  actions: ReturnType<typeof useSectionActions>
+  /** Absent: read-only (no rename / delete). */
+  actions?: ReturnType<typeof useSectionActions>
   /** Plural noun for the items ("séances", "exercices"). */
   what: string
   newHref?: (s: Section) => string
@@ -70,7 +71,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
 
   return (
     <>
-      <ErrorText>{actions.error}</ErrorText>
+      <ErrorText>{actions?.error}</ErrorText>
       {groups.map((g) => {
         const key = g.id ?? 'none'
         const open = query !== '' || expanded.includes(key)
@@ -83,7 +84,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
                 <span className="truncate font-semibold">{g.name}</span>
                 <span className="text-sm text-zinc-500">{g.items.length}</span>
               </button>
-              {section && (
+              {section && actions && (
                 <>
                   {newHref && (
                     <Link to={newHref(section)} className="px-1 text-lg text-lime-400" aria-label={`Ajouter dans ${section.name}`}>
