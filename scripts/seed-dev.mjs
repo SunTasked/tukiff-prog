@@ -157,6 +157,12 @@ const warmup = () =>
   block('warmup', 'none', {}, [item('Row', { calories: 15 }), item('Air Squat', { reps: '20' }), item('Push-up', { reps: '10' })], { notes: '2 rounds, rythme tranquille' })
 const newIds = (blocks) => blocks.map((b) => ({ ...b, id: crypto.randomUUID() }))
 
+// Block sponsor (UC-40): kept across reseeds (sponsors belong to no account).
+const sponsorId = (
+  must(await c1.from('sponsors').select('id').eq('name', 'Kanda Fitness').maybeSingle()) ??
+  must(await c1.from('sponsors').insert({ name: 'Kanda Fitness' }).select().single())
+).id
+
 const TEMPLATES = {
   'Chipper DU': [
     warmup(),
@@ -171,7 +177,7 @@ const TEMPLATES = {
   ],
   Fran: [
     warmup(),
-    block('metcon', 'for_time', { time_cap_s: 10 * 60, scaling: 'Thruster 30/20 kg\nPull-up → ring row' }, [
+    block('metcon', 'for_time', { time_cap_s: 10 * 60, scaling: 'Thruster 30/20 kg\nPull-up → ring row', sponsor_id: sponsorId }, [
       item('Thruster', { reps: '21-15-9', load_kg: 43, load_kg_f: 29 }),
       item('Pull-up', { reps: '21-15-9' }),
     ], { title: 'Fran' }),

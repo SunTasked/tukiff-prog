@@ -59,6 +59,8 @@ export type FormatParams = {
   min_level?: number
   /** false = scored, but out of the weekly leaderboard and without a block leaderboard. */
   ranked?: false
+  /** Sponsor shown under the block title ("powered by" + logo); absent = none. */
+  sponsor_id?: string
 }
 
 /**
@@ -74,8 +76,9 @@ export const levelName = (levels: AccessLevel[] | undefined, level: number) =>
 export const isPremium = (b: Pick<BlockDraft, 'params'>) => (b.params.min_level ?? 0) > 0
 
 /** Settings that are not the format's own: kept when the format changes, ignored by score invalidation. */
-export const blockSettings = ({ min_level, ranked, score_note, scaling }: FormatParams): FormatParams => ({
+export const blockSettings = ({ min_level, ranked, score_note, scaling, sponsor_id }: FormatParams): FormatParams => ({
   ...(score_note ? { score_note } : {}),
+  ...(sponsor_id ? { sponsor_id } : {}),
   ...(scaling !== undefined ? { scaling } : {}),
   ...(min_level ? { min_level } : {}),
   ...(ranked === false ? { ranked } : {}),
@@ -298,9 +301,9 @@ export function validateWorkout(w: WorkoutDraft): string | null {
   return null
 }
 
-/** What a score depends on: kind, title, notes and scaling options excluded (fixing a typo keeps the scores). */
+/** What a score depends on: kind, title, notes, scaling options and sponsor excluded (fixing a typo keeps the scores). */
 const scoringSignature = (b: BlockDraft) => {
-  const { min_level: _level, ranked: _ranked, scaling: _scaling, ...params } = b.params
+  const { min_level: _level, ranked: _ranked, scaling: _scaling, sponsor_id: _sponsor, ...params } = b.params
   return JSON.stringify([b.format, params, b.items])
 }
 

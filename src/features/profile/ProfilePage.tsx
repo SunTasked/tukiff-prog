@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { Avatar } from '../../components/Avatar'
-import { AvatarCropper } from '../../components/AvatarCropper'
+import { AvatarCropper } from '../../components/ImageCropper'
 import { programColor } from '../../components/ProgramBadges'
 import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../components/ui'
 import { fullName, GENDERS, type Gender } from '../../domain/profile'

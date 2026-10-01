@@ -632,6 +632,36 @@ export type Database = {
           },
         ]
       }
+      sponsors: {
+        Row: {
+          archived_at: string | null
+          created_at: string
+          id: string
+          link: string | null
+          logo_dark: boolean
+          logo_url: string | null
+          name: string
+        }
+        Insert: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          logo_dark?: boolean
+          logo_url?: string | null
+          name: string
+        }
+        Update: {
+          archived_at?: string | null
+          created_at?: string
+          id?: string
+          link?: string | null
+          logo_dark?: boolean
+          logo_url?: string | null
+          name?: string
+        }
+        Relationships: []
+      }
       usage_events: {
         Row: {
           at: string

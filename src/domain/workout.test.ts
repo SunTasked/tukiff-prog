@@ -154,9 +154,9 @@ describe('invalidatedBlocks', () => {
     e.blocks[1].params = { time_cap_s: 600 }
     expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
-  it('keeps the scores when only the access level, the ranking or the scaling options change', () => {
+  it('keeps the scores when only the access level, the ranking, the scaling options or the sponsor change', () => {
     const d = base()
-    d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false, scaling: 'Ring row' }
+    d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false, scaling: 'Ring row', sponsor_id: 's1' }
     expect(invalidatedBlocks(base(), d)).toEqual({ changed: [], removed: [] })
   })
 })

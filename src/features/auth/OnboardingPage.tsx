@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type ChangeEvent, type FormEvent } from 'react'
 import { Avatar } from '../../components/Avatar'
-import { AvatarCropper } from '../../components/AvatarCropper'
+import { AvatarCropper } from '../../components/ImageCropper'
 import { PasswordFields } from '../../components/PasswordFields'
 import { Button, Centered, Chips, ErrorText, Input } from '../../components/ui'
 import { isValidPassword } from '../../domain/password'

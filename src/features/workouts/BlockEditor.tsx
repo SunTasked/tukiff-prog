@@ -18,6 +18,7 @@ import {
 } from '../../domain/workout'
 import type { Exercise } from '../../lib/supabase'
 import { Markdown } from '../../components/Markdown'
+import { useSponsors } from '../../lib/sponsors'
 import { ItemEditor } from './ItemEditor'
 
 type Props = {
@@ -44,6 +45,8 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
   const [preview, setPreview] = useState(false)
   const setFormat = (format: Format) => set({ format, params: { ...defaultParams(format), ...blockSettings(block.params) } })
   const p = block.params
+  // Active sponsors, plus the block's own if it was removed since.
+  const sponsors = useSponsors().filter((s) => !s.archived_at || s.id === p.sponsor_id)
   // Libre = free text only: no movements or sub-blocks added (older ones stay listed, to remove or keep).
   const libre = block.format === 'none'
   // Levels offered: the program's, and at least the block's own (library templates have no program).
@@ -326,6 +329,16 @@ export function BlockEditor({ block, index, count, byId, nameOf, onChange, onMov
                 )}
                 value={String(p.min_level ?? 0)}
                 onChange={(v) => setParams({ min_level: v === '0' ? undefined : Number(v) })}
+              />
+            </div>
+          )}
+          {sponsors.length > 0 && (
+            <div>
+              <span className="mb-0.5 block text-xs text-zinc-500">Sponsor</span>
+              <Chips
+                options={{ '': 'Aucun', ...Object.fromEntries(sponsors.map((s) => [s.id, s.name])) }}
+                value={p.sponsor_id ?? ''}
+                onChange={(v) => setParams({ sponsor_id: v || undefined })}
               />
             </div>
           )}

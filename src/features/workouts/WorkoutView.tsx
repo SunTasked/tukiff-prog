@@ -4,6 +4,8 @@ import { loadFromPct } from '../../domain/records'
 import { SCORE_TYPES, scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { Markdown } from '../../components/Markdown'
+import { SponsorLogo } from '../../components/SponsorLogo'
+import { useSponsors } from '../../lib/sponsors'
 import {
   blockName,
   isPremium,
@@ -69,6 +71,7 @@ export function WorkoutView({
               )}
               {blockHeader?.(b)}
             </div>
+            {b.params.sponsor_id && <SponsorLine id={b.params.sponsor_id} />}
             {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
               {itemRuns(b).map(({ group, items }, k) => {
@@ -105,6 +108,25 @@ export function WorkoutView({
         ),
       )}
     </div>
+  )
+}
+
+/** "powered by" + logo, right-aligned under the title; opens the sponsor's site when it has one. */
+function SponsorLine({ id }: { id: string }) {
+  const sponsor = useSponsors().find((s) => s.id === id)
+  if (!sponsor) return null
+  const content = (
+    <>
+      <span className="text-xs text-zinc-500 italic">powered by</span>
+      <SponsorLogo sponsor={sponsor} />
+    </>
+  )
+  return sponsor.link ? (
+    <a href={sponsor.link} target="_blank" rel="noreferrer" className="mt-0.5 ml-auto flex w-fit items-center gap-1.5">
+      {content}
+    </a>
+  ) : (
+    <div className="mt-0.5 ml-auto flex w-fit items-center gap-1.5">{content}</div>
   )
 }
 
