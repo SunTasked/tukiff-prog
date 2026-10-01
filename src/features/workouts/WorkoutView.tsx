@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { loadFromPct } from '../../domain/records'
-import { SCORE_HINTS, SCORE_TYPES, scoreType } from '../../domain/scoring'
+import { SCORE_TYPES, scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { getItem, setItem } from '../../lib/storage'
 import { Chips } from '../../components/ui'
@@ -177,13 +177,14 @@ function ItemLine({
   )
 }
 
-/** What the athlete will enter as a score, so there is no guessing what a "round" is. */
+/** The score type, plus the coach's note on how to enter it if any. */
 function ScoreLine({ block }: { block: BlockDraft }) {
   const type = scoreType(block.format, block.params)
   if (type === 'none') return null
   return (
     <p className="mt-2 text-sm text-zinc-400">
-      <span className="font-semibold text-zinc-300">Score : {SCORE_TYPES[type]}</span> · {SCORE_HINTS[type]}
+      <span className="font-semibold text-zinc-300">Score : {SCORE_TYPES[type]}</span>
+      {block.params.score_note && <> · {block.params.score_note}</>}
     </p>
   )
 }
