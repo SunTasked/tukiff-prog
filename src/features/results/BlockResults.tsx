@@ -39,7 +39,7 @@ type Props = {
   skipped: boolean
   /** Other athletes' scores (off when the program's leaderboard is disabled, for athletes). */
   showBoard: boolean
-  /** Leaders of the program's weekly leaderboard (LEADER badge). */
+  /** Leaders of the program's weekly leaderboard ("L" badge). */
   leaders: Set<string>
   /** Claps of the workout (absent when the program's reactions are off). */
   claps?: Claps
@@ -396,7 +396,7 @@ function Board({
               )}
               <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
               <AthleteName profile={r.profiles} />
-              {leaders.has(r.athlete_id) && <LeaderBadge />}
+              {leaders.has(r.athlete_id) && <LeaderBadge short />}
               <span className="flex-1" />
               {clapping && <ClapButton resultId={r.id} mine={r.athlete_id === me} clapping={clapping} />}
               {rank !== null && <RxTag />}
