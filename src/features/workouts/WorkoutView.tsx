@@ -183,7 +183,7 @@ function TimerLink({ block }: { block: BlockDraft }) {
   const params = new URLSearchParams({ ...timerToParams(config), title: blockName(block) })
   return (
     <Link to={`/timer?${params}`} className="shrink-0 rounded-full bg-zinc-800 px-3 py-1 text-xs font-semibold text-zinc-200">
-      ▶ Timer
+      ⏱️ Timer
     </Link>
   )
 }
