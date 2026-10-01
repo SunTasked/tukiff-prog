@@ -12,15 +12,6 @@ export const SCORE_TYPES: Record<ScoreType, string> = {
   none: 'Aucun',
 }
 
-/** What the athlete enters, shown in the score sheet when the coach wrote no note. */
-export const SCORE_HINTS: Record<ScoreType, string> = {
-  time: 'Ton temps final, ou les reps faites si le time cap est atteint.',
-  rounds_reps: 'Les rounds complets, puis les reps faites dans le round entamé.',
-  reps: 'Le total de reps faites sur tout le bloc.',
-  load: 'La charge la plus lourde réussie.',
-  none: 'Pas de score : indique juste que c’est fait.',
-}
-
 /** The coach's choice for the block, else the format's default. */
 export function scoreType(format: Format, params: FormatParams = {}): ScoreType {
   return params.score ?? defaultScoreType(format)

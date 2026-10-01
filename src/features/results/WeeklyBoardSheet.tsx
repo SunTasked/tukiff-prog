@@ -31,6 +31,7 @@ export function WeeklyBoardSheet({
   const [boards, setBoards] = useState<WeeklyBoards | null>(null)
   const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
   const [open, setOpen] = useState<string | null>(null)
+  const [help, setHelp] = useState(false)
   const countOf = (g: Gender) => boards?.find((b) => b.gender === g)?.rows.length ?? 0
 
   useEffect(() => {
@@ -50,11 +51,31 @@ export function WeeklyBoardSheet({
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
-      <div className="flex items-center justify-between border-b border-zinc-800 p-3">
-        <span className="min-w-0 truncate font-semibold">Classement de la semaine · {programName}</span>
+      <div className="relative flex items-center justify-between border-b border-zinc-800 p-3">
+        <span className="flex min-w-0 items-center gap-2">
+          <span className="truncate font-semibold">Classement de la semaine · {programName}</span>
+          <button
+            className={`grid size-5 shrink-0 place-items-center rounded-full border text-xs ${help ? 'border-lime-400 text-lime-400' : 'border-zinc-600 text-zinc-400'}`}
+            aria-label="Comment sont comptés les points"
+            onClick={() => setHelp(!help)}
+          >
+            ?
+          </button>
+        </span>
         <button className="px-2 text-zinc-400" onClick={onClose}>
           Fermer
         </button>
+        {help && (
+          <p
+            className="absolute top-full right-3 left-3 z-10 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-xs text-zinc-300 shadow-lg shadow-black"
+            onClick={() => setHelp(false)}
+          >
+            Sur chaque bloc noté de la semaine, ta place au classement du bloc (Elite devant RX devant Scaled) rapporte des
+            points : 10 pour le 1er, 9 pour le 2e… 1 pour le 10e, 0 au-delà ou si tu n'as pas de score. Ton total est la somme
+            de tes 3 meilleurs blocs, le plus grand gagne. Le challenge de la semaine ne rapporte pas de points : il départage
+            les égalités. 👑 à 30 points.
+          </p>
+        )}
       </div>
       <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="mb-3 flex items-center justify-between">
@@ -74,13 +95,6 @@ export function WeeklyBoardSheet({
             ›
           </button>
         </div>
-        <p className="mb-4 text-xs text-zinc-500">
-          Sur chaque bloc noté de la semaine, ta place au classement du bloc (Elite devant RX devant Scaled) rapporte des
-          points : 10 pour le 1er, 9 pour le 2e… 1 pour le 10e, 0 au-delà ou si tu n'as pas de score. Ton total est la somme
-          de tes 3 meilleurs blocs, le plus grand gagne. Le challenge de la semaine ne rapporte pas de points : il départage
-          les égalités. 👑 à 30 points.
-        </p>
-
         {!enabled ? (
           <Card>
             <p className="text-zinc-400">Le classement est désactivé pour cette programmation.</p>
