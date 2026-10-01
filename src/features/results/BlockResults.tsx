@@ -129,7 +129,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
             Mon score : {formatScore(type, mine)}
-            {!mine.rx && ' · Adapté'} ✎
+            {ranked && mine.rx && ' · RX'} ✎
             {detail(mine) && <span className="block text-xs font-normal text-zinc-400">{detail(mine)}</span>}
           </button>
         ) : skipped ? (
@@ -219,7 +219,6 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
                   <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
                   <AthleteName profile={r.profiles} />
                   <span className="flex-1" />
-                  {!r.rx && <ScaledTag />}
                   <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
                 </div>
                 {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}
@@ -267,8 +266,8 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   )
 }
 
-const ScaledTag = () => (
-  <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">Adapté</span>
+const RxTag = () => (
+  <span className="shrink-0 rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 uppercase">RX</span>
 )
 
 function Board({
@@ -308,7 +307,7 @@ function Board({
               <AthleteName profile={r.profiles} />
               {leaders.has(r.athlete_id) && <LeaderBadge />}
               <span className="flex-1" />
-              {rank === null && <ScaledTag />}
+              {rank !== null && <RxTag />}
               <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
             </div>
             {detail(r) && <p className="text-right text-[11px] text-zinc-500">{detail(r)}</p>}

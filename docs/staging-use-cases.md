@@ -101,7 +101,7 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 
 | ID | Cas | Compte | Données / attendu |
 |---|---|---|---|
-| UC-25 | Classement de bloc séparé H/F : RX classés avec médailles top 3, scores adaptés en dessous, non classés, étiquette « Adapté » | a2 | Josh, Squat snatch (lundi) |
+| UC-25 | Classement de bloc séparé H/F : RX classés avec médailles top 3 et étiquette « RX », scores adaptés en dessous, non classés, sans étiquette | a2 | Josh, Squat snatch (lundi) |
 | UC-26 | Top 3 RX + ma ligne (même adaptée), classement complet en modale avec onglets Hommes/Femmes ouverts sur mon genre | a2 (H), a1 (F) | Josh |
 | UC-27 | Classement de la semaine (somme des rangs, bloc non scoré = dernier + 1) + badge LEADER par genre | a2 | semaines -1 et en cours ; Hugo et Léa attendus en tête |
 | UC-28 | Classement désactivé : l'athlète ne voit que son score, pas de classement hebdo ; le coach voit tout | a2 vs c1 | Haltéro |
@@ -114,12 +114,12 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-30 | Onglet Stats admin : actifs, sessions, temps de chargement par 10 min, pages, erreurs | c1 | 7 jours d'événements, 3 erreurs ; c2 n'a pas l'onglet |
 | UC-31 | Communauté : admins > coachs, athlètes par ordre alpha avec point rose/bleu, « + » invite par catégorie | c1 | 13 comptes |
 | UC-32 | Communauté, programmes en 3 sections : mes programmes / contributeur / autres (admin) avec owner | c1 (Hyrox dans « autres »), c2 (CrossFit en contributeur) | |
-| UC-33 | Fiche membre, compte rendu 7/30 jours par programme (score, « Adapté », rang parmi les RX, commentaire, réaction, passé, record) | c1 sur Léa, Sarah, Paul (vide) | limité aux programmes où le coach est owner/contributeur : c2 ne voit que CrossFit et Hyrox |
+| UC-33 | Fiche membre, compte rendu 7/30 jours par programme (score, « RX », rang parmi les RX, commentaire, réaction, passé, record) | c1 sur Léa, Sarah, Paul (vide) | limité aux programmes où le coach est owner/contributeur : c2 ne voit que CrossFit et Hyrox |
 | UC-36 | Fiche membre et Communauté : « Prénom Nom » (pseudo si absent) ; email sous le nom pour un admin seulement | c1 (admin) vs c2 sur Thomas, Paul | c2 ne voit pas l'email (refusé côté serveur) ; Paul affiché « Paul » |
 | UC-39 | Classements : pseudo encadré si l'athlète en a un (tap = « Prénom N. » en infobulle), sinon « Prénom N. » ; pseudo optionnel à l'inscription et dans le profil | a2 | Josh : « Tom », « Hugo le Viking », « Léa M. » |
 | UC-37 | Liens d'invitation nommés (« Pour qui ? ») affichés dans les liens actifs | c1, « + » athlètes | lien « Julien Garnier » (usage unique) et un lien 24 h sans nom |
 | UC-38 | Inscriptions en cours (lien utilisé, inscription pas finie) listées à part avec le nom du lien, bouton « Supprimer » (le lien à usage unique redevient utilisable) ; suppression auto après 7 jours | c1 | « Marion Blanc » |
-| UC-39 | Adaptations du coach (coche « Adaptations », texte libre) repliables sous le bloc ; saisie avec coche RX cochée par défaut, décochée = « Adapté », non classé, 0 pt au classement de la semaine | a3, a5 (adaptés), a6 (moitié) | Josh (lundi) |
+| UC-39 | Adaptations du coach (coche « Adaptations », texte libre) repliables sous le bloc ; saisie avec coche RX cochée par défaut, décochée = adapté (pas d’étiquette RX), non classé, 0 pt au classement de la semaine | a3, a5 (adaptés), a6 (moitié) | Josh (lundi) |
 | UC-34 | Records et % de 1RM ; lien « 1RM ? » quand il manque | a3 (sans 1RM) vs a1 | Squat snatch 80 %, Front Squat 75 %, Clean and jerk 75 % du hang clean |
 
 ## Relancer
