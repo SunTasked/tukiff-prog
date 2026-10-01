@@ -8,13 +8,13 @@ export type Claps = {
   counts: Map<string, number>
   /** Scores I clapped. */
   given: Set<string>
-  /** Who clapped my scores, per result id. */
-  received: Map<string, Person[]>
+  /** Who clapped, per result id (every score I can read). */
+  by: Map<string, Person[]>
 }
 
-const empty = (): Claps => ({ counts: new Map(), given: new Set(), received: new Map() })
+const empty = (): Claps => ({ counts: new Map(), given: new Set(), by: new Map() })
 
-/** Claps of a workout: counts for everyone, plus (RLS) the ones I gave and the ones I received with their authors. */
+/** Claps of a workout: counts and authors, on the scores I can read (RLS). */
 export function useClaps(workoutId: string | undefined, me: string | undefined, version: unknown) {
   const [claps, setClaps] = useState<Claps>(empty)
   const reload = useCallback(async () => {
@@ -26,15 +26,14 @@ export function useClaps(workoutId: string | undefined, me: string | undefined, 
     const next = empty()
     for (const c of counts.data ?? []) next.counts.set(c.result_id, c.claps)
     // from_user references auth.users (see migration 0047): names come from profiles separately.
-    const received = (rows.data ?? []).filter((r) => r.from_user !== me)
-    const ids = [...new Set(received.map((r) => r.from_user))]
+    const ids = [...new Set((rows.data ?? []).map((r) => r.from_user))]
     const { data: profiles } = ids.length
       ? await supabase.from('profiles').select('id, display_name, first_name, last_name, avatar_url').in('id', ids)
       : { data: [] }
     const byId = new Map((profiles ?? []).map((p) => [p.id, p]))
     for (const r of rows.data ?? []) if (r.from_user === me) next.given.add(r.result_id)
-    for (const r of received)
-      next.received.set(r.result_id, [...(next.received.get(r.result_id) ?? []), { id: r.from_user, profiles: byId.get(r.from_user) ?? null }])
+    for (const r of rows.data ?? [])
+      next.by.set(r.result_id, [...(next.by.get(r.result_id) ?? []), { id: r.from_user, profiles: byId.get(r.from_user) ?? null }])
     setClaps(next)
   }, [workoutId, me])
   useEffect(() => {

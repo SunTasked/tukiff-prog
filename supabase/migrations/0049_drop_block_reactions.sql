@@ -1,5 +1,6 @@
 -- Emoji reactions on blocks removed (UI gone): drop the table. The admin stats count claps instead.
 -- programs.reactions_enabled stays: it now only toggles claps.
+-- Claps: whoever can read a score can see who clapped it (long press on 👏), not only its athlete.
 
 create or replace function public.admin_usage() returns jsonb
 language plpgsql stable security definer set search_path = '' as $$
@@ -77,3 +78,14 @@ begin
 end $$;
 
 drop table public.block_reactions;
+
+drop policy "claps: read mine or received" on public.result_claps;
+create policy "claps: read on visible scores" on public.result_claps for select to authenticated using (
+  from_user = auth.uid()
+  -- results RLS applies inside the subquery: the scores the caller can read.
+  or exists (select 1 from public.results r where r.id = result_id)
+  or exists (
+    select 1 from public.results r
+    where r.id = result_id and r.team_id is not null and public.in_my_team(r.team_id)
+  )
+);
