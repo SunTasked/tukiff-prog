@@ -372,7 +372,6 @@ const between = (min, max) => Math.round(min + rand() * (max - min))
 const pick = (arr) => arr[between(0, arr.length - 1)]
 const COMMENTS = ['Grosse séance 🔥', 'Les DU ont piqué', 'Bras cramés', 'Rythme régulier', 'Dur mais propre', null, null, null]
 const DONE_COMMENTS = ['Technique ok', 'Barre à 60', 'Épaules raides', null]
-const FACES = ['😬', '😘', '🫠', '😏', '😭']
 
 function scoreFor(type, params, skill, female) {
   switch (type) {
@@ -393,7 +392,7 @@ function scoreFor(type, params, skill, female) {
 }
 const typeOf = (b) => b.params.score ?? { for_time: 'time', amrap: 'rounds_reps', sets_reps: 'load', tabata: 'reps' }[b.format] ?? 'none'
 
-let resultCount = 0, doneCount = 0, skipCount = 0, reactionCount = 0
+let resultCount = 0, doneCount = 0, skipCount = 0
 for (const u of USERS.filter((x) => x.skip < 1)) {
   const client = await clientFor(u.name)
   const female = u.gender === 'female'
@@ -401,7 +400,6 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
   for (const w of mine) {
     if (!w.publish_at || new Date(w.publish_at) > now) continue // coach preview of drafts / scheduled
     if (rand() < u.skip) continue
-    const reactionsOn = w.program_name === 'CrossFit'
     const blocks = must(await client.from('workout_blocks').select('id, kind, format, params').eq('workout_id', w.id).order('position'))
     for (const b of blocks) {
       if (b.kind === 'warmup') continue
@@ -424,10 +422,6 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
           workout_id: w.id, block_id: b.id, rx, comment: pick(COMMENTS), ...scoreFor(type, b.params, u.skill, female),
         }))
         resultCount++
-      }
-      if (reactionsOn && rand() < 0.35) {
-        must(await client.from('block_reactions').insert({ workout_id: w.id, block_id: b.id, emoji: pick(FACES) }))
-        reactionCount++
       }
     }
   }
@@ -457,7 +451,7 @@ for (const t of TEAMS) {
   }
 }
 console.log(`Résultats : ${teamCount} scores d'équipe`)
-console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe", ${reactionCount} réactions`)
+console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe"`)
 
 // Personal records: loads of % blocks (a3 has no Back Squat / Hang Clean 1RM, to show the "1RM ?" link).
 const RECORDS = {
