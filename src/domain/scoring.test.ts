@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { isRanked, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, type Score } from './scoring'
+import { isRanked, compactRows, myGenderFirst, compareScores, emptyScore, formatScore, leaderboards, weeklyLeaderboards, normalizeScore, rankResults, scoreType, validateScore, parseGuests, teamBoards, teamCategory, type Score } from './scoring'
 
 const s = (v: Partial<Score>): Score => ({ ...emptyScore(), ...v })
 const names = <T extends { name: string }>(rows: { result: T; rank: number | null }[]) => rows.map((r) => `${r.rank}:${r.result.name}`)
@@ -197,5 +197,57 @@ describe('myGenderFirst', () => {
     expect(myGenderFirst(boards, 'female').map((b) => b.gender)).toEqual(['female', 'male'])
     expect(myGenderFirst(boards, 'male').map((b) => b.gender)).toEqual(['male', 'female'])
     expect(myGenderFirst(boards, null).map((b) => b.gender)).toEqual(['male', 'female'])
+  })
+})
+
+describe('team WODs', () => {
+  const r = (id: string, team: string | null, gender: 'male' | 'female' | null, time_s: number, extra: object = {}) => ({
+    ...s({ time_s }),
+    id,
+    athlete_id: id,
+    team_id: team,
+    team_guests: null as unknown,
+    rx: true,
+    gender,
+    ...extra,
+  })
+
+  it('category: all men, all women, else mixed', () => {
+    expect(teamCategory(['male', null])).toBe('male')
+    expect(teamCategory(['female', 'female'])).toBe('female')
+    expect(teamCategory(['male', 'female', 'female'])).toBe('mixed')
+    expect(teamCategory(['male', 'male', 'female'])).toBe('mixed')
+  })
+
+  it('groups rows by team, guests count in the category, one board per category', () => {
+    const list = [
+      r('a', 't1', 'male', 500),
+      r('b', 't1', 'male', 500),
+      r('c', 't2', 'male', 400, { team_guests: [{ name: 'Zoé', gender: 'female' }] }),
+      r('d', 't3', 'female', 450),
+      r('e', 't3', 'female', 450),
+      r('f', 't4', 'female', 300, { rx: false }),
+      r('g', 't4', 'female', 300, { rx: false }),
+    ]
+    const boards = teamBoards('time', list)
+    expect(boards.map((b) => b.category)).toEqual(['male', 'female', 'mixed'])
+    expect(boards[0].rows.map((x) => [x.rank, x.result.members.map((m) => m.id).join('')])).toEqual([[1, 'ab']])
+    expect(boards[1].rows.map((x) => [x.rank, x.result.id])).toEqual([
+      [1, 't3'],
+      [null, 't4'],
+    ])
+    expect(boards[2].rows[0].result.guests).toEqual([{ name: 'Zoé', gender: 'female' }])
+  })
+
+  it('compact rows keep my team', () => {
+    const list = ['1', '2', '3', '4'].map((t, i) => r(`x${t}`, t, 'male', 100 + i))
+    const rows = teamBoards('time', list)[0].rows
+    expect(compactRows(rows, 'x4').map((x) => x.result.id)).toEqual(['1', '2', '3', '4'])
+    expect(compactRows(rows, 'nobody').map((x) => x.result.id)).toEqual(['1', '2', '3'])
+  })
+
+  it('parses guests defensively', () => {
+    expect(parseGuests(null)).toEqual([])
+    expect(parseGuests([{ name: ' Max ', gender: 'x' }, { name: '' }, 3])).toEqual([{ name: 'Max', gender: 'male' }])
   })
 })

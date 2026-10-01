@@ -120,6 +120,7 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-37 | Liens d'invitation nommés (« Pour qui ? ») affichés dans les liens actifs | c1, « + » athlètes | lien « Julien Garnier » (usage unique) et un lien 24 h sans nom |
 | UC-38 | Inscriptions en cours (lien utilisé, inscription pas finie) listées à part avec le nom du lien, bouton « Supprimer » (le lien à usage unique redevient utilisable) ; suppression auto après 7 jours | c1 | « Marion Blanc » |
 | UC-39 | Adaptations du coach (coche « Adaptations », texte libre) repliables sous le bloc ; saisie avec coche RX cochée par défaut, décochée = adapté (pas d’étiquette RX), non classé, 0 pt au classement de la semaine | a3, a5 (adaptés), a6 (moitié) | Josh (lundi) |
+| UC-40 | WOD en équipe (coach : « Équipe : Par 2/3/4 ») : un équipier saisit le score pour l'équipe, équipiers du programme ou invités sans compte (prénom + genre) ; erreur si un équipier a déjà un score ; tout équipier modifie ou supprime le score ; classement du bloc Hommes / Femmes / Mixte ; hors classement de la semaine | a1 (avec Inès), a3 (tente avec Hugo → erreur), c1 (éditeur) | CrossFit, jeudi « WOD » : équipes H, F, mixte avec invitée, mixte adaptée |
 | UC-34 | Records et % de 1RM ; lien « 1RM ? » quand il manque | a3 (sans 1RM) vs a1 | Squat snatch 80 %, Front Squat 75 %, Clean and jerk 75 % du hang clean |
 
 ## Relancer

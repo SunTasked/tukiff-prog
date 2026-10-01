@@ -3,7 +3,21 @@ import { Avatar } from '../../components/Avatar'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
-import { compactRows, formatScore, isRanked, leaderboards, myGenderFirst, scoreType, type BoardRow, type ScoreType } from '../../domain/scoring'
+import {
+  TEAM_CATEGORIES,
+  compactRows,
+  formatScore,
+  isRanked,
+  leaderboards,
+  myGenderFirst,
+  scoreType,
+  teamBoards,
+  teamCategory,
+  type BoardRow,
+  type ScoreType,
+  type Team,
+  type TeamCategory,
+} from '../../domain/scoring'
 import type { BlockDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
@@ -59,13 +73,23 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const boardOf = (g: Gender) => boards.find((b) => b.gender === g)?.rows ?? []
   const genderCounts = { male: boardOf('male').length, female: boardOf('female').length }
   const myGender: Gender = profile?.gender === 'female' ? 'female' : 'male'
-  const enterLabel = type === 'none' ? 'Marquer comme fait' : 'Saisir mon score'
+  const enterLabel = type === 'none' ? 'Marquer comme fait' : block.params.team_size ? 'Saisir le score d’équipe' : 'Saisir mon score'
   const checkable = type === 'none'
   // Blocks without score have no leaderboard, only the athletes' comments.
   const commented = results.filter((r) => r.comment?.trim())
   // Unranked blocks (coach's choice, premium): my score only, the others' in a plain list by name.
   const ranked = isRanked(block.format, block.params)
   const byName = [...results].sort((a, b) => scoreName(a.profiles).localeCompare(scoreName(b.profiles), 'fr'))
+  // Team WOD: one score per team, boards men / women / mixed teams.
+  const teamSize = type !== 'none' ? block.params.team_size : undefined
+  const withGender = results.map((r) => ({ ...r, gender: r.profiles?.gender ?? null }))
+  const teams = teamSize ? teamBoards(type, withGender) : []
+  const teamRows = mine?.team_id ? results.filter((r) => r.team_id === mine.team_id && r.athlete_id !== me) : []
+  const teamCount = teams.reduce((n, b) => n + b.rows.length, 0)
+  const teamOf = (c: TeamCategory) => teams.find((b) => b.category === c)?.rows ?? []
+  const myTeam = teams.flatMap((b) => b.rows).find((row) => row.result.members.some((m) => m.athlete_id === me))
+  const myCategory: TeamCategory = myTeam?.result.category ?? teamCategory([(profile?.gender as Gender | null) ?? null])
+  const [teamTab, setTeamTab] = useState<TeamCategory>(myCategory)
 
   // Blocks without score: one tap on the "Fait" box, the sheet stays available for the comment.
   async function toggleDone() {
@@ -128,8 +152,13 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         !checkable &&
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
-            Mon score : {formatScore(type, mine)}
+            {teamSize ? 'Équipe' : 'Mon score'} : {formatScore(type, mine)}
             {ranked && mine.rx && ' · RX'} ✎
+            {!!teamSize && (teamRows.length > 0 || !!myTeam?.result.guests.length) && (
+              <span className="block truncate text-xs font-normal text-zinc-400">
+                avec {[...teamRows.map((r) => scoreName(r.profiles)), ...(myTeam?.result.guests ?? []).map((g) => g.name)].join(', ')}
+              </span>
+            )}
             {detail(mine) && <span className="block text-xs font-normal text-zinc-400">{detail(mine)}</span>}
           </button>
         ) : skipped ? (
@@ -160,13 +189,22 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </button>
       )}
 
-      {showBoard && !checkable && !ranked && results.length > 0 && (
+      {showBoard && !checkable && !ranked && !teamSize && results.length > 0 && (
         <button className="mt-3 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
           Voir les scores ({results.length}) ›
         </button>
       )}
 
-      {showBoard && !checkable && ranked && boards.length > 0 && (
+      {showBoard && teamSize && teamCount > 0 && (
+        <>
+          {ranked && <TeamBoard title={TEAM_CATEGORIES[myCategory]} rows={compactRows(teamOf(myCategory), me)} type={type} me={me} />}
+          <button className="mt-2 w-full text-center text-sm text-lime-400" onClick={() => setFull(true)}>
+            {ranked ? `Voir le classement complet (${teamCount}) ›` : `Voir les scores (${teamCount}) ›`}
+          </button>
+        </>
+      )}
+
+      {showBoard && !checkable && ranked && !teamSize && boards.length > 0 && (
         <>
           <Board
             gender={myGender}
@@ -204,7 +242,37 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </div>
       )}
 
-      {full && !checkable && !ranked && (
+      {full && teamSize && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
+          <div className="flex items-center justify-between border-b border-zinc-800 p-3">
+            <span className="min-w-0 truncate font-semibold">{ranked ? 'Classement' : 'Scores'} · {blockLabel}</span>
+            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
+              Fermer
+            </button>
+          </div>
+          <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+            <div className="mb-3 flex gap-1 rounded-xl bg-zinc-900 p-1">
+              {(Object.keys(TEAM_CATEGORIES) as TeamCategory[]).map((c) => (
+                <button
+                  key={c}
+                  className={`flex-1 rounded-lg py-1.5 text-sm font-semibold ${c === teamTab ? 'bg-zinc-700 text-zinc-100' : 'text-zinc-400'}`}
+                  onClick={() => setTeamTab(c)}
+                >
+                  {TEAM_CATEGORIES[c]} ({teamOf(c).length})
+                </button>
+              ))}
+            </div>
+            <TeamBoard
+              rows={ranked ? teamOf(teamTab) : teamOf(teamTab).map((row) => ({ ...row, rank: null }))}
+              type={type}
+              me={me}
+              unranked={!ranked}
+            />
+          </div>
+        </div>
+      )}
+
+      {full && !checkable && !ranked && !teamSize && (
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Scores · {blockLabel}</span>
@@ -229,7 +297,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </div>
       )}
 
-      {full && !checkable && ranked && (
+      {full && !checkable && ranked && !teamSize && (
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Classement · {blockLabel}</span>
@@ -254,6 +322,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
           block={block}
           ranked={ranked}
           existing={mine}
+          team={teamSize ? { size: teamSize, rows: teamRows } : undefined}
           onClose={() => setOpen(false)}
           onSaved={async () => {
             setOpen(false)
@@ -314,6 +383,61 @@ function Board({
             {r.comment && <p className={`mt-0.5 text-xs whitespace-pre-line text-zinc-400 ${type === 'none' ? 'pl-8' : 'pl-16'}`}>{r.comment}</p>}
           </li>
         ))}
+      </ol>
+    </div>
+  )
+}
+
+type TeamResult = Team<ResultRow & { gender: Gender | null }>
+
+/** Team leaderboard: one row per team, its members' names (guests in grey), the team's score. */
+function TeamBoard({
+  title,
+  rows,
+  type,
+  me,
+  unranked = false,
+}: {
+  title?: string
+  rows: BoardRow<TeamResult>[]
+  type: ScoreType
+  me: string | undefined
+  unranked?: boolean
+}) {
+  return (
+    <div className="mt-3">
+      {title && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title}</p>}
+      {rows.length === 0 && <p className="text-sm text-zinc-500">Pas encore de score.</p>}
+      <ol className="flex flex-col gap-1">
+        {rows.map(({ result: t, rank }) => {
+          const comment = t.members.find((m) => m.comment)?.comment
+          return (
+            <li
+              key={t.id}
+              className={`rounded-lg px-2 py-1.5 text-sm ${
+                t.members.some((m) => m.athlete_id === me) ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-950'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                {!unranked && (
+                  <span className="w-6 shrink-0 text-center text-zinc-500">{rank === null ? '–' : rank <= 3 ? MEDALS[rank - 1] : rank}</span>
+                )}
+                <span className="flex shrink-0 -space-x-2">
+                  {t.members.map((m) => (
+                    <Avatar key={m.id} url={m.profiles?.avatar_url} name={scoreName(m.profiles)} className="size-6 text-[10px] ring-2 ring-zinc-950" />
+                  ))}
+                </span>
+                <span className="min-w-0 flex-1 truncate">
+                  {t.members.map((m) => scoreName(m.profiles)).join(' · ')}
+                  {t.guests.length > 0 && <span className="text-zinc-500"> · {t.guests.map((g) => g.name).join(' · ')}</span>}
+                </span>
+                {rank !== null && <RxTag />}
+                <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, t)}</span>
+              </div>
+              {comment && <p className="mt-0.5 pl-16 text-xs whitespace-pre-line text-zinc-400">{comment}</p>}
+            </li>
+          )
+        })}
       </ol>
     </div>
   )

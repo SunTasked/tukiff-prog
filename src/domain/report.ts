@@ -2,7 +2,7 @@
 import type { Gender } from './profile'
 import { formatScore, rankResults, type Score, type ScoreType } from './scoring'
 
-export type ReportBlock = { id: string; label: string; type: ScoreType; ranked?: boolean; exerciseIds: string[] }
+export type ReportBlock = { id: string; label: string; type: ScoreType; ranked?: boolean; team?: boolean; exerciseIds: string[] }
 export type ReportWorkout = { id: string; date: string; title: string; program: string; blocks: ReportBlock[] }
 export type ReportResult = Score & {
   block_id: string
@@ -59,7 +59,8 @@ export function buildReport(
         const mine = results.find((r) => r.block_id === block.id && r.athlete_id === athleteId)
         if (!mine) return { block, status: skipped.has(block.id) ? 'skipped' : 'empty', emoji, record }
         let rank: ReportRow['rank']
-        if (block.type !== 'none' && block.ranked !== false && mine.rx) {
+        // Team scores are ranked among teams, shown on the block only.
+        if (block.type !== 'none' && block.ranked !== false && !block.team && mine.rx) {
           const board = results.filter(
             (r) => r.block_id === block.id && r.rx && (r.gender ?? 'male') === (mine.gender ?? 'male'),
           )

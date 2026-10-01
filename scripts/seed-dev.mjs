@@ -292,7 +292,8 @@ const KANDA_WEEK = [
   ],
   [
     block('skill', 'emom', { rounds: 6, interval_s: 180, score: 'load' }, [item('Front Squat', { reps: '6', pct_1rm: 75 })], { title: 'Front Squat', notes: 'Bonus : skill pistol' }),
-    block('metcon', 'for_time', { rounds: 3, time_cap_s: 900, score: 'time' }, [
+    // Team WOD by 2 (UC-40).
+    block('metcon', 'for_time', { rounds: 3, time_cap_s: 900, score: 'time', team_size: 2 }, [
       item('Toes-to-Bar', { reps: '30' }),
       item('Power Clean', { reps: '12', load_kg: 80, load_kg_f: 50 }),
       item('Pistol', { reps: '30' }),
@@ -410,6 +411,7 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
         skipCount++
         continue
       }
+      if (b.params.team_size) continue // scored by team below
       const type = typeOf(b)
       const rx = rand() < u.rx
       if (type === 'none') {
@@ -430,6 +432,31 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
     }
   }
 }
+// Team WODs (UC-40): one entry per team, by its first member; men, women and mixed teams, guests without account.
+const TEAMS = [
+  { by: 'a1', with: ['a5'], time_s: 405, comment: 'On a souffert' },
+  { by: 'a4', with: ['a2'], time_s: 380 },
+  { by: 'a7', with: ['a9'], guests: [{ name: 'Zoé', gender: 'female' }], time_s: 470, rx: false },
+  { by: 'a6', with: [], guests: [{ name: 'Camille', gender: 'female' }], time_s: 450 },
+]
+let teamCount = 0
+for (const t of TEAMS) {
+  const client = await clientFor(t.by)
+  const mine = must(await client.rpc('my_workouts', { p_from: dayOf(-2, 0), p_to: today }))
+  for (const w of mine.filter((x) => x.publish_at && new Date(x.publish_at) <= now)) {
+    const blocks = must(await client.from('workout_blocks').select('id, params').eq('workout_id', w.id))
+    for (const b of blocks.filter((x) => x.params.team_size)) {
+      const ids = must(await client.rpc('team_candidates', { p_block: b.id }))
+      const members = t.with.map((n) => ids.find((c) => c.first_name === USERS.find((u) => u.name === n).first)?.id).filter(Boolean)
+      must(await client.rpc('save_team_result', {
+        p_block: b.id, p_team: null, p_members: members, p_guests: t.guests ?? [], p_time_s: t.time_s, p_capped: false,
+        p_rounds: null, p_reps: null, p_load_kg: null, p_rx: t.rx ?? true, p_comment: t.comment ?? null,
+      }))
+      teamCount++
+    }
+  }
+}
+console.log(`Résultats : ${teamCount} scores d'équipe`)
 console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe", ${reactionCount} réactions`)
 
 // Personal records: loads of % blocks (a3 has no Back Squat / Hang Clean 1RM, to show the "1RM ?" link).
