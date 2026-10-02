@@ -21,13 +21,15 @@ export function visibleReleases(releases: Release[], viewer: { coach: boolean; a
     .filter((r) => r.notes.length > 0)
 }
 
-/**
- * Whether the newest visible release is newer than the last one seen. Nothing seen yet (new device or first
- * launch with this feature): only the newest release counts as unread, not the whole history.
- */
+/** Last version counted as read. Nothing seen yet (new device or first launch with this feature): everything
+ * but the newest release, so the whole history does not show as unread. */
+export function readBaseline(allVersions: string[], seen: string | null): string | null {
+  return seen ?? [...allVersions].sort(compareVersions).at(-2) ?? null
+}
+
+export const isUnread = (version: string, baseline: string | null) => baseline === null || compareVersions(version, baseline) > 0
+
+/** Whether the newest visible release is unread. */
 export function hasUnread(visible: { version: string }[], allVersions: string[], seen: string | null): boolean {
-  if (!visible.length) return false
-  const sorted = [...allVersions].sort(compareVersions)
-  const baseline = seen ?? sorted.at(-2) ?? null
-  return baseline === null || compareVersions(visible[0].version, baseline) > 0
+  return visible.length > 0 && isUnread(visible[0].version, readBaseline(allVersions, seen))
 }

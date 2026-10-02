@@ -1,4 +1,4 @@
-import { visibleReleases, hasUnread, type Release } from '../domain/releases'
+import { visibleReleases, hasUnread, isUnread, readBaseline, type Release } from '../domain/releases'
 import { supabase, type Profile } from './supabase'
 import { isAdmin, isCoach } from '../features/auth/AuthProvider'
 
@@ -8,7 +8,11 @@ export const RELEASES = Object.values(files)
 
 const viewer = (p: Profile | null) => ({ coach: isCoach(p), admin: isAdmin(p) })
 
-export const releasesFor = (p: Profile | null) => visibleReleases(RELEASES, viewer(p))
+/** Releases this user can see, each flagged unread or not (as of the profile passed). */
+export function releasesFor(p: Profile | null) {
+  const baseline = readBaseline(RELEASES.map((r) => r.version), p?.messages_seen ?? null)
+  return visibleReleases(RELEASES, viewer(p)).map((r) => ({ ...r, unread: isUnread(r.version, baseline) }))
+}
 
 /** The last version read is kept on the profile (messages_seen) so it follows the user across devices. */
 export const unreadMessages = (p: Profile | null) =>

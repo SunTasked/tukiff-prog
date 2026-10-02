@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { compareVersions, hasUnread, visibleReleases, type Release } from './releases'
+import { compareVersions, hasUnread, isUnread, readBaseline, visibleReleases, type Release } from './releases'
 
 const releases: Release[] = [
   { version: '1.0.0', date: '2026-10-02', athlete: ['Séance du jour'], coach: ['Éditeur'] },
@@ -52,5 +52,16 @@ describe('hasUnread', () => {
     expect(hasUnread(visibleReleases(releases, { coach: false, admin: true }), all, null)).toBe(true)
     expect(hasUnread([{ version: '1.0.0' }], ['1.0.0'], null)).toBe(true)
     expect(hasUnread([], all, null)).toBe(false)
+  })
+})
+
+describe('isUnread', () => {
+  it('opens releases newer than the last seen, and only the newest when nothing was seen', () => {
+    const all = releases.map((r) => r.version)
+    expect(isUnread('1.2.0', readBaseline(all, '1.0.0'))).toBe(true)
+    expect(isUnread('1.0.0', readBaseline(all, '1.0.0'))).toBe(false)
+    expect(isUnread('1.10.0', readBaseline(all, null))).toBe(true)
+    expect(isUnread('1.2.0', readBaseline(all, null))).toBe(false)
+    expect(isUnread('1.0.0', readBaseline(['1.0.0'], null))).toBe(true)
   })
 })
