@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Card, PageTitle } from '../../components/ui'
+import { useLocation, useNavigate } from 'react-router'
+import { Card } from '../../components/ui'
+import { clapsMessage } from '../../domain/clapsMessage'
 import { formatLongDay } from '../../domain/dates'
 import type { Audience } from '../../domain/releases'
+import { clapCompliments, markClapsRead, newClappers } from '../../lib/clapsNotification'
 import { markMessagesRead, releasesFor } from '../../lib/releases'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -14,18 +17,35 @@ const GROUPS: { audience: Audience; label?: string }[] = [
 
 export function MessagesPage() {
   const { profile, refreshProfile } = useAuth()
+  const navigate = useNavigate()
+  const location = useLocation()
   const [releases] = useState(() => releasesFor(profile))
+  // Claps counted once, then marked read: the note lives only for this visit and is never stored.
+  const [clapsNote, setClapsNote] = useState<string | null>(null)
   useEffect(() => {
-    void markMessagesRead(profile).then((changed) => {
-      if (changed) void refreshProfile()
-    })
+    void (async () => {
+      const n = await newClappers(profile)
+      if (n > 0) setClapsNote(clapsMessage(n, await clapCompliments(), profile?.gender ?? null))
+      const [changed, claps] = await Promise.all([markMessagesRead(profile), markClapsRead(profile)])
+      if (changed || claps) void refreshProfile()
+    })()
   }, [])
+  // Opened from the bell: back to it; opened directly (link, reload): home.
+  const close = () => (location.key === 'default' ? navigate('/') : navigate(-1))
 
   return (
     <>
-      <PageTitle>Messages</PageTitle>
+      <div className="mb-4 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Messages</h1>
+        <button type="button" onClick={close} aria-label="Fermer" className="rounded-full bg-zinc-900 p-2 text-zinc-300">
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+            <path d="M18 6 6 18M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
       <div className="flex flex-col gap-3">
-        {releases.length === 0 && <Card className="text-zinc-400">Aucun message.</Card>}
+        {clapsNote && <Card className="text-sm">{clapsNote}</Card>}
+        {releases.length === 0 && !clapsNote && <Card className="text-zinc-400">Aucun message.</Card>}
         {releases.map((r) => (
           <Card key={r.version}>
             <details open={r.unread} className="group">

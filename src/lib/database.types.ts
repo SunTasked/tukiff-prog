@@ -123,6 +123,27 @@ export type Database = {
           },
         ]
       }
+      clap_compliments: {
+        Row: {
+          created_at: string
+          id: string
+          text: string
+          text_female: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text: string
+          text_female?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text?: string
+          text_female?: string | null
+        }
+        Relationships: []
+      }
       exercise_sections: {
         Row: {
           created_at: string
@@ -363,6 +384,7 @@ export type Database = {
           is_admin: boolean
           is_app_owner: boolean
           last_name: string | null
+          claps_seen_at: string
           messages_seen: string | null
           notifications: Json
           role: string | null
@@ -379,6 +401,7 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           last_name?: string | null
+          claps_seen_at?: string
           messages_seen?: string | null
           notifications?: Json
           role?: string | null
@@ -395,6 +418,7 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           last_name?: string | null
+          claps_seen_at?: string
           messages_seen?: string | null
           notifications?: Json
           role?: string | null
@@ -875,6 +899,7 @@ export type Database = {
           result_id: string
         }[]
       }
+      new_clappers: { Args: never; Returns: number }
       copy_workout: {
         Args: {
           p_date: string

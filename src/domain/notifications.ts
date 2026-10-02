@@ -1,6 +1,9 @@
 // Notification preferences (profiles.notifications): opt-outs only, a missing key means on.
 
-export const NOTIFICATION_CATEGORIES = [{ key: 'updates', label: 'Mises à jour de l’app', hint: 'Point rouge sur la cloche' }] as const
+export const NOTIFICATION_CATEGORIES = [
+  { key: 'updates', label: 'Mises à jour de l’app', hint: 'Point rouge sur la cloche' },
+  { key: 'claps', label: 'Claps 👏 reçus', hint: 'Nombre d’athlètes qui ont salué tes scores' },
+] as const
 
 export type NotificationCategory = (typeof NOTIFICATION_CATEGORIES)[number]['key']
 export type NotificationPrefs = Partial<Record<NotificationCategory | 'all', boolean>>
