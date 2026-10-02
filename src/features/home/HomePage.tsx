@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
-import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { compareWorkouts, groupByProgram } from '../../domain/grouping'
 import { useNewClappers } from '../../lib/clapsNotification'
 import { unreadMessages } from '../../lib/releases'
 import { useOnResume } from '../../lib/resume'
@@ -109,7 +109,6 @@ export function HomePage() {
     <DayView
       day={d}
       week={week}
-      active={d === day}
       boardOff={boardOff}
       coached={coached}
       athleteView={athleteView}
@@ -197,7 +196,6 @@ export function HomePage() {
 function DayView({
   day,
   week,
-  active,
   boardOff,
   coached,
   athleteView,
@@ -206,7 +204,6 @@ function DayView({
 }: {
   day: string
   week: Row[] | null
-  active: boolean
   boardOff: Set<string>
   coached: Map<string, number>
   athleteView: Set<string>
@@ -214,27 +211,6 @@ function DayView({
   onWeekBoard: (panel: { key: string; label: string }) => void
 }) {
   const [workouts, setWorkouts] = useState<(WorkoutDraft & Row)[] | null>(null)
-
-  // Auto-scroll, once, when this day is shown and loaded, to the first block of the open panels I neither scored
-  // nor skipped.
-  const done = useRef(new Map<string, Set<string>>())
-  const scrolled = useRef(false)
-  const [reported, setReported] = useState(0)
-  const report = (workoutId: string, blockIds: Set<string>) => {
-    done.current.set(workoutId, blockIds)
-    setReported((n) => n + 1)
-  }
-  useEffect(() => {
-    if (!active || !workouts || scrolled.current) return
-    const open = groupByProgram(workouts)
-      .filter((p) => getItem(panelStorageKey(p.key)) !== '1')
-      .flatMap((p) => p.items)
-    if (!open.every((w) => done.current.has(w.id))) return
-    scrolled.current = true
-    const target = firstPendingBlock(open, done.current)
-    // Next frame: after a swipe, the page first scrolls back to the top of the new day.
-    if (target) requestAnimationFrame(() => document.getElementById(`block-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  }, [active, workouts, reported])
 
   const rows = useMemo(
     () =>
@@ -251,7 +227,6 @@ function DayView({
   useEffect(() => {
     if (!rows) return
     setWorkouts(null)
-    done.current = new Map()
     Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
       setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
     )
@@ -308,10 +283,7 @@ function DayView({
                   <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
                 </p>
               )}
-              <WorkoutWithResults workout={asAthlete ? viewAs(w, myLevel) : w} canLog={published}
-                // Unpublished: nothing to log, so never the auto-scroll target.
-                onDone={(ids) => report(w.id, published ? ids : new Set(w.blocks.map((b) => b.id)))}
-              />
+              <WorkoutWithResults workout={asAthlete ? viewAs(w, myLevel) : w} canLog={published} />
             </div>
           )
         })}

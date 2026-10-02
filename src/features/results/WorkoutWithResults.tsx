@@ -11,18 +11,13 @@ import { useClaps } from './useClaps'
 import { useWorkoutResults } from './useWorkoutResults'
 import { useWeekLeaders } from './weeklyBoards'
 
-/**
- * Workout + score entry + leaderboards. canLog: the workout is assigned to the viewer.
- * onDone: once everything is loaded (layout stable), the ids of the blocks I scored or skipped.
- */
+/** Workout + score entry + leaderboards. canLog: the workout is assigned to the viewer. */
 export function WorkoutWithResults({
   workout,
   canLog,
-  onDone,
 }: {
   workout: WorkoutDraft
   canLog: boolean
-  onDone?: (blockIds: Set<string>) => void
 }) {
   const { session } = useAuth()
   const me = session?.user.id
@@ -55,10 +50,6 @@ export function WorkoutWithResults({
     reloadSettings()
     reloadSkips()
   })
-  useEffect(() => {
-    if (!onDone || !loaded || !settings || !skips) return
-    onDone(new Set([...skips, ...results.filter((r) => r.athlete_id === me).map((r) => r.block_id)]))
-  }, [onDone, loaded, settings, skips, results, me])
   const { oneRms } = useRecords(canLog ? me : undefined)
   // "L" badge: leaders of the program's weekly leaderboard, refreshed with the scores.
   const leaders = useWeekLeaders(loaded ? programId : null, workout.date, results)

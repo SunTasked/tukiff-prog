@@ -1,5 +1,6 @@
 {
   "athlete": [
-    "Accueil : glisse à gauche pour le jour suivant, à droite pour le jour précédent ; la veille et le lendemain sont déjà chargés"
+    "Accueil : glisse à gauche pour le jour suivant, à droite pour le jour précédent ; la veille et le lendemain sont déjà chargés",
+    "Accueil : plus de défilement automatique vers le premier bloc non saisi"
   ]
 }

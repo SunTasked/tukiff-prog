@@ -24,17 +24,3 @@ export function groupByProgram<T extends { program_id: string; program_name: str
   }
   return [...panels.values()].sort((a, b) => compareNames(a.label, b.label))
 }
-
-/**
- * Home auto-scroll target: the first block, in display order, of the open panels that I neither
- * scored nor skipped. undefined when everything is done, or when it is the very first block
- * (already on screen, no need to hide the week strip).
- */
-export function firstPendingBlock(
-  workouts: { id: string; blocks: { id: string }[] }[],
-  done: Map<string, Set<string>>,
-): string | undefined {
-  const blocks = workouts.flatMap((w) => w.blocks.map((b) => ({ id: b.id, done: done.get(w.id)?.has(b.id) ?? false })))
-  const index = blocks.findIndex((b) => !b.done)
-  return index > 0 ? blocks[index].id : undefined
-}
