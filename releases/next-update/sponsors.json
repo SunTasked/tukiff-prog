@@ -1,5 +1,5 @@
 {
   "admin": ["Sponsors : liste gérée dans Communauté (nom, logo recadré, lien)"],
   "coach": ["Sponsor au choix sur chaque bloc"],
-  "athlete": ["« powered by » + logo du sponsor sous le titre du bloc"]
+  "athlete": ["« powered by » + logo du sponsor à droite du titre du bloc"]
 }

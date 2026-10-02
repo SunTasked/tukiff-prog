@@ -60,8 +60,12 @@ export function WorkoutView({
               </p>
               <TimerLink block={b} />
             </div>
-            {blockHeading(b) && <h3 className="mt-1 text-lg font-bold">{blockHeading(b)}</h3>}
-            {b.params.sponsor_id && <SponsorLine id={b.params.sponsor_id} />}
+            {(blockHeading(b) || b.params.sponsor_id) && (
+              <div className="mt-1 flex items-start gap-2">
+                <h3 className="min-w-0 flex-1 text-lg font-bold">{blockHeading(b)}</h3>
+                {b.params.sponsor_id && <SponsorBadge id={b.params.sponsor_id} />}
+              </div>
+            )}
             {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
               {itemRuns(b).map(({ group, items }, k) => {
@@ -101,22 +105,22 @@ export function WorkoutView({
   )
 }
 
-/** "powered by" + logo, right-aligned under the title; opens the sponsor's site when it has one. */
-function SponsorLine({ id }: { id: string }) {
+/** "powered by" over the logo, right of the title (narrow, so long titles keep room); opens the sponsor's site when it has one. */
+function SponsorBadge({ id }: { id: string }) {
   const sponsor = useSponsors().find((s) => s.id === id)
   if (!sponsor) return null
   const content = (
     <>
-      <span className="text-xs text-zinc-500 italic">powered by</span>
+      <span className="text-[10px] leading-none text-zinc-500 italic">powered by</span>
       <SponsorLogo sponsor={sponsor} />
     </>
   )
   return sponsor.link ? (
-    <a href={sponsor.link} target="_blank" rel="noreferrer" className="mt-0.5 ml-auto flex w-fit items-center gap-1.5">
+    <a href={sponsor.link} target="_blank" rel="noreferrer" className="flex shrink-0 flex-col items-end gap-0.5">
       {content}
     </a>
   ) : (
-    <div className="mt-0.5 ml-auto flex w-fit items-center gap-1.5">{content}</div>
+    <div className="flex shrink-0 flex-col items-end gap-0.5">{content}</div>
   )
 }
 
