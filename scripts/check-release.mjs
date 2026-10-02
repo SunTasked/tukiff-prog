@@ -2,7 +2,8 @@
 // Usage: node scripts/check-release.mjs <base branch>   (needs the base branch fetched as origin/<base>)
 //   main:    the version is bumped, releases/v<version>.json exists, releases/next-update/ is empty,
 //            no high or critical vulnerability (npm audit).
-//   staging: the PR adds a note in releases/next-update/ (except release preparations and main merged back).
+//   staging: the PR adds a note in releases/next-update/ (except release preparations, main merged back
+//            and Dependabot updates).
 import { execSync } from 'node:child_process'
 import { existsSync, readdirSync, readFileSync } from 'node:fs'
 
@@ -27,7 +28,7 @@ if (base === 'main') {
 } else if (base === 'staging') {
   const head = process.env.GITHUB_HEAD_REF
   const added = sh(`git diff --name-only --diff-filter=AM origin/${base}...HEAD -- releases/next-update`)
-  if (head !== 'main' && version === baseVersion && !added.split('\n').some((f) => f.endsWith('.json')))
+  if (head !== 'main' && !head?.startsWith('dependabot/') && version === baseVersion && !added.split('\n').some((f) => f.endsWith('.json')))
     fail('Ajouter les nouveautés de la PR dans releases/next-update/<feature>.json (voir releases/README.md)')
 }
 console.log(`Règles de release OK (${base}, version ${version})`)
