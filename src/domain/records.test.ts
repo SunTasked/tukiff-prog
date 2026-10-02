@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyScore } from './scoring'
-import { bestBenchmarks, bestLoads, bestMaxes, formatMax, loadFromPct, oneRepMaxes, recordEntries } from './records'
+import { bestBenchmarks, bestLoads, bestMaxes, formatMax, loadFromPct, oneRepMaxes, recordEntries, withInherited } from './records'
 
 it('computes a load from a % of the 1RM, rounded to 1 kg', () => {
   expect(loadFromPct(100, 80)).toBe(80)
@@ -44,4 +44,23 @@ it('keeps the highest max per exercise and formats it in the exercise unit', () 
   expect(best.get('vup')!.value).toBe(31)
   expect(formatMax('reps', 31)).toBe('31 reps')
   expect(formatMax('time', 90)).toBe('1:30')
+})
+
+describe('withInherited', () => {
+  const parents = new Map([
+    ['power-snatch', ['snatch']],
+    ['snatch', ['gto']],
+  ])
+  const rec = (exercise_id: string, load_kg: number, rep_max = 1) => ({ exercise_id, rep_max, load_kg, date: '2026-10-01' })
+  it('counts a variant for its parents, transitively', () => {
+    const best = bestLoads(withInherited([rec('power-snatch', 80), rec('snatch', 75)], parents))
+    expect(best.get('snatch')!.get(1)).toMatchObject({ load_kg: 80, via: 'power-snatch' })
+    expect(best.get('gto')!.get(1)).toMatchObject({ load_kg: 80, via: 'power-snatch' })
+    expect(best.get('power-snatch')!.get(1)!.via).toBeUndefined()
+  })
+  it('prefers my own lift on a tie and never goes down the hierarchy', () => {
+    const best = bestLoads(withInherited([rec('power-snatch', 80), rec('snatch', 80)], parents))
+    expect(best.get('snatch')!.get(1)!.via).toBeUndefined()
+    expect(bestLoads(withInherited([rec('snatch', 90)], parents)).get('power-snatch')).toBeUndefined()
+  })
 })

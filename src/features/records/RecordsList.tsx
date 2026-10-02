@@ -20,16 +20,18 @@ import type { PersonalRecord } from '../../lib/supabase'
  */
 export function RecordsList({
   records,
+  loads,
   nameOf,
   measureOf,
   linked,
 }: {
   records: PersonalRecord[]
+  /** Loads with those inherited from variants (useRecords). */
+  loads: (LoadRecord & { via?: string })[]
   nameOf: (id: string) => string | undefined
   measureOf: (id: string) => Measure | undefined
   linked: boolean
 }) {
-  const loads = records.filter((r): r is PersonalRecord & LoadRecord => r.exercise_id !== null && r.load_kg !== null)
   const maxes = records.filter((r): r is PersonalRecord & MaxRecord => r.exercise_id !== null && r.value !== null)
   const benches = records.filter((r) => r.benchmark_name !== null) as (PersonalRecord & BenchmarkRecord)[]
   const byName = (a: string, b: string) => (nameOf(a) ?? '').localeCompare(nameOf(b) ?? '')
@@ -77,7 +79,7 @@ export function RecordsList({
           row(
             id,
             `/library/exercises/${id}`,
-            nameOf(id) ?? '?',
+            <ViaName name={nameOf(id) ?? '?'} via={[...byRm.values()].map((r) => r.via && nameOf(r.via))} />,
             [...byRm.entries()]
               .sort(([a], [b]) => a - b)
               .map(([rm, r]) => (
@@ -111,5 +113,16 @@ export function RecordsList({
         ),
       )}
     </div>
+  )
+}
+
+/** Lift name, with the variants its bests come from (a Power Snatch counts as a Snatch). */
+export function ViaName({ name, via }: { name: string; via: (string | undefined)[] }) {
+  const from = [...new Set(via.filter(Boolean))]
+  return (
+    <>
+      {name}
+      {from.length > 0 && <span className="block truncate text-xs text-zinc-500">via {from.join(', ')}</span>}
+    </>
   )
 }

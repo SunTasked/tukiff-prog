@@ -1,0 +1,4 @@
+{
+  "athlete": ["Records d'haltéro par association : un Power Snatch compte aussi pour le Snatch (affiché « via … »), y compris pour les % de 1RM"],
+  "admin": ["Hiérarchie des mouvements dans la table exercise_links (migration 0059), alimentée en base"]
+}

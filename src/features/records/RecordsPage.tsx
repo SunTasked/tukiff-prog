@@ -9,7 +9,7 @@ import { useRecords } from './useRecords'
 export function RecordsPage() {
   const { session } = useAuth()
   const { nameOf, measureOf } = useExercises()
-  const { records } = useRecords(session?.user.id)
+  const { records, loads } = useRecords(session?.user.id)
 
   return (
     <>
@@ -24,7 +24,7 @@ export function RecordsPage() {
         </Link>
         .
       </p>
-      <RecordsList records={records} nameOf={nameOf} measureOf={measureOf} linked />
+      <RecordsList records={records} loads={loads} nameOf={nameOf} measureOf={measureOf} linked />
     </>
   )
 }

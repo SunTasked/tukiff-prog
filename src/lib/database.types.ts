@@ -162,6 +162,21 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_links: {
+        Row: {
+          exercise_id: string
+          parent_id: string
+        }
+        Insert: {
+          exercise_id: string
+          parent_id: string
+        }
+        Update: {
+          exercise_id?: string
+          parent_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string

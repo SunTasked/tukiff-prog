@@ -9,7 +9,6 @@ import {
   recordEntries,
   RECORD_MEASURES,
   type BenchmarkRecord,
-  type LoadRecord,
   type MaxRecord,
 } from '../../domain/records'
 import { GENDERS, type Gender } from '../../domain/profile'
@@ -20,6 +19,7 @@ import { useAuth } from '../auth/AuthProvider'
 import { AthleteName } from '../results/AthleteName'
 import { GenderTabs } from '../results/GenderTabs'
 import { BenchmarkRecordSheet, ExerciseRecordSheet, scoredBlocks } from './RecordForms'
+import { useExercises } from '../exercises/useExercises'
 import { useRecords } from './useRecords'
 
 const score = (r: PersonalRecord) => formatScore(r.score_type as ScoreType, { ...emptyScore(), ...r })
@@ -83,16 +83,17 @@ export function ExerciseRecords({
   adding?: boolean
 }) {
   const { session } = useAuth()
-  const { records, reload } = useRecords(session?.user.id)
+  const { records, loads: allLoads, reload } = useRecords(session?.user.id)
+  const { nameOf } = useExercises()
   const [open, setOpen] = useState(adding)
   const measure = exercise.measure as Measure
   if (!RECORD_MEASURES.includes(measure)) return null
 
   const mine = records.filter((r) => r.exercise_id === exercise.id)
   const load = measure === 'load'
-  const loads = mine.filter((r): r is PersonalRecord & LoadRecord => r.load_kg !== null)
   const maxes = mine.filter((r): r is PersonalRecord & MaxRecord => r.value !== null)
-  const byRm = bestLoads(loads).get(exercise.id)
+  // Best per RM, counting my lifts on its variants (via).
+  const byRm = bestLoads(allLoads.filter((r) => r.exercise_id === exercise.id)).get(exercise.id)
   const bestMax = bestMaxes(maxes).get(exercise.id)
   const best = load ? (
     <div className="flex flex-wrap gap-3">
@@ -101,6 +102,7 @@ export function ExerciseRecords({
         .map(([rm, r]) => (
           <span key={rm}>
             <span className="text-zinc-500">{rm}RM</span> <b>{formatNumber(r.load_kg)} kg</b>
+            {r.via && <span className="text-xs text-zinc-500"> via {nameOf(r.via)}</span>}
           </span>
         ))}
     </div>
