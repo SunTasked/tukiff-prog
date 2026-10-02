@@ -7,6 +7,7 @@ import { invitationStatus } from '../../domain/invitations'
 import { fullName, isPending } from '../../domain/profile'
 import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { isAdmin, isCoach, roleLabel, useAuth } from '../auth/AuthProvider'
+import { SponsorsCard } from '../sponsors/SponsorsCard'
 import { InviteSheet, type InvitationRow } from './InviteSheet'
 
 type ProgramRow = Program & { program_members: { count: number }[]; program_coaches: { coach_id: string }[] }
@@ -260,6 +261,7 @@ export function AthletesPage() {
             </>
           )}
         </Card>
+        {admin && <SponsorsCard />}
         <ErrorText>{error}</ErrorText>
       </div>
       {inviting && (
