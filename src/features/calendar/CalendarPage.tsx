@@ -2,7 +2,7 @@ import { Fragment, useCallback, useEffect, useMemo, useState, type DragEvent } f
 import { useNavigate, useSearchParams } from 'react-router'
 import { DateField, DateTimeField } from '../../components/DatePicker'
 import { ProgramBadge, programColor, programDot } from '../../components/ProgramBadges'
-import { Button, ErrorText, PageTitle } from '../../components/ui'
+import { Button, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import {
   addDays,
   coversDay,
@@ -17,14 +17,15 @@ import {
   weekDays,
 } from '../../domain/dates'
 import { compareWorkouts } from '../../domain/grouping'
-import { groupBySection } from '../../domain/sections'
 import { getItem, setItem } from '../../lib/storage'
 import { supabase } from '../../lib/supabase'
 import { searchExercises } from '../exercises/useExercises'
 import { useMyPrograms, type EditableProgram } from '../programs/useMyPrograms'
 import { useExercises } from '../exercises/useExercises'
-import { toBlock } from '../workouts/api'
-import type { AccessLevel, BlockDraft } from '../../domain/workout'
+import { loadWorkout, toBlock } from '../workouts/api'
+import { WorkoutView } from '../workouts/WorkoutView'
+import { SectionedList } from '../library/SectionedList'
+import type { AccessLevel, BlockDraft, WorkoutDraft } from '../../domain/workout'
 import { BlockLines, DETAILS, type Detail } from './BlockLines'
 import { StatusBadge } from './StatusBadge'
 
@@ -644,6 +645,7 @@ function SelectionBar({
 function AddSheet({ date, programs, onClose }: { date: string; programs: EditableProgram[]; onClose: () => void }) {
   const navigate = useNavigate()
   const [programId, setProgramId] = useState(programs[0]?.id ?? '')
+  const exercises = useExercises()
   const [templates, setTemplates] = useState<{ id: string; name: string; title: string; section_id: string | null }[]>([])
   const [sections, setSections] = useState<{ id: string; name: string }[]>([])
   const [query, setQuery] = useState('')
@@ -705,30 +707,64 @@ function AddSheet({ date, programs, onClose }: { date: string; programs: Editabl
         />
         <ErrorText>{error}</ErrorText>
       </div>
-      <div className="flex-1 overflow-y-auto pb-[env(safe-area-inset-bottom)]">
-        {groupBySection(searchExercises(templates, query), sections)
-          .filter((g) => g.items.length > 0)
-          .map((g) => (
-            <section key={g.id ?? 'none'}>
-              <p className="sticky top-0 bg-zinc-950 px-4 pt-3 pb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                {g.name}
-              </p>
-              <ul>
-                {g.items.map((t) => (
-                  <li key={t.id}>
-                    <button
-                      className="w-full border-b border-zinc-900 px-4 py-3 text-left disabled:opacity-50"
-                      disabled={!programId}
-                      onClick={() => pick(t.id)}
-                    >
-                      {t.name}
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </section>
-          ))}
+      <div className="flex flex-1 flex-col gap-3 overflow-y-auto px-3 pb-[max(env(safe-area-inset-bottom),0.75rem)]">
+        <SectionedList
+          items={searchExercises(templates, query)}
+          sections={sections}
+          query={query}
+          storageKey="librarySectionsExpanded"
+          what="séances"
+          renderItem={(t) => (
+            <TemplateItem id={t.id} title={t.name} exercises={exercises} disabled={!programId} onPick={() => pick(t.id)} />
+          )}
+        />
       </div>
     </div>
+  )
+}
+
+/** Library session in the add sheet: tap the title to show its content (collapsed by default), then use it. */
+function TemplateItem({
+  id,
+  title,
+  exercises,
+  disabled,
+  onPick,
+}: {
+  id: string
+  title: string
+  exercises: ReturnType<typeof useExercises>
+  disabled: boolean
+  onPick: () => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [workout, setWorkout] = useState<WorkoutDraft | null | undefined>()
+
+  function toggle() {
+    if (!open && workout === undefined) loadWorkout(id).then(setWorkout)
+    setOpen(!open)
+  }
+
+  return (
+    <>
+      <button className="flex w-full items-center gap-2 px-4 py-3 text-left" onClick={toggle} aria-expanded={open}>
+        <span className="min-w-0 flex-1 truncate">{title}</span>
+        <span className="text-zinc-500">{open ? '▾' : '▸'}</span>
+      </button>
+      {open && (
+        <div className="flex flex-col gap-3 px-4 pb-4">
+          {workout === undefined ? (
+            <Spinner />
+          ) : workout === null ? (
+            <p className="text-sm text-zinc-400">Séance introuvable.</p>
+          ) : (
+            <WorkoutView workout={workout} nameOf={exercises.nameOf} videoOf={(eid) => exercises.byId.get(eid)?.video_url} />
+          )}
+          <Button disabled={disabled || !workout} onClick={onPick}>
+            Utiliser cette séance
+          </Button>
+        </div>
+      )}
+    </>
   )
 }
