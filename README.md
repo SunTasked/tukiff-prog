@@ -69,11 +69,17 @@ Variables d'environnement :
 
 1. **Feature** : branche depuis `staging`, PR vers `staging`. Sur la base staging : `node scripts/migrate.mjs`,
    `node scripts/gen-types.mjs` (commiter le fichier de types) et `node scripts/deploy-functions.mjs` si une Edge Function
-   a changé. La preview Vercel de la PR utilise la base staging. Merger dans `staging` : l'URL staging affiche la feature.
-2. **Release** : PR de `staging` vers `main`. Juste avant le merge : `TARGET=prod node scripts/migrate.mjs` (applique
+   a changé. La PR ajoute ses nouveautés dans `releases/next-update/<feature>.json` (voir `releases/README.md`).
+   La preview Vercel de la PR utilise la base staging. Merger dans `staging` : l'URL staging affiche la feature.
+2. **Release** : branche depuis `staging`, `node scripts/release.mjs <mineur|correctif|majeur>` (mise à jour des
+   dépendances et correction des vulnérabilités, lint/tests/build, version et notes `releases/v<version>.json`), PR
+   vers `staging`, merge, puis **test de l'app sur l'URL staging avec ces mises à jour**. Ensuite PR de `staging` vers
+   `main` ; la CI y refuse une version non montée, des notes manquantes ou une vulnérabilité haute. Juste avant le merge : `TARGET=prod node scripts/migrate.mjs` (applique
    en lot les migrations du lot) et `deploy-functions` si besoin. Merger avec un **merge commit, jamais squash ni
-   rebase**, sinon `staging` et `main` divergent. Vercel déploie la production.
-3. **Correctif urgent** : branche depuis `main`, PR vers `main`, puis fusionner `main` dans `staging`
+   rebase**, sinon `staging` et `main` divergent. Vercel déploie la production, le tag `v<version>` et la release
+   GitHub sont créés automatiquement.
+3. **Correctif urgent** : branche depuis `main`, note dans `releases/next-update/`, `node scripts/release.mjs correctif`,
+   PR vers `main`, puis fusionner `main` dans `staging`
    (PR `main` → `staging`, merge commit).
 4. Après un changement d'URL : `TARGET=prod node scripts/auth-config.mjs https://tukiff-prog.vercel.app`.
 

@@ -18,3 +18,16 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run build
+
+  # Release notes and version (releases/README.md); PRs into main also need a clean npm audit.
+  release-rules:
+    if: github.event_name == 'pull_request' && (github.base_ref == 'main' || github.base_ref == 'staging')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node scripts/check-release.mjs ${{ github.base_ref }}
