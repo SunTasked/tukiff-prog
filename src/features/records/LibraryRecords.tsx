@@ -49,7 +49,7 @@ function RecordsCard({
           {entries.map((e) => (
             <li key={e[0].entry_id} className="flex items-center justify-between gap-2 rounded-lg bg-zinc-950 px-2 py-1.5">
               <span className="text-zinc-400 capitalize">{formatDay(e[0].date)}</span>
-              <span className="min-w-0 flex-1 truncate text-right">
+              <span className="min-w-0 flex-1 text-right break-words">
                 {label(e)}
                 {e[0].notes && <span className="text-zinc-500"> · {e[0].notes}</span>}
               </span>
