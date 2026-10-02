@@ -102,7 +102,7 @@ export function ExerciseRecords({
         .map(([rm, r]) => (
           <span key={rm}>
             <span className="text-zinc-500">{rm}RM</span> <b>{formatNumber(r.load_kg)} kg</b>
-            {r.via && <span className="text-xs text-zinc-500"> via {nameOf(r.via)}</span>}
+            {r.via && nameOf(r.via) && <span className="text-xs text-zinc-500"> via {nameOf(r.via)}</span>}
           </span>
         ))}
     </div>
