@@ -1,11 +1,16 @@
-/** Minimum horizontal travel (px) for a swipe. */
-export const SWIPE_MIN_PX = 60
+/** Finger travel (px) before a gesture is classified as horizontal or vertical. */
+export const SWIPE_LOCK_PX = 10
+
+/** Axis of a gesture once the finger moved enough, null before. Horizontal needs a clearly sideways move. */
+export function swipeAxis(dx: number, dy: number): 'x' | 'y' | null {
+  if (Math.hypot(dx, dy) < SWIPE_LOCK_PX) return null
+  return Math.abs(dx) > 1.2 * Math.abs(dy) ? 'x' : 'y'
+}
 
 /**
- * Direction of a finished touch gesture, or null when it isn't a clear horizontal swipe
- * (too short, or mostly vertical: a scroll).
+ * Whether a horizontal drag released after `dx` px at `velocity` px/ms turns the page:
+ * dragged past 30% of the width, or flicked fast enough.
  */
-export function swipeDirection(dx: number, dy: number): 'left' | 'right' | null {
-  if (Math.abs(dx) < SWIPE_MIN_PX || Math.abs(dx) < 2 * Math.abs(dy)) return null
-  return dx < 0 ? 'left' : 'right'
+export function swipeCommits(dx: number, velocity: number, width: number) {
+  return Math.abs(dx) > 0.3 * width || (Math.abs(velocity) > 0.4 && Math.abs(dx) > 30 && Math.sign(velocity) === Math.sign(dx))
 }
