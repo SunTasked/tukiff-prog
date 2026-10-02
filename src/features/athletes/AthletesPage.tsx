@@ -9,6 +9,7 @@ import { supabase, type Profile, type Program } from '../../lib/supabase'
 import { isAdmin, isCoach, roleLabel, useAuth } from '../auth/AuthProvider'
 import { ComplimentsCard } from '../compliments/ComplimentsCard'
 import { SponsorsCard } from '../sponsors/SponsorsCard'
+import { usePalmares } from '../results/palmares'
 import { InviteSheet, type InvitationRow } from './InviteSheet'
 
 type ProgramRow = Program & { program_members: { count: number }[]; program_coaches: { coach_id: string }[] }
@@ -21,9 +22,11 @@ const yearFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short
 const shortDate = (ts: string) =>
   (new Date(ts).getFullYear() === new Date().getFullYear() ? dateFmt : yearFmt).format(new Date(ts))
 
-type SortKey = 'name' | 'signup' | 'seen'
+type SortKey = 'name' | 'leader' | 'wins' | 'signup' | 'seen'
 const COLUMNS: { key: SortKey; label: string; className: string }[] = [
   { key: 'name', label: 'Nom', className: 'flex-1 text-left' },
+  { key: 'leader', label: 'L', className: 'w-7 text-right' },
+  { key: 'wins', label: '🥇', className: 'w-7 text-right' },
   { key: 'signup', label: 'Inscrit', className: 'w-16 text-right' },
   { key: 'seen', label: 'Vu', className: 'w-14 text-right' },
 ]
@@ -41,6 +44,7 @@ export function AthletesPage() {
   const [inviting, setInviting] = useState<'athlete' | 'coach' | null>(null)
   const [newProgram, setNewProgram] = useState('')
   const [lastSeen, setLastSeen] = useState<Map<string, string | null>>(new Map())
+  const palmares = usePalmares()
   // Name A→Z by default; dates most recent first on first tap. Tapping the active column flips the order.
   const [sort, setSort] = useState<{ key: SortKey; desc: boolean }>({ key: 'name', desc: false })
 
@@ -88,6 +92,10 @@ export function AthletesPage() {
   const athletes = members.filter((m) => !isAdmin(m) && !isCoach(m)).sort(byName)
   const sorted = (list: Profile[]) => {
     if (sort.key === 'name') return sort.desc ? [...list].reverse() : list
+    if (sort.key === 'leader' || sort.key === 'wins') {
+      const count = (m: Profile) => palmares.get(m.id)?.[sort.key === 'leader' ? 'leader_weeks' : 'wins'] ?? 0
+      return [...list].sort((a, b) => (sort.desc ? count(b) - count(a) : count(a) - count(b)))
+    }
     const value = (m: Profile) => (sort.key === 'signup' ? m.created_at : lastSeen.get(m.id)) ?? ''
     // Never seen: always at the end.
     return [...list].sort((a, b) => {
@@ -178,7 +186,7 @@ export function AthletesPage() {
           return (
             <li key={m.id}>
               <Link to={`/athletes/${m.id}`} className="flex items-center gap-2 py-2">
-                <Avatar url={m.avatar_url} name={fullName(m)} />
+                <Avatar url={m.avatar_url} name={fullName(m)} crown={palmares.get(m.id)?.crown} />
                 <span className="flex min-w-0 flex-1 flex-col">
                   <span className="flex items-center gap-1.5">
                     {m.gender && (
@@ -195,6 +203,8 @@ export function AthletesPage() {
                     </span>
                   )}
                 </span>
+                <span className="w-7 shrink-0 text-right text-xs text-zinc-300 tabular-nums">{palmares.get(m.id)?.leader_weeks || '–'}</span>
+                <span className="w-7 shrink-0 text-right text-xs text-zinc-300 tabular-nums">{palmares.get(m.id)?.wins || '–'}</span>
                 <span className="w-16 shrink-0 text-right text-xs text-zinc-400">{shortDate(m.created_at)}</span>
                 <span className="w-14 shrink-0 text-right text-xs text-zinc-400">{seen ? seenAgo(seen) : '—'}</span>
               </Link>

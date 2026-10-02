@@ -10,6 +10,7 @@ import { useMyPrograms } from '../programs/useMyPrograms'
 import { useExercises } from '../exercises/useExercises'
 import { RecordsList } from '../records/RecordsList'
 import { useRecords } from '../records/useRecords'
+import { PalmaresTiles } from '../results/PalmaresTiles'
 import { AthleteReport } from './AthleteReport'
 
 const signupFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -118,6 +119,9 @@ export function MemberPage() {
         <br />
         Dernier accès : {lastSeen ? formatDateTime(lastSeen) : 'inconnu'}
       </p>
+      <div className="mb-4">
+        <PalmaresTiles athleteId={member.id} />
+      </div>
       <div className="mb-4">
         <Chips options={TABS} value={tab} onChange={setTab} />
       </div>

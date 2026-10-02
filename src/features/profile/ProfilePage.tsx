@@ -11,9 +11,12 @@ import { supabase } from '../../lib/supabase'
 import { levelName, type AccessLevel } from '../../domain/workout'
 import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
+import { useCrowns } from '../results/palmares'
+import { PalmaresTiles } from '../results/PalmaresTiles'
 
 export function ProfilePage() {
   const { session, profile, refreshProfile } = useAuth()
+  const crown = useCrowns().has(profile?.id ?? '')
   const [editingName, setEditingName] = useState(false)
   const [editingNames, setEditingNames] = useState(false)
   const fileInput = useRef<HTMLInputElement>(null)
@@ -110,7 +113,7 @@ export function ProfilePage() {
       <div className="flex flex-col gap-4">
         <Card className="flex flex-col gap-3">
           <div className="flex items-center gap-4">
-            <Avatar url={profile?.avatar_url} name={fullName(profile)} className="size-16 text-xl" />
+            <Avatar url={profile?.avatar_url} name={fullName(profile)} crown={crown} className="size-16 text-xl" />
             <div className="flex flex-col items-start gap-1 text-sm">
               <button className="font-semibold text-lime-400" onClick={() => fileInput.current?.click()}>
                 {profile?.avatar_url ? 'Changer la photo' : 'Ajouter une photo'}
@@ -140,6 +143,7 @@ export function ProfilePage() {
               </button>
             </span>
           </Row>
+          <PalmaresTiles athleteId={profile?.id} />
           <Row label="Genre">
             <Chips options={GENDERS} value={(profile?.gender as Gender | null) ?? null} onChange={(gender) => update({ gender })} />
           </Row>
