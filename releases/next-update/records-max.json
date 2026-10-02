@@ -10,6 +10,7 @@
     "Classement Hommes/Femmes de la box sur chaque benchmark, un par score"
   ],
   "admin": [
-    "scripts/copy-library.mjs : copie les benchmarks de la prod vers staging"
+    "scripts/copy-library.mjs : copie les benchmarks de la prod vers staging",
+    "Benchmarks et sections de la bibliothèque en lecture seule aussi en base (RLS)"
   ]
 }
