@@ -1,3 +1,4 @@
 {
-  "athlete": ["Séance tirée d'un benchmark : bouton « Enregistrer comme record » une fois tous les scores RX saisis, ; un coach qui modifie un bloc lié est prévenu que le lien sera supprimé (notes permises)"]
+  "athlete": ["Séance tirée d'un benchmark : bouton « Enregistrer comme record » une fois tous les scores RX saisis"],
+  "coach": ["Modifier un bloc copié d'un benchmark (hors notes) demande confirmation et retire le lien au benchmark"]
 }
