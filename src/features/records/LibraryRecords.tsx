@@ -212,7 +212,6 @@ function BenchmarkBoard({ workoutId, blocks, version }: { workoutId: string; blo
     if (!b || compareScores(block.type, r, b) < 0) best.set(r.athlete_id, r)
   }
   const byGender = (g: Gender) => [...best.values()].filter((r) => ((r.gender as Gender | null) ?? 'male') === g)
-  if (!rows.length) return null
 
   return (
     <Card className="mt-4">

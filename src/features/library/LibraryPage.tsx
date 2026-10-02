@@ -65,15 +65,18 @@ function WorkoutList() {
   const { pathname } = useLocation()
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
+  const [scored, setScored] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
-    const [w, s] = await Promise.all([
+    const [w, s, r] = await Promise.all([
       supabase.from('workouts').select('id, title, section_id').is('date', null),
       supabase.from('library_sections').select('id, name'),
+      supabase.rpc('benchmarks_scored'),
     ])
     setRows(w.data ?? [])
     setSections(s.data ?? [])
+    setScored(new Set(r.data ?? []))
   }, [])
 
   useEffect(() => {
@@ -100,6 +103,7 @@ function WorkoutList() {
         renderItem={(w) => (
           <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
             <span className="truncate">{w.title}</span>
+            {scored.has(w.id) && <Podium />}
           </Link>
         )}
       />
@@ -155,5 +159,14 @@ function ExerciseList() {
         )}
       />
     </div>
+  )
+}
+
+/** At least one record on this benchmark (anyone's): its leaderboard has rows. */
+function Podium() {
+  return (
+    <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-label="Classement">
+      <path d="M9 21V8h6v13M3 21v-8h6M15 21v-5h6v5zM2 21h20" />
+    </svg>
   )
 }

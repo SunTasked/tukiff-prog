@@ -930,6 +930,7 @@ export type Database = {
         }[]
       }
       library_blocks: { Args: never; Returns: string[] }
+      benchmarks_scored: { Args: never; Returns: string[] }
       copy_workout: {
         Args: {
           p_date: string
