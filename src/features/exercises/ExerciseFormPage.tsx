@@ -41,7 +41,7 @@ export function ExerciseFormPage() {
       })
   }, [id])
 
-  const back = () => navigate('/library?tab=exercises')
+  const back = () => navigate(id ? `/library/exercises/${id}` : '/library?tab=exercises')
 
   async function save(e: FormEvent) {
     e.preventDefault()
@@ -64,7 +64,7 @@ export function ExerciseFormPage() {
   async function remove() {
     if (!confirm(`Supprimer « ${name} » ?`)) return
     const { error } = await supabase.from('exercises').delete().eq('id', id!)
-    if (!error) return back()
+    if (!error) return navigate('/library?tab=exercises')
     if (error.code === '23503') {
       const [{ data }, { count: records }] = await Promise.all([
         supabase.from('block_items').select('workout_blocks(workout_id)').eq('exercise_id', id!),

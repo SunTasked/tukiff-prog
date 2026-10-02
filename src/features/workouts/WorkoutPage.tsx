@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router'
 import { Button, ErrorText, PageTitle, Spinner } from '../../components/ui'
 import type { WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
+import { isCoach, useAuth } from '../auth/AuthProvider'
 import { useExercises } from '../exercises/useExercises'
+import { BenchmarkRecords } from '../records/LibraryRecords'
 import { loadWorkout } from './api'
 import { WorkoutView } from './WorkoutView'
 
@@ -13,6 +15,7 @@ export function WorkoutPage() {
   const { nameOf, byId, loading } = useExercises()
   const [workout, setWorkout] = useState<WorkoutDraft | null | undefined>()
   const [error, setError] = useState('')
+  const coach = isCoach(useAuth().profile)
 
   useEffect(() => {
     loadWorkout(id!).then(setWorkout)
@@ -35,13 +38,18 @@ export function WorkoutPage() {
       </Link>
       <PageTitle>{workout.title}</PageTitle>
       <WorkoutView workout={workout} nameOf={nameOf} videoOf={(eid) => byId.get(eid)?.video_url} />
-      <div className="mt-6 flex flex-col gap-3">
-        <Button onClick={() => navigate(`/library/workouts/${id}/edit`)}>Modifier</Button>
-        <ErrorText>{error}</ErrorText>
-        <button className="py-2 text-sm text-red-400 underline" onClick={remove}>
-          Supprimer la séance
-        </button>
-      </div>
+      <BenchmarkRecords key={workout.id} workout={{ id: workout.id!, title: workout.title, blocks: workout.blocks }} />
+      {coach && (
+        <div className="mt-6 flex flex-col gap-3">
+          <Button variant="secondary" onClick={() => navigate(`/library/workouts/${id}/edit`)}>
+            Modifier
+          </Button>
+          <ErrorText>{error}</ErrorText>
+          <button className="py-2 text-sm text-red-400 underline" onClick={remove}>
+            Supprimer la séance
+          </button>
+        </div>
+      )}
     </>
   )
 }

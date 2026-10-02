@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
+import { isCoach, useAuth } from '../auth/AuthProvider'
 import { searchExercises, useExercises } from '../exercises/useExercises'
 import { SectionedList, useSectionActions, type Section } from './SectionedList'
 
@@ -63,6 +64,7 @@ const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active 
 
 function WorkoutList() {
   const { pathname } = useLocation()
+  const coach = isCoach(useAuth().profile)
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [query, setQuery] = useState('')
@@ -86,14 +88,19 @@ function WorkoutList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-          + Nouveau benchmark
-        </Link>
-        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}>
-          + Section
-        </button>
-      </div>
+      {coach && (
+        <div className="flex gap-2">
+          <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
+            + Nouveau benchmark
+          </Link>
+          <button
+            className="rounded-xl bg-zinc-800 px-4 font-semibold"
+            onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}
+          >
+            + Section
+          </button>
+        </div>
+      )}
       <input
         placeholder="Rechercher un benchmark"
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
@@ -106,7 +113,7 @@ function WorkoutList() {
         sections={sections}
         query={query}
         storageKey="librarySectionsExpanded"
-        actions={actions}
+        actions={coach ? actions : undefined}
         what="benchmarks"
         newHref={(s) => `/library/workouts/new?section=${s.id}`}
         renderItem={(w) => (
@@ -122,6 +129,7 @@ function WorkoutList() {
 
 function ExerciseList() {
   const { pathname } = useLocation()
+  const coach = isCoach(useAuth().profile)
   const { exercises, sections, reload } = useExercises()
   useEffect(() => {
     reload()
@@ -132,14 +140,16 @@ function ExerciseList() {
 
   return (
     <div className="flex flex-col gap-3">
-      <div className="flex gap-2">
-        <Link to="/library/exercises/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-          + Nouvel exercice
-        </Link>
-        <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Ergos, Gymnastique, Haltéro')}>
-          + Section
-        </button>
-      </div>
+      {coach && (
+        <div className="flex gap-2">
+          <Link to="/library/exercises/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
+            + Nouvel exercice
+          </Link>
+          <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Ergos, Gymnastique, Haltéro')}>
+            + Section
+          </button>
+        </div>
+      )}
       <input
         placeholder={`Rechercher parmi ${exercises.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
@@ -151,7 +161,7 @@ function ExerciseList() {
         sections={sections}
         query={query}
         storageKey="exerciseSectionsExpanded"
-        actions={actions}
+        actions={coach ? actions : undefined}
         what="exercices"
         newHref={(s) => `/library/exercises/new?section=${s.id}`}
         renderItem={(e) => (
