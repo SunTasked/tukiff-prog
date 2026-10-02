@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
 import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { unreadMessages } from '../../lib/releases'
 import { useOnResume } from '../../lib/resume'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
@@ -9,7 +10,7 @@ import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mon
 import { StatusBadge } from '../calendar/StatusBadge'
 import { viewAs, type AccessLevel, type WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { isAdmin, isCoach, useAuth } from '../auth/AuthProvider'
 import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
@@ -24,7 +25,8 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
+  const unread = unreadMessages({ coach: isCoach(profile), admin: isAdmin(profile) })
   const me = session?.user.id
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
@@ -116,9 +118,17 @@ export function HomePage() {
       <div className="flex items-center justify-between">
         {/* mix-blend-screen makes the logo's black background disappear on the dark page */}
         <img src="/tkf-logo.jpg" alt="TKF Programming" className="h-14 w-auto mix-blend-screen lg:invisible" />
-        <Link to="/timer" className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-semibold">
-          ⏱️ Timer
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link to="/timer" className="rounded-full bg-zinc-900 px-3 py-1.5 text-sm font-semibold">
+            ⏱️ Timer
+          </Link>
+          <Link to="/messages" aria-label={unread ? 'Messages (nouveau)' : 'Messages'} className="relative rounded-full bg-zinc-900 p-2 text-zinc-300">
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+            </svg>
+            {unread && <span className="absolute top-1 right-1 size-2.5 rounded-full bg-red-500 ring-2 ring-zinc-950" />}
+          </Link>
+        </div>
       </div>
 
       <div className="mt-3 mb-4">

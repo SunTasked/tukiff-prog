@@ -8,7 +8,7 @@ import { fullName, GENDERS, type Gender } from '../../domain/profile'
 import { removeAvatar, uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
 import { levelName, type AccessLevel } from '../../domain/workout'
-import { roleLabel, useAuth } from '../auth/AuthProvider'
+import { isAdmin, roleLabel, useAuth } from '../auth/AuthProvider'
 import { PasswordForm } from '../auth/ResetPasswordPage'
 
 export function ProfilePage() {
@@ -164,6 +164,15 @@ export function ProfilePage() {
             <span className="text-zinc-400">1RM, benchmarks ›</span>
           </Link>
         </Section>
+
+        {isAdmin(profile) && (
+          <Section title="Admin">
+            <Link to="/admin" className="flex items-center justify-between rounded-2xl bg-zinc-900 p-4">
+              <span className="font-semibold">Statistiques</span>
+              <span className="text-zinc-400">Usage sur 7 jours ›</span>
+            </Link>
+          </Section>
+        )}
 
         <Section title="Sécurité">
         <Card>

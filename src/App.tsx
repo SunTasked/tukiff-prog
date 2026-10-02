@@ -16,6 +16,7 @@ import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { ExerciseFormPage } from './features/exercises/ExerciseFormPage'
 import { HomePage } from './features/home/HomePage'
 import { LibraryPage } from './features/library/LibraryPage'
+import { MessagesPage } from './features/messages/MessagesPage'
 import { WorkoutEditor } from './features/workouts/WorkoutEditor'
 import { WorkoutPage } from './features/workouts/WorkoutPage'
 import { AdminStatsPage } from './features/admin/AdminStatsPage'
@@ -68,6 +69,7 @@ export default function App() {
       <Route element={<Layout />}>
         <Route index element={narrow(<HomePage />)} />
         <Route path="profile" element={narrow(<ProfilePage />)} />
+        <Route path="messages" element={narrow(<MessagesPage />)} />
         <Route path="workouts/:id" element={narrow(<AthleteWorkoutPage />)} />
         <Route path="records" element={narrow(<RecordsPage />)} />
         <Route path="timer" element={narrow(<TimerPage />)} />
