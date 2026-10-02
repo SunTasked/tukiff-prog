@@ -1,14 +1,51 @@
 import { useEffect, useRef, useState, type PointerEvent, type WheelEvent } from 'react'
-import { clampCrop, cropRect, MAX_ZOOM, scaleOf, type Crop } from '../domain/crop'
+import { clampCrop, drawRect, fitZoom, MAX_ZOOM, scaleOf, type Crop } from '../domain/crop'
 import { Button } from './ui'
 
-const OUTPUT = 256
+type Props = { file: File; onCancel: () => void; onSave: (picture: Blob) => void }
 
-/**
- * Full-screen cropper: drag to move, pinch (or slider / mouse wheel) to zoom.
- * The circle shows exactly what the avatar will display; the saved picture is its bounding square.
- */
-export function AvatarCropper({ file, onCancel, onSave }: { file: File; onCancel: () => void; onSave: (picture: Blob) => void }) {
+/** Profile picture: the circle shows exactly what the avatar will display; the saved picture is its bounding square (JPEG). */
+export const AvatarCropper = (props: Props) => (
+  <ImageCropper {...props} title="Recadrer la photo" width={256} height={256} type="image/jpeg" round />
+)
+
+/** Sponsor logo: 3:1 frame on the background it is shown on; may shrink inside the frame (PNG, margins stay transparent). */
+export const LogoCropper = ({ dark, ...props }: Props & { dark: boolean }) => (
+  <ImageCropper
+    {...props}
+    title="Recadrer le logo"
+    width={480}
+    height={160}
+    type="image/png"
+    fit
+    frameClassName={dark ? 'bg-zinc-800' : 'bg-zinc-100'}
+  />
+)
+
+/** Full-screen cropper: drag to move, pinch (or slider / mouse wheel) to zoom. */
+function ImageCropper({
+  file,
+  onCancel,
+  onSave,
+  title,
+  width,
+  height,
+  type,
+  round = false,
+  fit = false,
+  frameClassName = 'bg-zinc-900',
+}: Props & {
+  title: string
+  /** Output size in px; the frame has the same proportions. */
+  width: number
+  height: number
+  type: 'image/jpeg' | 'image/png'
+  /** Circle overlay (avatar). */
+  round?: boolean
+  /** The picture may be zoomed out until it fits whole inside the frame. */
+  fit?: boolean
+  frameClassName?: string
+}) {
   const [src, setSrc] = useState<string | null>(null)
   const [img, setImg] = useState<HTMLImageElement | null>(null)
   const [failed, setFailed] = useState(false)
@@ -33,13 +70,23 @@ export function AvatarCropper({ file, onCancel, onSave }: { file: File; onCancel
 
   const w = img?.naturalWidth ?? 1
   const h = img?.naturalHeight ?? 1
+  const vh = (view * height) / width
+  const minZoom = fit && img && view ? fitZoom(w, h, view, vh) : 1
   // Functional updates: several pointer moves can land before a re-render.
-  const update = (next: (c: Crop) => Crop) => setCrop((c) => clampCrop(w, h, view, next(c)))
+  const update = (next: (c: Crop) => Crop) => setCrop((c) => clampCrop(w, h, view, vh, next(c), minZoom))
+
+  // A logo starts whole inside the frame.
+  const started = useRef(false)
+  useEffect(() => {
+    if (!fit || !img || !view || started.current) return
+    started.current = true
+    setCrop({ zoom: minZoom, x: 0, y: 0 })
+  }, [fit, img, view, minZoom])
 
   // Keep the crop valid when the viewport size changes (rotation).
   useEffect(() => {
-    if (img && view) setCrop((c) => clampCrop(img.naturalWidth, img.naturalHeight, view, c))
-  }, [img, view])
+    if (img && view) setCrop((c) => clampCrop(img.naturalWidth, img.naturalHeight, view, vh, c, minZoom))
+  }, [img, view, vh, minZoom])
 
   function down(e: PointerEvent) {
     e.currentTarget.setPointerCapture(e.pointerId)
@@ -71,7 +118,7 @@ export function AvatarCropper({ file, onCancel, onSave }: { file: File; onCancel
 
   function zoomTo(zoom: (current: number) => number) {
     update((c) => {
-      const z = Math.min(MAX_ZOOM, Math.max(1, zoom(c.zoom)))
+      const z = Math.min(MAX_ZOOM, Math.max(minZoom, zoom(c.zoom)))
       // Scale the offset too so the point under the center stays put.
       return { zoom: z, x: (c.x * z) / c.zoom, y: (c.y * z) / c.zoom }
     })
@@ -84,23 +131,26 @@ export function AvatarCropper({ file, onCancel, onSave }: { file: File; onCancel
 
   function save() {
     if (!img || !view) return
-    const { sx, sy, side } = cropRect(w, h, view, crop)
+    const { dx, dy, dw, dh } = drawRect(w, h, view, vh, crop)
+    const k = width / view
     const canvas = document.createElement('canvas')
-    canvas.width = canvas.height = OUTPUT
+    canvas.width = width
+    canvas.height = height
     const ctx = canvas.getContext('2d')!
     ctx.imageSmoothingQuality = 'high'
-    ctx.drawImage(img, sx, sy, side, side, 0, 0, OUTPUT, OUTPUT)
-    canvas.toBlob((b) => (b ? onSave(b) : setFailed(true)), 'image/jpeg', 0.85)
+    ctx.drawImage(img, dx * k, dy * k, dw * k, dh * k)
+    canvas.toBlob((b) => (b ? onSave(b) : setFailed(true)), type, 0.85)
   }
 
-  const s = scaleOf(w, h, view, crop.zoom)
+  const s = scaleOf(w, h, view, vh, crop.zoom)
 
   return (
     <div className="fixed inset-0 z-50 flex flex-col items-center justify-center gap-4 bg-black/90 p-4">
-      <h2 className="font-semibold">Recadrer la photo</h2>
+      <h2 className="font-semibold">{title}</h2>
       <div
         ref={box}
-        className="relative aspect-square w-full max-w-sm cursor-grab touch-none overflow-hidden rounded-2xl bg-zinc-900 select-none active:cursor-grabbing"
+        className={`relative w-full max-w-sm cursor-grab touch-none overflow-hidden rounded-2xl select-none active:cursor-grabbing ${frameClassName}`}
+        style={{ aspectRatio: `${width} / ${height}` }}
         onPointerDown={down}
         onPointerMove={move}
         onPointerUp={up}
@@ -123,17 +173,17 @@ export function AvatarCropper({ file, onCancel, onSave }: { file: File; onCancel
           />
         )}
         {/* Darkened outside + outlined circle = what the avatar shows. */}
-        <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-2 ring-lime-400" />
+        {round && <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-2 ring-lime-400" />}
       </div>
       {failed ? (
-        <p className="text-sm text-red-400">Image illisible : essaie une autre photo (JPEG ou PNG).</p>
+        <p className="text-sm text-red-400">Image illisible : essaie une autre image (JPEG ou PNG).</p>
       ) : (
-        <p className="text-sm text-zinc-400">Déplace la photo et pince pour zoomer.</p>
+        <p className="text-sm text-zinc-400">Déplace l’image et pince pour zoomer.</p>
       )}
       <input
         type="range"
         aria-label="Zoom"
-        min={1}
+        min={minZoom}
         max={MAX_ZOOM}
         step={0.01}
         value={crop.zoom}
