@@ -9,7 +9,7 @@ import { useRecords } from './useRecords'
 
 export function RecordsPage() {
   const { session } = useAuth()
-  const { nameOf } = useExercises()
+  const { nameOf, measureOf } = useExercises()
   const { records, reload } = useRecords(session?.user.id)
   const [params, setParams] = useSearchParams()
   // ?add=<exercise_id> opens the form preset (link from a % of 1RM in a workout).
@@ -28,7 +28,7 @@ export function RecordsPage() {
       <Button className="mb-4 w-full" onClick={() => setAdding(true)}>
         + Nouveau record
       </Button>
-      <RecordsList records={records} nameOf={nameOf} editable onChange={reload} />
+      <RecordsList records={records} nameOf={nameOf} measureOf={measureOf} editable onChange={reload} />
       {adding && (
         <RecordSheet
           initialExercise={params.get('add') ?? undefined}

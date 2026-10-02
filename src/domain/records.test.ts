@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyScore } from './scoring'
-import { bestBenchmarks, bestLoads, loadFromPct, oneRepMaxes } from './records'
+import { bestBenchmarks, bestLoads, bestMaxes, formatMax, loadFromPct, oneRepMaxes } from './records'
 
 it('computes a load from a % of the 1RM, rounded to 1 kg', () => {
   expect(loadFromPct(100, 80)).toBe(80)
@@ -31,4 +31,14 @@ it('keeps the best benchmark score per name', () => {
   const best = bestBenchmarks([b('Fran', 300), b('fran ', 260), b('Fran', 280), b('Grace', 200)])
   expect(best.get('fran')!.time_s).toBe(260)
   expect(best.get('grace')!.time_s).toBe(200)
+})
+
+it('keeps the highest max per exercise and formats it in the exercise unit', () => {
+  const m = (exercise_id: string, value: number) => ({ exercise_id, value, date: '2026-01-01' })
+  const best = bestMaxes([m('vup', 25), m('vup', 31), m('plank', 90)])
+  expect(best.get('vup')!.value).toBe(31)
+  expect(formatMax('reps', 31)).toBe('31 reps')
+  expect(formatMax('time', 90)).toBe('1:30')
+  expect(formatMax('distance', 400)).toBe('400 m')
+  expect(formatMax('calories', 30)).toBe('30 cal')
 })

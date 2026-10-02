@@ -1,27 +1,33 @@
 import { useState } from 'react'
 import { Card } from '../../components/ui'
 import { formatDay } from '../../domain/dates'
-import { bestBenchmarks, bestLoads, type BenchmarkRecord, type LoadRecord } from '../../domain/records'
+import { bestBenchmarks, bestLoads, bestMaxes, formatMax, type BenchmarkRecord, type LoadRecord, type MaxRecord } from '../../domain/records'
 import { emptyScore, formatScore, type ScoreType } from '../../domain/scoring'
-import { formatNumber } from '../../domain/workout'
+import { formatNumber, type Measure } from '../../domain/workout'
 import { supabase, type PersonalRecord } from '../../lib/supabase'
 
-/** Best loads per exercise and best benchmark scores, with history on tap. */
+/** Best loads per exercise, best maxes (reps, hold time…) and best benchmark scores, with history on tap. */
 export function RecordsList({
   records,
   nameOf,
+  measureOf,
   editable,
   onChange,
 }: {
   records: PersonalRecord[]
   nameOf: (id: string) => string | undefined
+  measureOf: (id: string) => Measure | undefined
   editable: boolean
   onChange?: () => void
 }) {
   const [open, setOpen] = useState<string | null>(null)
-  const loads = records.filter((r): r is PersonalRecord & LoadRecord => r.exercise_id !== null)
+  const loads = records.filter((r): r is PersonalRecord & LoadRecord => r.exercise_id !== null && r.load_kg !== null)
+  const maxes = records.filter((r): r is PersonalRecord & MaxRecord => r.exercise_id !== null && r.value !== null)
   const benches = records.filter((r) => r.benchmark_name !== null) as (PersonalRecord & BenchmarkRecord)[]
-  const bestByExercise = [...bestLoads(loads)].sort(([a], [b]) => (nameOf(a) ?? '').localeCompare(nameOf(b) ?? ''))
+  const byName = (a: string, b: string) => (nameOf(a) ?? '').localeCompare(nameOf(b) ?? '')
+  const bestByExercise = [...bestLoads(loads)].sort(([a], [b]) => byName(a, b))
+  const bestMax = [...bestMaxes(maxes).values()].sort((a, b) => byName(a.exercise_id, b.exercise_id))
+  const max = (r: PersonalRecord) => formatMax(measureOf(r.exercise_id!) ?? 'reps', r.value!)
   const bestBench = [...bestBenchmarks(benches).values()].sort((a, b) => a.benchmark_name.localeCompare(b.benchmark_name))
   const score = (r: PersonalRecord) => formatScore(r.score_type as ScoreType, { ...emptyScore(), ...r })
 
@@ -76,6 +82,29 @@ export function RecordsList({
                   history(
                     loads.filter((r) => r.exercise_id === exerciseId),
                     (r) => `${r.rep_max}RM · ${formatNumber(r.load_kg!)} kg`,
+                  )}
+              </li>
+            ))}
+          </ul>
+        </Card>
+      )}
+      {bestMax.length > 0 && (
+        <Card>
+          <h2 className="mb-2 font-semibold">Max</h2>
+          <ul className="divide-y divide-zinc-800">
+            {bestMax.map((best) => (
+              <li key={best.exercise_id} className="py-2">
+                <button
+                  className="flex w-full justify-between gap-2 text-left"
+                  onClick={() => setOpen(open === best.exercise_id ? null : best.exercise_id)}
+                >
+                  <span className="truncate">{nameOf(best.exercise_id) ?? '?'}</span>
+                  <b className="shrink-0 text-sm">{max(best)}</b>
+                </button>
+                {open === best.exercise_id &&
+                  history(
+                    maxes.filter((r) => r.exercise_id === best.exercise_id),
+                    max,
                   )}
               </li>
             ))}

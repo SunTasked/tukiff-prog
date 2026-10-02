@@ -20,7 +20,7 @@ export function useRecords(athleteId: string | undefined) {
     reload()
   }, [reload])
 
-  const loads = useMemo(() => records.filter((r): r is PersonalRecord & LoadRecord => r.exercise_id !== null), [records])
+  const loads = useMemo(() => records.filter((r): r is PersonalRecord & LoadRecord => r.exercise_id !== null && r.load_kg !== null), [records])
   const oneRms = useMemo(() => oneRepMaxes(loads), [loads])
   return { records, loads, oneRms, reload }
 }

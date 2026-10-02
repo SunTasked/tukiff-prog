@@ -2,15 +2,16 @@ import { useState } from 'react'
 import { DateField } from '../../components/DatePicker'
 import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
-import { BENCHMARKS } from '../../domain/records'
+import { BENCHMARKS, MAX_LABELS } from '../../domain/records'
 import { emptyScore, normalizeScore, validateScore, type Score } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
 import { isCoach, useAuth } from '../auth/AuthProvider'
 import { ExercisePicker } from '../exercises/ExercisePicker'
 import { useExercises } from '../exercises/useExercises'
 import { today } from '../../domain/dates'
+import type { Measure } from '../../domain/workout'
 
-const KINDS = { load: 'Charge', benchmark: 'Benchmark' } as const
+const KINDS = { load: 'Exercice', benchmark: 'Benchmark' } as const
 const RM = { '1': '1RM', '2': '2RM', '3': '3RM', '5': '5RM', '10': '10RM' } as const
 const BENCH_TYPES = { time: 'Temps', rounds_reps: 'Rounds + reps', reps: 'Reps' } as const
 type BenchType = keyof typeof BENCH_TYPES
@@ -18,7 +19,7 @@ type BenchType = keyof typeof BENCH_TYPES
 const input = 'w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3'
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
-/** New record: an exercise load (1RM, 3RM…) or a benchmark score. */
+/** New record: an exercise load (1RM, 3RM…), an exercise max (reps, hold time…) or a benchmark score. */
 export function RecordSheet({
   initialExercise,
   onClose,
@@ -35,6 +36,7 @@ export function RecordSheet({
   const [picking, setPicking] = useState(false)
   const [rm, setRm] = useState<keyof typeof RM>('1')
   const [load, setLoad] = useState<number | null>(null)
+  const [value, setValue] = useState<number | null>(null)
   const [bench, setBench] = useState('')
   const [benchType, setBenchType] = useState<BenchType>('time')
   const [score, setScore] = useState<Score>(emptyScore())
@@ -42,12 +44,19 @@ export function RecordSheet({
   const [notes, setNotes] = useState('')
   const [error, setError] = useState('')
 
+  const measure = (exercises.find((e) => e.id === exerciseId)?.measure ?? 'load') as Measure
+
   async function save() {
     let row
     if (kind === 'load') {
       if (!exerciseId) return setError('Choisis un exercice.')
-      if (!load) return setError('Indique la charge.')
-      row = { exercise_id: exerciseId, rep_max: Number(rm), load_kg: load }
+      if (measure === 'load') {
+        if (!load) return setError('Indique la charge.')
+        row = { exercise_id: exerciseId, rep_max: Number(rm), load_kg: load }
+      } else {
+        if (!value) return setError('Indique ton record.')
+        row = { exercise_id: exerciseId, value }
+      }
     } else {
       if (!bench.trim()) return setError('Indique le nom du benchmark.')
       const invalid = validateScore(benchType, score)
@@ -76,10 +85,22 @@ export function RecordSheet({
             <button className={`${input} text-left`} onClick={() => setPicking(true)}>
               {exerciseId ? nameOf(exerciseId) : <span className="text-zinc-500">Choisir un exercice</span>}
             </button>
-            <Chips options={RM} value={rm} onChange={setRm} />
-            <Field label="Charge (kg)">
-              <NumberInput value={load} onChange={setLoad} />
-            </Field>
+            {measure === 'load' ? (
+              <>
+                <Chips options={RM} value={rm} onChange={setRm} />
+                <Field label="Charge (kg)">
+                  <NumberInput value={load} onChange={setLoad} />
+                </Field>
+              </>
+            ) : (
+              <Field label={MAX_LABELS[measure]}>
+                {measure === 'time' ? (
+                  <DurationInput value={value} onChange={setValue} />
+                ) : (
+                  <NumberInput value={value} onChange={(v) => setValue(measure === 'reps' ? int(v) : v)} />
+                )}
+              </Field>
+            )}
           </>
         ) : (
           <>

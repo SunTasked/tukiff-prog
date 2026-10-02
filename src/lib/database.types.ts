@@ -323,6 +323,7 @@ export type Database = {
           rounds: number | null
           score_type: string | null
           time_s: number | null
+          value: number | null
         }
         Insert: {
           athlete_id?: string
@@ -338,6 +339,7 @@ export type Database = {
           rounds?: number | null
           score_type?: string | null
           time_s?: number | null
+          value?: number | null
         }
         Update: {
           athlete_id?: string
@@ -353,6 +355,7 @@ export type Database = {
           rounds?: number | null
           score_type?: string | null
           time_s?: number | null
+          value?: number | null
         }
         Relationships: [
           {
