@@ -1,0 +1,23 @@
+# On each push to main: tags v<version> (package.json) and publishes a GitHub release from releases/v<version>.json.
+name: Release
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+jobs:
+  tag:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          v="v$(node -p "require('./package.json').version")"
+          if gh release view "$v" >/dev/null 2>&1; then echo "$v existe déjà"; exit 0; fi
+          node -e '
+            const r = require(`./releases/${process.argv[1]}.json`)
+            const titles = { coach: "Coachs", athlete: "Athlètes", admin: "Technique" }
+            for (const [k, t] of Object.entries(titles)) if (r[k]?.length) console.log(`## ${t}\n${r[k].map((i) => `- ${i}`).join("\n")}\n`)
+          ' "$v" > notes.md
+          gh release create "$v" --target "$GITHUB_SHA" --title "$v" --notes-file notes.md
