@@ -766,6 +766,7 @@ export type Database = {
           notes: string | null
           params: Json
           position: number
+          source_block_id: string | null
           title: string | null
           workout_id: string
         }
@@ -776,6 +777,7 @@ export type Database = {
           notes?: string | null
           params?: Json
           position: number
+          source_block_id?: string | null
           title?: string | null
           workout_id: string
         }
@@ -786,6 +788,7 @@ export type Database = {
           notes?: string | null
           params?: Json
           position?: number
+          source_block_id?: string | null
           title?: string | null
           workout_id?: string
         }
