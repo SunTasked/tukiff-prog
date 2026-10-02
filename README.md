@@ -4,7 +4,7 @@ PWA de programmation CrossFit pour un petit groupe (coachs et athlètes), en fra
 
 - **Production** : https://tukiff-prog.vercel.app (branche `main`)
 - **Previews** : chaque branche poussée est déployée par Vercel (`tukiff-prog-git-<branche>-tukiff.vercel.app`)
-- **Staging** : https://tukiff-prog-staging.vercel.app, branche `staging` recopiée depuis `main` à chaque push (workflow `staging.yml`), sur Supabase staging
+- **Staging** : https://tukiff-prog-staging.vercel.app (branche `staging`, pré-prod qui accumule les features en attente de release), sur Supabase staging
 
 ## Stack
 
@@ -60,15 +60,29 @@ Variables d'environnement :
 | `node scripts/auth-config.mjs <siteUrl>` | configure Auth : URLs, politique de mot de passe, SMTP Gmail et emails en français |
 | `node scripts/vercel-setup.mjs` | pousse les variables `VITE_SUPABASE_*` dans Vercel (prod → production, staging → previews) |
 | `node scripts/admin.mjs list \| create-user \| set-role \| login-link \| delete-user` | gestion ponctuelle des comptes |
+| `node scripts/reset-staging.mjs [--go] [--prod-data] [--no-seed]` | reconstruit la base staging : migrations de la prod, bibliothèque d'exercices de la prod (ou toutes ses données avec `--prod-data`, emails réels compris), migrations pas encore en prod, puis `seed-dev`. Sans `--go`, affiche seulement le plan. Refuse `TARGET=prod` ; la prod n'est que lue |
 | `node scripts/seed-dev.mjs [--clean]` | crée (ou supprime avec `--clean`) le jeu de test `*@tkf.test`, mot de passe `a`, décrit avec les cas à valider dans `docs/staging-use-cases.md` ; sur la prod, seul `--clean` est accepté |
 
 ## Déploiement
 
-1. Sur staging : `node scripts/migrate.mjs`, `node scripts/gen-types.mjs` (commiter le fichier de types), et
-   `node scripts/deploy-functions.mjs` si une Edge Function a changé. Pousser la branche : la preview Vercel utilise staging.
-2. Merger dans `main` : Vercel déploie la production. La CI (lint, tests, build) tourne sur chaque PR.
-3. Sur la prod, juste avant ou après le merge : `TARGET=prod node scripts/migrate.mjs` (et `deploy-functions` si besoin).
+`main` = production, `staging` = pré-prod. Les features passent par `staging`, la prod reçoit des lots (releases).
+
+1. **Feature** : branche depuis `staging`, PR vers `staging`. Sur la base staging : `node scripts/migrate.mjs`,
+   `node scripts/gen-types.mjs` (commiter le fichier de types) et `node scripts/deploy-functions.mjs` si une Edge Function
+   a changé. La preview Vercel de la PR utilise la base staging. Merger dans `staging` : l'URL staging affiche la feature.
+2. **Release** : PR de `staging` vers `main`. Juste avant le merge : `TARGET=prod node scripts/migrate.mjs` (applique
+   en lot les migrations du lot) et `deploy-functions` si besoin. Merger avec un **merge commit, jamais squash ni
+   rebase**, sinon `staging` et `main` divergent. Vercel déploie la production.
+3. **Correctif urgent** : branche depuis `main`, PR vers `main`, puis fusionner `main` dans `staging`
+   (PR `main` → `staging`, merge commit).
 4. Après un changement d'URL : `TARGET=prod node scripts/auth-config.mjs https://tukiff-prog.vercel.app`.
+
+La CI (lint, tests, build) tourne sur chaque PR et sur les pushs dans `main` et `staging`.
+
+Les migrations arrivent sur la base staging avant la prod : elles doivent rester compatibles avec le code de la prod
+(ajouts plutôt que suppressions ; une colonne se supprime dans une release suivante). Une feature abandonnée dont la
+migration est déjà sur staging : migration inverse, ou `node scripts/reset-staging.mjs --go` depuis `staging` à jour
+(la base est reconstruite avec les seules migrations présentes dans la branche).
 
 Une nouvelle migration s'ajoute sous la forme `supabase/migrations/00NN_nom.sql` (numéro suivant, jamais modifier une migration déjà appliquée).
 
