@@ -123,6 +123,27 @@ export type Database = {
           },
         ]
       }
+      clap_compliments: {
+        Row: {
+          created_at: string
+          id: string
+          text: string
+          text_female: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          text: string
+          text_female?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          text?: string
+          text_female?: string | null
+        }
+        Relationships: []
+      }
       exercise_sections: {
         Row: {
           created_at: string

@@ -4,7 +4,7 @@ import { Card } from '../../components/ui'
 import { clapsMessage } from '../../domain/clapsMessage'
 import { formatLongDay } from '../../domain/dates'
 import type { Audience } from '../../domain/releases'
-import { markClapsRead, newClappers } from '../../lib/clapsNotification'
+import { clapCompliments, markClapsRead, newClappers } from '../../lib/clapsNotification'
 import { markMessagesRead, releasesFor } from '../../lib/releases'
 import { useAuth } from '../auth/AuthProvider'
 
@@ -25,7 +25,7 @@ export function MessagesPage() {
   useEffect(() => {
     void (async () => {
       const n = await newClappers(profile)
-      if (n > 0) setClapsNote(clapsMessage(n))
+      if (n > 0) setClapsNote(clapsMessage(n, await clapCompliments(), profile?.gender ?? null))
       const [changed, claps] = await Promise.all([markMessagesRead(profile), markClapsRead(profile)])
       if (changed || claps) void refreshProfile()
     })()

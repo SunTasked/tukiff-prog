@@ -16,3 +16,28 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke execute on function public.new_clappers() from anon, public;
 grant execute on function public.new_clappers() to authenticated;
+
+-- Compliments drawn at random after the claps message, managed by admins in Communauté.
+-- text_female: the women's version when the text depends on gender (null = same text for everyone).
+create table public.clap_compliments (
+  id uuid primary key default gen_random_uuid(),
+  text text not null check (length(trim(text)) > 0),
+  text_female text,
+  created_at timestamptz not null default now()
+);
+alter table public.clap_compliments enable row level security;
+create policy "clap_compliments: read" on public.clap_compliments for select to authenticated using (true);
+create policy "clap_compliments: admin insert" on public.clap_compliments for insert to authenticated with check ((select public.is_admin()));
+create policy "clap_compliments: admin update" on public.clap_compliments for update to authenticated
+  using ((select public.is_admin())) with check ((select public.is_admin()));
+create policy "clap_compliments: admin delete" on public.clap_compliments for delete to authenticated using ((select public.is_admin()));
+
+insert into public.clap_compliments (text, text_female) values
+  ('Grosse machine va', null),
+  ('C''est qui le patron ?!', 'C''est qui la patronne ?!'),
+  ('Ti é un tigre !', null),
+  ('Ok monsieur', 'Ok madame'),
+  ('Chargééé !!!', null),
+  ('Va falloir arrêter les produits, ça commence à se voir.', null),
+  ('🔥🔥🔥', null),
+  ('Fort et famous en plus', 'Forte et famous en plus');

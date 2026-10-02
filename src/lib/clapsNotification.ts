@@ -27,3 +27,9 @@ export async function markClapsRead(p: Profile | null) {
   const { error } = await supabase.from('profiles').update({ claps_seen_at: new Date().toISOString() }).eq('id', p.id)
   return !error
 }
+
+/** The compliments admins manage in Communauté. */
+export async function clapCompliments() {
+  const { data } = await supabase.from('clap_compliments').select('*').order('created_at')
+  return data ?? []
+}
