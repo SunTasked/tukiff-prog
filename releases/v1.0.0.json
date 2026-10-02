@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "date": "2026-10-02",
+  "admin": [
+    "Base de version : production telle qu'au 2 octobre 2026",
+    "Déploiement par la branche staging, notes de version et contrôle des dépendances à chaque release"
+  ],
+  "coach": [
+    "Programmations avec niveaux d'accès, séances sur plusieurs jours, bibliothèque de séances",
+    "Éditeur de blocs : type de score, sous-blocs, paliers, WODs en équipe, adaptations",
+    "Communauté : membres, invitations, compte rendu par athlète"
+  ],
+  "athlete": [
+    "Séance du jour, timer, saisie des scores (RX ou adapté), « Fait » et « Je passe »",
+    "Classements par bloc et de la semaine, claps sur les scores",
+    "Records et pourcentages de 1RM"
+  ]
+}
