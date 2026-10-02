@@ -4,6 +4,7 @@ import { Avatar } from '../../components/Avatar'
 import { AvatarCropper } from '../../components/ImageCropper'
 import { programColor } from '../../components/ProgramBadges'
 import { Button, Card, Chips, ErrorText, Input, PageTitle } from '../../components/ui'
+import { asPrefs, NOTIFICATION_CATEGORIES, notificationOn, type NotificationPrefs } from '../../domain/notifications'
 import { fullName, GENDERS, type Gender } from '../../domain/profile'
 import { removeAvatar, uploadAvatar } from '../../lib/avatar'
 import { supabase } from '../../lib/supabase'
@@ -48,7 +49,7 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string | null; first_name?: string; last_name?: string; gender?: Gender; notify_updates?: boolean }) {
+  async function update(values: { display_name?: string | null; first_name?: string; last_name?: string; gender?: Gender; notifications?: NotificationPrefs }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
@@ -60,6 +61,9 @@ export function ProfilePage() {
     setSaved(true)
     return true
   }
+
+  const prefs = asPrefs(profile?.notifications)
+  const setPref = (key: keyof NotificationPrefs, on: boolean) => update({ notifications: { ...prefs, [key]: on } })
 
   function pickPhoto(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0]
@@ -166,19 +170,18 @@ export function ProfilePage() {
         </Section>
 
         <Section title="Notifications">
-          <Card>
-            <label className="flex items-center justify-between gap-3">
-              <span>
-                <span className="block">Nouveautés de l’app</span>
-                <span className="block text-xs text-zinc-500">Point rouge sur la cloche à chaque mise à jour</span>
-              </span>
-              <input
-                type="checkbox"
-                className="size-5 shrink-0 accent-lime-400"
-                checked={profile?.notify_updates !== false}
-                onChange={(e) => update({ notify_updates: e.target.checked })}
+          <Card className="flex flex-col gap-3">
+            <Toggle label="Toutes les notifications" checked={prefs.all !== false} onChange={(on) => setPref('all', on)} />
+            {NOTIFICATION_CATEGORIES.map((c) => (
+              <Toggle
+                key={c.key}
+                label={c.label}
+                hint={c.hint}
+                disabled={prefs.all === false}
+                checked={notificationOn(prefs, c.key)}
+                onChange={(on) => setPref(c.key, on)}
               />
-            </label>
+            ))}
           </Card>
         </Section>
 
@@ -326,5 +329,23 @@ function NamesDialog({ initial, onCancel, onSave }: { initial: Names; onCancel: 
         </div>
       </form>
     </div>
+  )
+}
+
+function Toggle(props: { label: string; hint?: string; checked: boolean; disabled?: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <label className={`flex items-center justify-between gap-3 ${props.disabled ? 'opacity-40' : ''}`}>
+      <span>
+        <span className="block">{props.label}</span>
+        {props.hint && <span className="block text-xs text-zinc-500">{props.hint}</span>}
+      </span>
+      <input
+        type="checkbox"
+        className="size-5 shrink-0 accent-lime-400"
+        checked={props.checked}
+        disabled={props.disabled}
+        onChange={(e) => props.onChange(e.target.checked)}
+      />
+    </label>
   )
 }

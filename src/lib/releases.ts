@@ -1,4 +1,5 @@
 import { visibleReleases, hasUnread, isUnread, readBaseline, type Release } from '../domain/releases'
+import { asPrefs, notificationOn } from '../domain/notifications'
 import { supabase, type Profile } from './supabase'
 import { isAdmin, isCoach } from '../features/auth/AuthProvider'
 
@@ -17,7 +18,8 @@ export function releasesFor(p: Profile | null) {
 /** The last version read is kept on the profile (messages_seen) so it follows the user across devices.
  * No red dot when the user turned update notifications off in Profil. */
 export const unreadMessages = (p: Profile | null) =>
-  p?.notify_updates !== false && hasUnread(releasesFor(p), RELEASES.map((r) => r.version), p?.messages_seen ?? null)
+  notificationOn(asPrefs(p?.notifications), 'updates') &&
+  hasUnread(releasesFor(p), RELEASES.map((r) => r.version), p?.messages_seen ?? null)
 
 /** Marks every release as read (the newest version, whoever it is for). Returns whether the profile changed. */
 export async function markMessagesRead(p: Profile | null): Promise<boolean> {
