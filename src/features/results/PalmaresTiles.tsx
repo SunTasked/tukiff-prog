@@ -29,11 +29,11 @@ export function PalmaresTiles({ athleteId }: { athleteId: string | undefined }) 
         </p>
       )}
       <div className="mt-1 flex gap-2">
-        <span className="flex flex-1 items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2">
+        <span className="flex flex-1 items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2 ring-1 ring-zinc-800">
           <LeaderBadge />
           <span className="text-lg leading-none font-bold whitespace-nowrap">× {p?.leader_weeks ?? 0}</span>
         </span>
-        <span className="flex flex-1 items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2">
+        <span className="flex flex-1 items-center gap-2 rounded-xl bg-zinc-950 px-3 py-2 ring-1 ring-zinc-800">
           <span className="leading-none">🥇</span>
           <span className="text-lg leading-none font-bold whitespace-nowrap">× {p?.wins ?? 0}</span>
         </span>
