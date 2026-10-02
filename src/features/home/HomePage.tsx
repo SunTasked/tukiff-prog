@@ -5,6 +5,7 @@ import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain
 import { useNewClappers } from '../../lib/clapsNotification'
 import { unreadMessages } from '../../lib/releases'
 import { useOnResume } from '../../lib/resume'
+import { useSwipe } from '../../lib/swipe'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
@@ -52,6 +53,9 @@ export function HomePage() {
   }
 
   const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
+  // Swipe left = next day, right = previous day (like turning pages).
+  const swipeArea = useRef<HTMLDivElement>(null)
+  useSwipe(swipeArea, (dir) => goTo(addDays(day, dir === 'left' ? 1 : -1)))
 
   const loadWeek = useCallback(
     () =>
@@ -116,7 +120,8 @@ export function HomePage() {
   }, [week, day])
 
   return (
-    <>
+    // Tall enough that a swipe below a short day still counts.
+    <div ref={swipeArea} className="min-h-[75dvh]">
       <div className="flex items-center justify-between">
         {/* mix-blend-screen makes the logo's black background disappear on the dark page */}
         <img src="/tkf-logo.jpg" alt="TKF Programming" className="h-14 w-auto mix-blend-screen lg:invisible" />
@@ -240,7 +245,7 @@ export function HomePage() {
       {weekBoard && (
         <WeeklyBoardSheet programId={weekBoard.key} programName={weekBoard.label} week={monday} onClose={() => setWeekBoard(null)} />
       )}
-    </>
+    </div>
   )
 }
 
