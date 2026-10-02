@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { loadFromPct } from '../../domain/records'
-import { SCORE_TYPES, scoreType } from '../../domain/scoring'
+import { scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { Markdown } from '../../components/Markdown'
 import {
@@ -145,17 +145,15 @@ function ItemLine({
   )
 }
 
-/** The score type, plus the coach's note on how to enter it if any. */
+/** Team size and the coach's note on how to enter the score, if any (the score type itself is implied by the block). */
 function ScoreLine({ block }: { block: BlockDraft }) {
-  const type = scoreType(block.format, block.params)
-  if (type === 'none') return null
+  const { team_size, score_note } = block.params
+  if (scoreType(block.format, block.params) === 'none' || (!team_size && !score_note)) return null
   return (
     <p className="mt-2 text-sm text-zinc-400">
-      <span className="font-semibold text-zinc-300">
-        Score : {SCORE_TYPES[type]}
-        {block.params.team_size && ` · équipe de ${block.params.team_size}`}
-      </span>
-      {block.params.score_note && <> · {block.params.score_note}</>}
+      {team_size && <span className="font-semibold text-zinc-300">Équipe de {team_size}</span>}
+      {team_size && score_note && ' · '}
+      {score_note}
     </p>
   )
 }

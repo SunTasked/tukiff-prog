@@ -1,5 +1,5 @@
 import { Markdown } from '../../components/Markdown'
-import { SCORE_TYPES, scoreType } from '../../domain/scoring'
+import { scoreType } from '../../domain/scoring'
 import {
   blockHeading,
   isPremium,
@@ -63,11 +63,11 @@ export function BlockLines({
                   </div>
                 ))}
                 {b.format !== 'none' && b.notes && <p className="whitespace-pre-line text-zinc-500">{b.notes}</p>}
-                {score !== 'none' && (
+                {score !== 'none' && (b.params.team_size || b.params.ranked === false) && (
                   <p className="text-zinc-500">
-                    Score : {SCORE_TYPES[score]}
-                    {b.params.team_size && ` · équipe de ${b.params.team_size}`}
-                    {b.params.ranked === false && ' · hors classement'}
+                    {[b.params.team_size && `Équipe de ${b.params.team_size}`, b.params.ranked === false && 'Hors classement']
+                      .filter(Boolean)
+                      .join(' · ')}
                   </p>
                 )}
               </div>
