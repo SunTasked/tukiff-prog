@@ -109,16 +109,16 @@ function SponsorBadge({ id }: { id: string }) {
   if (!sponsor) return null
   const content = (
     <>
-      <span className="text-[10px] whitespace-nowrap text-zinc-500 italic max-[359px]:hidden">powered by</span>
+      <span className="text-[10px] leading-none whitespace-nowrap text-zinc-500 italic max-[359px]:hidden">powered by</span>
       <SponsorLogo sponsor={sponsor} className="h-5" />
     </>
   )
   return sponsor.link ? (
-    <a href={sponsor.link} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-1">
+    <a href={sponsor.link} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-2">
       {content}
     </a>
   ) : (
-    <div className="flex min-w-0 items-center gap-1">{content}</div>
+    <div className="flex min-w-0 items-center gap-2">{content}</div>
   )
 }
 
