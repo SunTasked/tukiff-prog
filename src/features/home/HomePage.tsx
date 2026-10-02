@@ -10,7 +10,7 @@ import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mon
 import { StatusBadge } from '../calendar/StatusBadge'
 import { viewAs, type AccessLevel, type WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
-import { isAdmin, isCoach, useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth/AuthProvider'
 import { WeeklyBoardSheet } from '../results/WeeklyBoardSheet'
 import { WorkoutWithResults } from '../results/WorkoutWithResults'
 import { loadWorkout } from '../workouts/api'
@@ -26,7 +26,7 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
   const { session, profile } = useAuth()
-  const unread = unreadMessages({ coach: isCoach(profile), admin: isAdmin(profile) })
+  const unread = unreadMessages(profile)
   const me = session?.user.id
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()

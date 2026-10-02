@@ -363,6 +363,7 @@ export type Database = {
           is_admin: boolean
           is_app_owner: boolean
           last_name: string | null
+          messages_seen: string | null
           role: string | null
         }
         Insert: {
@@ -377,6 +378,7 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           last_name?: string | null
+          messages_seen?: string | null
           role?: string | null
         }
         Update: {
@@ -391,6 +393,7 @@ export type Database = {
           is_admin?: boolean
           is_app_owner?: boolean
           last_name?: string | null
+          messages_seen?: string | null
           role?: string | null
         }
         Relationships: [

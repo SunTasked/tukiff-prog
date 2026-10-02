@@ -3,14 +3,18 @@ import { Card, PageTitle } from '../../components/ui'
 import { formatLongDay } from '../../domain/dates'
 import type { Audience } from '../../domain/releases'
 import { markMessagesRead, releasesFor } from '../../lib/releases'
-import { isAdmin, isCoach, useAuth } from '../auth/AuthProvider'
+import { useAuth } from '../auth/AuthProvider'
 
 const TAGS: Partial<Record<Audience, string>> = { coach: 'Coach', admin: 'Admin' }
 
 export function MessagesPage() {
-  const { profile } = useAuth()
-  const [releases] = useState(() => releasesFor({ coach: isCoach(profile), admin: isAdmin(profile) }))
-  useEffect(() => markMessagesRead(), [])
+  const { profile, refreshProfile } = useAuth()
+  const [releases] = useState(() => releasesFor(profile))
+  useEffect(() => {
+    void markMessagesRead(profile).then((changed) => {
+      if (changed) void refreshProfile()
+    })
+  }, [])
 
   return (
     <>
