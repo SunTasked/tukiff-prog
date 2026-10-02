@@ -48,7 +48,7 @@ export function ProfilePage() {
       )
   }, [session])
 
-  async function update(values: { display_name?: string | null; first_name?: string; last_name?: string; gender?: Gender }) {
+  async function update(values: { display_name?: string | null; first_name?: string; last_name?: string; gender?: Gender; notify_updates?: boolean }) {
     setError('')
     setSaved(false)
     const { error } = await supabase.from('profiles').update(values).eq('id', profile!.id)
@@ -163,6 +163,23 @@ export function ProfilePage() {
             <span className="font-semibold">Mes records</span>
             <span className="text-zinc-400">1RM, benchmarks ›</span>
           </Link>
+        </Section>
+
+        <Section title="Notifications">
+          <Card>
+            <label className="flex items-center justify-between gap-3">
+              <span>
+                <span className="block">Nouveautés de l’app</span>
+                <span className="block text-xs text-zinc-500">Point rouge sur la cloche à chaque mise à jour</span>
+              </span>
+              <input
+                type="checkbox"
+                className="size-5 shrink-0 accent-lime-400"
+                checked={profile?.notify_updates !== false}
+                onChange={(e) => update({ notify_updates: e.target.checked })}
+              />
+            </label>
+          </Card>
         </Section>
 
         {isAdmin(profile) && (

@@ -1,33 +1,31 @@
-import { useEffect, useState } from "react";
-import { Card, PageTitle } from "../../components/ui";
-import { formatLongDay } from "../../domain/dates";
-import type { Audience } from "../../domain/releases";
-import { markMessagesRead, releasesFor } from "../../lib/releases";
-import { useAuth } from "../auth/AuthProvider";
+import { useEffect, useState } from 'react'
+import { Card, PageTitle } from '../../components/ui'
+import { formatLongDay } from '../../domain/dates'
+import type { Audience } from '../../domain/releases'
+import { markMessagesRead, releasesFor } from '../../lib/releases'
+import { useAuth } from '../auth/AuthProvider'
 
 // Athlete notes first, unlabelled; coach and admin notes under a named separator.
 const GROUPS: { audience: Audience; label?: string }[] = [
-  { audience: "athlete" },
-  { audience: "coach", label: "Coach" },
-  { audience: "admin", label: "Admin" },
-];
+  { audience: 'athlete' },
+  { audience: 'coach', label: 'Coach' },
+  { audience: 'admin', label: 'Admin' },
+]
 
 export function MessagesPage() {
-  const { profile, refreshProfile } = useAuth();
-  const [releases] = useState(() => releasesFor(profile));
+  const { profile, refreshProfile } = useAuth()
+  const [releases] = useState(() => releasesFor(profile))
   useEffect(() => {
     void markMessagesRead(profile).then((changed) => {
-      if (changed) void refreshProfile();
-    });
-  }, []);
+      if (changed) void refreshProfile()
+    })
+  }, [])
 
   return (
     <>
       <PageTitle>Messages</PageTitle>
       <div className="flex flex-col gap-3">
-        {releases.length === 0 && (
-          <Card className="text-zinc-400">Aucun message.</Card>
-        )}
+        {releases.length === 0 && <Card className="text-zinc-400">Aucun message.</Card>}
         {releases.map((r) => (
           <Card key={r.version}>
             <details open={r.unread} className="group">
@@ -35,21 +33,15 @@ export function MessagesPage() {
                 <span>
                   <span className="block font-semibold">
                     Mise à jour {r.version}
-                    {r.unread && (
-                      <span className="ml-2 inline-block size-2 rounded-full bg-red-500 align-middle" />
-                    )}
+                    {r.unread && <span className="ml-2 inline-block size-2 rounded-full bg-red-500 align-middle" />}
                   </span>
-                  <span className="block text-xs text-zinc-500 first-letter:uppercase">
-                    {formatLongDay(r.date)}
-                  </span>
+                  <span className="block text-xs text-zinc-500 first-letter:uppercase">{formatLongDay(r.date)}</span>
                 </span>
-                <span className="text-zinc-500 transition-transform group-open:rotate-180">
-                  ▾
-                </span>
+                <span className="text-zinc-500 transition-transform group-open:rotate-180">▾</span>
               </summary>
               {GROUPS.map(({ audience, label }) => {
-                const notes = r.notes.filter((n) => n.audience === audience);
-                if (!notes.length) return null;
+                const notes = r.notes.filter((n) => n.audience === audience)
+                if (!notes.length) return null
                 return (
                   <div key={audience}>
                     {label && (
@@ -64,12 +56,12 @@ export function MessagesPage() {
                       ))}
                     </ul>
                   </div>
-                );
+                )
               })}
             </details>
           </Card>
         ))}
       </div>
     </>
-  );
+  )
 }
