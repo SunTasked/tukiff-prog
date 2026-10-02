@@ -119,6 +119,8 @@ export type BlockDraft = {
   notes: string
   items: ItemDraft[]
   groups: GroupDraft[]
+  /** Library benchmark block this scheduled block was copied from (read only, unlinked when its content changes). */
+  source_block_id?: string | null
 }
 
 /** date / program_id: null = library template; set = scheduled workout (only used when creating). */
@@ -328,6 +330,12 @@ export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): 
     else if (scoringSignature(now) !== scoringSignature(b)) changed.push(b.id)
   }
   return { changed, removed }
+}
+
+/** Blocks copied from a benchmark whose content changed (notes aside): saving removes their link. */
+export function unlinkedBlocks(original: WorkoutDraft, draft: WorkoutDraft): string[] {
+  const current = new Map(draft.blocks.map((b) => [b.id, b]))
+  return original.blocks.filter((b) => b.source_block_id && current.has(b.id) && !sameAsBenchmark(current.get(b.id)!, b)).map((b) => b.id)
 }
 
 // Faster entry ------------------------------------------------------------------

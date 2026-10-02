@@ -10,6 +10,7 @@ import {
   formatSummary,
   invalidatedBlocks,
   sameAsBenchmark,
+  unlinkedBlocks,
   itemSummary,
   newBlock,
   parseDuration,
@@ -232,5 +233,25 @@ describe('sameAsBenchmark', () => {
   it('detects reps or load changes', () => {
     expect(sameAsBenchmark({ ...fran(), items: [{ ...fran().items[0], reps: '15-12-9' }] }, fran())).toBe(false)
     expect(sameAsBenchmark({ ...fran(), items: [{ ...fran().items[0], load_kg: 40 }] }, fran())).toBe(false)
+  })
+})
+
+describe('unlinkedBlocks', () => {
+  const w = () => ({
+    title: 'WOD',
+    notes: '',
+    blocks: [
+      { ...newBlock('metcon', 'a'), source_block_id: 'fran', items: [{ ...emptyItem('thr'), reps: '21-15-9', load_kg: 43 }] },
+      { ...newBlock('metcon', 'b'), items: [emptyItem('t')] },
+    ],
+  })
+  it('keeps the link on notes, drops it on content changes of linked blocks only', () => {
+    const notes = w()
+    notes.blocks[0].notes = 'Vite'
+    expect(unlinkedBlocks(w(), notes)).toEqual([])
+    const load = w()
+    load.blocks[0].items[0].load_kg = 40
+    load.blocks[1].items[0].reps = '10'
+    expect(unlinkedBlocks(w(), load)).toEqual(['a'])
   })
 })

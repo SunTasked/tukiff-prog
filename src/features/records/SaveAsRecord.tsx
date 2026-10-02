@@ -7,30 +7,22 @@ import { loadWorkout } from '../workouts/api'
 import type { ResultRow } from '../results/useWorkoutResults'
 import { scoredBlocks } from './RecordForms'
 
-type BlockLink = { scheduled: string; template: string }
-
 /**
  * Session copied from a library benchmark: once I scored every scored block of the benchmark (RX, solo, not capped),
  * my scores can be saved as a benchmark record in one tap (one entry, dated on the session).
  */
 export function SaveAsRecord({ workout, results, me }: { workout: WorkoutDraft; results: ResultRow[]; me: string }) {
-  const [links, setLinks] = useState<BlockLink[]>([])
   const [benchmark, setBenchmark] = useState<WorkoutDraft | null>(null)
   const [saved, setSaved] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
 
+  const source = workout.blocks.find((b) => b.source_block_id)?.source_block_id
   useEffect(() => {
     let live = true
     ;(async () => {
-      const { data } = await supabase
-        .from('workout_blocks')
-        .select('id, source_block_id')
-        .eq('workout_id', workout.id!)
-        .not('source_block_id', 'is', null)
-      const found = (data ?? []).map((b) => ({ scheduled: b.id, template: b.source_block_id! }))
-      if (!found.length) return
-      const { data: src } = await supabase.from('workout_blocks').select('workout_id').eq('id', found[0].template).maybeSingle()
+      if (!source) return
+      const { data: src } = await supabase.from('workout_blocks').select('workout_id').eq('id', source).maybeSingle()
       const template = src && (await loadWorkout(src.workout_id))
       if (!live || !template || template.date) return
       const ids = template.blocks.map((b) => b.id)
@@ -42,20 +34,19 @@ export function SaveAsRecord({ workout, results, me }: { workout: WorkoutDraft; 
         .in('block_id', ids)
         .limit(1)
       if (!live) return
-      setLinks(found)
       setBenchmark(template)
       setSaved(!!mine?.length)
     })()
     return () => {
       live = false
     }
-  }, [workout.id, workout.date, me])
+  }, [source, workout.date, me])
 
   if (!benchmark) return null
   const blocks = scoredBlocks(benchmark.title, benchmark.blocks)
   // My score on the scheduled copy of each scored benchmark block, its content unchanged (notes aside).
   const scores = blocks.map((b) => {
-    const copy = workout.blocks.find((x) => links.some((l) => l.scheduled === x.id && l.template === b.block.id))
+    const copy = workout.blocks.find((x) => x.source_block_id === b.block.id)
     const r = copy && results.find((x) => x.block_id === copy.id && x.athlete_id === me)
     const usable = copy && r && r.rx && !r.capped && !r.team_id && sameAsBenchmark(copy, b.block)
     return usable ? r : null

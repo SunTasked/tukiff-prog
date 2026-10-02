@@ -48,6 +48,7 @@ export function toBlock(b: Tables<'workout_blocks'> & { block_items: Tables<'blo
     params,
     notes: b.notes ?? '',
     groups,
+    source_block_id: b.source_block_id,
     items: [...b.block_items]
       .sort((x, y) => x.position - y.position)
       .map(
@@ -99,8 +100,8 @@ export async function loadWorkout(id: string): Promise<WorkoutDraft | null> {
   }
 }
 
-/** resetBlocks: blocks whose results must be deleted (scoring content changed). */
-export async function saveWorkout(w: WorkoutDraft, resetBlocks: string[] = []): Promise<string> {
+/** resetBlocks: blocks whose results must be deleted (scoring content changed). unlinkBlocks: lose their benchmark link. */
+export async function saveWorkout(w: WorkoutDraft, resetBlocks: string[] = [], unlinkBlocks: string[] = []): Promise<string> {
   const blocks = w.blocks.map((b) => ({ ...b, params: toStored(b) }))
   const { data, error } = await supabase.rpc('save_workout', {
     p: { ...w, blocks, reset_blocks: resetBlocks } as never,
@@ -112,6 +113,11 @@ export async function saveWorkout(w: WorkoutDraft, resetBlocks: string[] = []): 
       .from('workouts')
       .update({ section_id: w.section_id ?? null })
       .eq('id', data)
+    if (res.error) throw new Error(res.error.message)
+  }
+  // The benchmark link is a plain column too: save_workout keeps it, a changed block loses it.
+  if (unlinkBlocks.length) {
+    const res = await supabase.from('workout_blocks').update({ source_block_id: null }).in('id', unlinkBlocks)
     if (res.error) throw new Error(res.error.message)
   }
   return data
