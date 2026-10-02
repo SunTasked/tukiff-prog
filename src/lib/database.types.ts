@@ -912,6 +912,23 @@ export type Database = {
         }[]
       }
       new_clappers: { Args: never; Returns: number }
+      benchmark_board: {
+        Args: { p_workout: string }
+        Returns: {
+          athlete_id: string
+          block_id: string
+          date: string
+          display_name: string | null
+          first_name: string | null
+          gender: string | null
+          last_name: string | null
+          load_kg: number | null
+          reps: number | null
+          rounds: number | null
+          score_type: string
+          time_s: number | null
+        }[]
+      }
       library_blocks: { Args: never; Returns: string[] }
       copy_workout: {
         Args: {
