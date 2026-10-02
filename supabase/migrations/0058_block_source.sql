@@ -1,6 +1,7 @@
+-- Idempotent: first applied on staging as 0057_block_source.sql (0057 taken by PR #65).
 -- Scheduled blocks copied from a library benchmark keep a link to the benchmark block,
 -- so an athlete's score can be saved as a benchmark record. Kept through duplications.
-alter table public.workout_blocks add column source_block_id uuid references public.workout_blocks on delete set null;
+alter table public.workout_blocks add column if not exists source_block_id uuid references public.workout_blocks on delete set null;
 
 create or replace function public.copy_workout(p_src uuid, p_date date, p_publish_at timestamptz, p_program uuid)
 returns uuid
