@@ -154,6 +154,14 @@ describe('invalidatedBlocks', () => {
     e.blocks[1].params = { time_cap_s: 600 }
     expect(invalidatedBlocks(base(), e).changed).toEqual(['b'])
   })
+  it('drops the scores when a block turns team or solo, not when the team size changes', () => {
+    const team = base()
+    team.blocks[1].params = { ...team.blocks[1].params, team_size: 2 }
+    expect(invalidatedBlocks(base(), team).changed).toEqual(['b'])
+    const bigger = base()
+    bigger.blocks[1].params = { ...bigger.blocks[1].params, team_size: 3 }
+    expect(invalidatedBlocks(team, bigger).changed).toEqual([])
+  })
   it('keeps the scores when only the access level, the ranking, the scaling options or the sponsor change', () => {
     const d = base()
     d.blocks[1].params = { ...d.blocks[1].params, min_level: 1, ranked: false, scaling: 'Ring row', sponsor_id: 's1' }

@@ -80,52 +80,6 @@ export type Database = {
           },
         ]
       }
-      block_reactions: {
-        Row: {
-          block_id: string
-          created_at: string
-          emoji: string
-          user_id: string
-          workout_id: string
-        }
-        Insert: {
-          block_id: string
-          created_at?: string
-          emoji: string
-          user_id?: string
-          workout_id: string
-        }
-        Update: {
-          block_id?: string
-          created_at?: string
-          emoji?: string
-          user_id?: string
-          workout_id?: string
-        }
-        Relationships: [
-          {
-            foreignKeyName: "block_reactions_block_id_fkey"
-            columns: ["block_id"]
-            isOneToOne: false
-            referencedRelation: "workout_blocks"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "block_reactions_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "block_reactions_workout_id_fkey"
-            columns: ["workout_id"]
-            isOneToOne: false
-            referencedRelation: "workouts"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       block_skips: {
         Row: {
           athlete_id: string
@@ -559,6 +513,42 @@ export type Database = {
           },
         ]
       }
+      result_claps: {
+        Row: {
+          created_at: string
+          from_user: string
+          result_id: string
+          workout_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user?: string
+          result_id: string
+          workout_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user?: string
+          result_id?: string
+          workout_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "result_claps_result_id_fkey"
+            columns: ["result_id"]
+            isOneToOne: false
+            referencedRelation: "results"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "result_claps_workout_id_fkey"
+            columns: ["workout_id"]
+            isOneToOne: false
+            referencedRelation: "workouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       results: {
         Row: {
           athlete_id: string
@@ -572,6 +562,8 @@ export type Database = {
           reps: number | null
           rounds: number | null
           rx: boolean
+          team_guests: Json | null
+          team_id: string | null
           time_s: number | null
           updated_at: string
           workout_id: string
@@ -588,6 +580,8 @@ export type Database = {
           reps?: number | null
           rounds?: number | null
           rx?: boolean
+          team_guests?: Json | null
+          team_id?: string | null
           time_s?: number | null
           updated_at?: string
           workout_id: string
@@ -604,6 +598,8 @@ export type Database = {
           reps?: number | null
           rounds?: number | null
           rx?: boolean
+          team_guests?: Json | null
+          team_id?: string | null
           time_s?: number | null
           updated_at?: string
           workout_id?: string
@@ -833,11 +829,46 @@ export type Database = {
       accept_invitation: { Args: { p_code: string }; Returns: string }
       admin_usage: { Args: never; Returns: Json }
       assigned_to_me: { Args: { p_workout: string }; Returns: boolean }
+      delete_team_result: { Args: { p_team: string }; Returns: undefined }
+      save_team_result: {
+        Args: {
+          p_block: string
+          p_team: string | null
+          p_members: string[]
+          p_guests: Json
+          p_time_s: number | null
+          p_capped: boolean
+          p_rounds: number | null
+          p_reps: number | null
+          p_load_kg: number | null
+          p_rx: boolean
+          p_comment: string | null
+        }
+        Returns: string
+      }
+      team_candidates: {
+        Args: { p_block: string }
+        Returns: {
+          id: string
+          first_name: string | null
+          last_name: string | null
+          display_name: string | null
+          gender: string | null
+          avatar_url: string | null
+        }[]
+      }
       block_min_level: { Args: { p_params: Json }; Returns: number }
       can_edit_program: { Args: { p_program: string }; Returns: boolean }
       can_edit_workout: { Args: { p_workout: string }; Returns: boolean }
       can_see_block: { Args: { p_block: string }; Returns: boolean }
       can_see_workout: { Args: { p_workout: string }; Returns: boolean }
+      clap_counts: {
+        Args: { p_workout: string }
+        Returns: {
+          claps: number
+          result_id: string
+        }[]
+      }
       copy_workout: {
         Args: {
           p_date: string

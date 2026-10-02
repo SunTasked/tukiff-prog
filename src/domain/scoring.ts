@@ -134,17 +134,92 @@ export type BoardRow<T> = { result: T; rank: number | null }
 export function leaderboards<T extends Score & { rx: boolean; gender: Gender | null; created_at?: string }>(type: ScoreType, list: T[]) {
   return (Object.keys(GENDERS) as Gender[])
     .map((gender) => {
-      const mine = list.filter((r) => (r.gender ?? 'male') === gender)
-      const scaled = mine.filter((r) => !r.rx).sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
-      const rows: BoardRow<T>[] = [...rankResults(type, mine.filter((r) => r.rx)), ...scaled.map((result) => ({ result, rank: null }))]
+      const rows = boardRows(type, list.filter((r) => (r.gender ?? 'male') === gender))
       return { gender, rows }
     })
     .filter((b) => b.rows.length > 0)
 }
 
-/** Compact block board: the RX top 3 (medals), plus my row when I'm further down or scaled. */
-export function compactRows<R extends BoardRow<{ athlete_id: string }>>(rows: R[], me: string | undefined): R[] {
-  return rows.filter((row, i) => (row.rank !== null && i < 3) || row.result.athlete_id === me)
+/** One board: the RX ranked, then the scaled scores unranked in entry order. */
+function boardRows<T extends Score & { rx: boolean; created_at?: string }>(type: ScoreType, list: T[]): BoardRow<T>[] {
+  const scaled = list.filter((r) => !r.rx).sort((a, b) => (a.created_at ?? '').localeCompare(b.created_at ?? ''))
+  return [...rankResults(type, list.filter((r) => r.rx)), ...scaled.map((result) => ({ result, rank: null }))]
+}
+
+// Team WODs ---------------------------------------------------------------------
+
+export type TeamCategory = Gender | 'mixed'
+export const TEAM_CATEGORIES: Record<TeamCategory, string> = { male: 'Hommes', female: 'Femmes', mixed: 'Mixte' }
+/** Teammate without an account: a name, and a gender for the team's category. */
+export type TeamGuest = { name: string; gender: Gender }
+
+/** All men, all women, else mixed (one woman among men is mixed, like one man among women). */
+export function teamCategory(genders: (Gender | null)[]): TeamCategory {
+  const all = genders.map((g) => g ?? 'male')
+  return all.every((g) => g === 'male') ? 'male' : all.every((g) => g === 'female') ? 'female' : 'mixed'
+}
+
+export function parseGuests(json: unknown): TeamGuest[] {
+  if (!Array.isArray(json)) return []
+  return json.flatMap((g) =>
+    g && typeof g.name === 'string' && g.name.trim() ? [{ name: g.name.trim(), gender: g.gender === 'female' ? 'female' : 'male' }] : [],
+  )
+}
+
+type TeamRow = Score & { id: string; athlete_id: string; team_id: string | null; team_guests: unknown; rx: boolean; gender: Gender | null; created_at?: string }
+export type Team<T> = Score & {
+  id: string
+  members: T[]
+  guests: TeamGuest[]
+  rx: boolean
+  created_at?: string
+  category: TeamCategory
+  /** Row that carries the team's claps: the smallest result id, the same for every viewer. */
+  clapTarget: string
+}
+
+/** Results of a team block grouped by team (rows sharing team_id; a row without team is a team of its own). */
+export function groupTeams<T extends TeamRow>(list: T[]): Team<T>[] {
+  const byTeam = new Map<string, T[]>()
+  for (const r of list) {
+    const key = r.team_id ?? r.id
+    byTeam.set(key, [...(byTeam.get(key) ?? []), r])
+  }
+  return [...byTeam.entries()].map(([id, members]) => {
+    const first = members[0]
+    const guests = parseGuests(first.team_guests)
+    return {
+      id,
+      members,
+      guests,
+      time_s: first.time_s,
+      capped: first.capped,
+      rounds: first.rounds,
+      reps: first.reps,
+      load_kg: first.load_kg,
+      rx: first.rx,
+      created_at: first.created_at,
+      category: teamCategory([...members.map((m) => m.gender), ...guests.map((g) => g.gender)]),
+      clapTarget: members.map((m) => m.id).sort()[0],
+    }
+  })
+}
+
+/** One board per team category (men, women, mixed, skipping empty ones), ranked like the solo boards. */
+export function teamBoards<T extends TeamRow>(type: ScoreType, list: T[]) {
+  const teams = groupTeams(list)
+  return (Object.keys(TEAM_CATEGORIES) as TeamCategory[])
+    .map((category) => ({ category, rows: boardRows(type, teams.filter((t) => t.category === category)) }))
+    .filter((b) => b.rows.length > 0)
+}
+
+/** Compact block board: the RX top 3 (medals), plus my row (or my team) when further down or scaled. */
+export function compactRows<R extends BoardRow<{ athlete_id: string } | { members: { athlete_id: string }[] }>>(
+  rows: R[],
+  me: string | undefined,
+): R[] {
+  const mine = (r: R['result']) => ('members' in r ? r.members.some((m) => m.athlete_id === me) : r.athlete_id === me)
+  return rows.filter((row, i) => (row.rank !== null && i < 3) || mine(row.result))
 }
 
 export type WeeklyPlace = { place: number; missed: boolean; points: number; counted: boolean }

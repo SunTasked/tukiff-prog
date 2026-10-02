@@ -2,7 +2,7 @@
 import type { Gender } from './profile'
 import { formatScore, rankResults, type Score, type ScoreType } from './scoring'
 
-export type ReportBlock = { id: string; label: string; type: ScoreType; ranked?: boolean; exerciseIds: string[] }
+export type ReportBlock = { id: string; label: string; type: ScoreType; ranked?: boolean; team?: boolean; exerciseIds: string[] }
 export type ReportWorkout = { id: string; date: string; title: string; program: string; blocks: ReportBlock[] }
 export type ReportResult = Score & {
   block_id: string
@@ -23,7 +23,6 @@ export type ReportRow = {
   /** Rank among the RX of the same gender, with the size of that board (RX scores of ranked blocks only). */
   rank?: { rank: number; of: number }
   comment?: string
-  emoji?: string
   record: boolean
 }
 export type SessionStatus = 'done' | 'partial' | 'skipped' | 'missed'
@@ -42,7 +41,6 @@ export function buildReport(
   workouts: ReportWorkout[],
   results: ReportResult[],
   skipped: Set<string>,
-  emojis: Map<string, string>,
   records: ReportRecord[],
 ): ReportSession[] {
   return [...workouts]
@@ -55,11 +53,11 @@ export function buildReport(
             ((r.exercise_id && block.exerciseIds.includes(r.exercise_id)) ||
               (r.benchmark_name && block.label.toLowerCase().includes(r.benchmark_name.toLowerCase()))),
         )
-        const emoji = emojis.get(block.id)
         const mine = results.find((r) => r.block_id === block.id && r.athlete_id === athleteId)
-        if (!mine) return { block, status: skipped.has(block.id) ? 'skipped' : 'empty', emoji, record }
+        if (!mine) return { block, status: skipped.has(block.id) ? 'skipped' : 'empty', record }
         let rank: ReportRow['rank']
-        if (block.type !== 'none' && block.ranked !== false && mine.rx) {
+        // Team scores are ranked among teams, shown on the block only.
+        if (block.type !== 'none' && block.ranked !== false && !block.team && mine.rx) {
           const board = results.filter(
             (r) => r.block_id === block.id && r.rx && (r.gender ?? 'male') === (mine.gender ?? 'male'),
           )
@@ -73,7 +71,6 @@ export function buildReport(
           rx: mine.rx,
           rank,
           comment: mine.comment ?? undefined,
-          emoji,
           record,
         }
       })

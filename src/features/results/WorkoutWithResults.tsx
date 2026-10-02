@@ -7,7 +7,7 @@ import { useExercises } from '../exercises/useExercises'
 import { useRecords } from '../records/useRecords'
 import { WorkoutView } from '../workouts/WorkoutView'
 import { BlockResults } from './BlockResults'
-import { BlockReactions, type Reaction } from './BlockReactions'
+import { useClaps } from './useClaps'
 import { useWorkoutResults } from './useWorkoutResults'
 import { useWeekLeaders } from './weeklyBoards'
 
@@ -28,25 +28,19 @@ export function WorkoutWithResults({
   const me = session?.user.id
   const { nameOf, byId } = useExercises()
   const { results, loaded, reload } = useWorkoutResults(workout.id)
-  const [reactions, setReactions] = useState<Reaction[] | null>(null)
-  // Reactions and leaderboard can be turned off per program (athletes then only see their own score).
-  const [reactionsOn, setReactionsOn] = useState(false)
+  // Claps (programs.reactions_enabled) and leaderboard can be turned off per program (athletes then only see their own score).
+  const [settings, setSettings] = useState<{ claps: boolean } | null>(null)
   const [boardOn, setBoardOn] = useState(true)
   const [programId, setProgramId] = useState<string | null>(null)
-  const reloadReactions = useCallback(async () => {
-    const [w, r] = await Promise.all([
-      supabase.from('workouts').select('program_id, programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single(),
-      supabase.from('block_reactions').select('block_id, user_id, emoji, profiles(display_name, first_name, last_name, avatar_url)').eq('workout_id', workout.id!),
-    ])
-    const on = w.data?.programs?.reactions_enabled ?? true
-    setReactionsOn(on)
-    setBoardOn(w.data?.programs?.leaderboard_enabled ?? true)
-    setProgramId(w.data?.program_id ?? null)
-    setReactions(on ? (r.data ?? []) : [])
+  const reloadSettings = useCallback(async () => {
+    const { data: w } = await supabase.from('workouts').select('program_id, programs(reactions_enabled, leaderboard_enabled)').eq('id', workout.id!).single()
+    setSettings({ claps: w?.programs?.reactions_enabled ?? true })
+    setBoardOn(w?.programs?.leaderboard_enabled ?? true)
+    setProgramId(w?.program_id ?? null)
   }, [workout.id])
   useEffect(() => {
-    reloadReactions()
-  }, [reloadReactions])
+    reloadSettings()
+  }, [reloadSettings])
   // Blocks I marked "Je passe" (coaches can read everyone's, so filter on me).
   const [skips, setSkips] = useState<Set<string> | null>(canLog ? null : new Set())
   const reloadSkips = useCallback(async () => {
@@ -58,16 +52,19 @@ export function WorkoutWithResults({
     reloadSkips()
   }, [reloadSkips])
   useOnResume(() => {
-    reloadReactions()
+    reloadSettings()
     reloadSkips()
   })
   useEffect(() => {
-    if (!onDone || !loaded || !reactions || !skips) return
+    if (!onDone || !loaded || !settings || !skips) return
     onDone(new Set([...skips, ...results.filter((r) => r.athlete_id === me).map((r) => r.block_id)]))
-  }, [onDone, loaded, reactions, skips, results, me])
+  }, [onDone, loaded, settings, skips, results, me])
   const { oneRms } = useRecords(canLog ? me : undefined)
-  // LEADER badge: leaders of the program's weekly leaderboard, refreshed with the scores.
+  // "L" badge: leaders of the program's weekly leaderboard, refreshed with the scores.
   const leaders = useWeekLeaders(loaded ? programId : null, workout.date, results)
+  // Claps on others' scores: only with the program's claps setting on.
+  const clapsOn = settings?.claps ?? false
+  const { claps, clap, unclap } = useClaps(clapsOn ? workout.id : undefined, me, results)
 
   return (
     <WorkoutView
@@ -75,18 +72,6 @@ export function WorkoutWithResults({
       nameOf={nameOf}
       videoOf={(id) => byId.get(id)?.video_url}
       oneRmOf={canLog ? (id) => oneRms.get(id) : undefined}
-      blockHeader={(block) =>
-        reactionsOn && (
-          <BlockReactions
-            workoutId={workout.id!}
-            blockId={block.id}
-            reactions={(reactions ?? []).filter((r) => r.block_id === block.id)}
-            me={me}
-            canReact={canLog}
-            onChange={reloadReactions}
-          />
-        )
-      }
       blockFooter={(block, label) => (
         <BlockResults
           workoutId={workout.id!}
@@ -98,6 +83,9 @@ export function WorkoutWithResults({
           skipped={skips?.has(block.id) ?? false}
           showBoard={boardOn || !canLog}
           leaders={leaders}
+          claps={clapsOn ? claps : undefined}
+          onClap={clap}
+          onUnclap={unclap}
           onChange={() => {
             reload()
             reloadSkips()

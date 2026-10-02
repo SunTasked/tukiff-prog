@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, ErrorText, Field, Textarea } from '../../components/ui'
-import { emptyScore, formatScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
+import { emptyScore, formatScore, normalizeScore, parseGuests, validateScore, type Score, type ScoreType, type TeamGuest } from '../../domain/scoring'
 import type { BlockDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { RepCounter } from './RepCounter'
+import { TeamPicker, type Teammate } from './TeamPicker'
 import type { ResultRow } from './useWorkoutResults'
 
 type Props = {
@@ -19,6 +20,8 @@ type Props = {
   /** Ranked block: the "RX" box is offered (unticked = scaled, not ranked). */
   ranked: boolean
   existing: ResultRow | undefined
+  /** Team block: my teammates' rows (same team_id as mine), entered and deleted together. */
+  team?: { size: number; rows: ResultRow[] }
   onClose: () => void
   onSaved: () => void
 }
@@ -26,12 +29,16 @@ type Props = {
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
 
-export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, block, ranked, existing, onClose, onSaved }: Props) {
+export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, block, ranked, existing, team, onClose, onSaved }: Props) {
   const [score, setScore] = useState<Score>(existing ?? emptyScore())
   const [rx, setRx] = useState(existing?.rx ?? true)
   const [comment, setComment] = useState(existing?.comment ?? '')
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [members, setMembers] = useState<Teammate[]>(() =>
+    (team?.rows ?? []).map((r) => ({ id: r.athlete_id, avatar_url: null, first_name: null, last_name: null, display_name: null, gender: null, ...r.profiles })),
+  )
+  const [guests, setGuests] = useState<TeamGuest[]>(() => parseGuests(existing?.team_guests))
   const set = (patch: Partial<Score>) => setScore({ ...score, ...patch })
 
   async function save() {
@@ -39,9 +46,24 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
     if (invalid) return setError(invalid)
     if (type === 'time' && !score.capped && timeCap && score.time_s! > timeCap)
       return setError('Ton temps dépasse le time cap : coche « Time cap atteint ».')
+    if (team && members.length + guests.length === 0) return setError('Ajoute tes équipiers.')
     setBusy(true)
     const row = { ...normalizeScore(type, score), rx: !ranked || rx, comment: comment.trim() || null }
-    const { error } = existing
+    const { error } = team
+      ? await supabase.rpc('save_team_result', {
+          p_block: blockId,
+          p_team: existing?.team_id ?? null,
+          p_members: members.map((m) => m.id),
+          p_guests: guests,
+          p_time_s: row.time_s,
+          p_capped: row.capped,
+          p_rounds: row.rounds,
+          p_reps: row.reps,
+          p_load_kg: row.load_kg,
+          p_rx: row.rx,
+          p_comment: row.comment,
+        })
+      : existing
       ? await supabase.from('results').update(row).eq('id', existing.id)
       : await supabase.from('results').insert({ ...row, workout_id: workoutId, block_id: blockId })
     setBusy(false)
@@ -50,8 +72,10 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
   }
 
   async function remove() {
-    if (!existing || !confirm('Supprimer ton score ?')) return
-    const { error } = await supabase.from('results').delete().eq('id', existing.id)
+    if (!existing || !confirm(existing.team_id ? 'Supprimer le score de toute l’équipe ?' : 'Supprimer ton score ?')) return
+    const { error } = existing.team_id
+      ? await supabase.rpc('delete_team_result', { p_team: existing.team_id })
+      : await supabase.from('results').delete().eq('id', existing.id)
     if (error) return setError(error.message)
     onSaved()
   }
@@ -59,12 +83,24 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
   return (
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black pt-[env(safe-area-inset-top)]">
       <div className="flex items-center justify-between border-b border-zinc-800 p-3">
-        <span className="font-semibold">Mon score · {blockLabel}</span>
+        <span className="min-w-0 truncate font-semibold">{team ? 'Score d’équipe' : 'Mon score'} · {blockLabel}</span>
         <button className="px-2 text-zinc-400" onClick={onClose}>
           Annuler
         </button>
       </div>
       <div className="flex flex-1 flex-col gap-4 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
+        {team && (
+          <TeamPicker
+            blockId={blockId}
+            size={team.size}
+            members={members}
+            guests={guests}
+            onChange={(m, g) => {
+              setMembers(m)
+              setGuests(g)
+            }}
+          />
+        )}
 
         {block?.params.score_note && <p className="text-sm text-zinc-400">{block.params.score_note}</p>}
 
@@ -113,7 +149,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
         )}
         {type !== 'none' && (
           <p className="rounded-xl bg-zinc-900 px-3 py-2 text-sm text-zinc-400">
-            Ton score s’affichera : <span className="font-semibold text-zinc-100">{formatScore(type, normalizeScore(type, score))}</span>
+            {team ? 'Le score' : 'Ton score'} s’affichera : <span className="font-semibold text-zinc-100">{formatScore(type, normalizeScore(type, score))}</span>
           </p>
         )}
 
@@ -132,7 +168,7 @@ export function ScoreSheet({ timeCap, workoutId, blockId, blockLabel, type, bloc
         </Button>
         {existing && (
           <button className="py-2 text-sm text-red-400 underline" onClick={remove}>
-            Supprimer mon score
+            {existing.team_id ? 'Supprimer le score de l’équipe' : 'Supprimer mon score'}
           </button>
         )}
       </div>

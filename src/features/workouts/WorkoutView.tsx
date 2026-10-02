@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from 'react'
 import { Link } from 'react-router'
 import { loadFromPct } from '../../domain/records'
-import { SCORE_TYPES, scoreType } from '../../domain/scoring'
+import { scoreType } from '../../domain/scoring'
 import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { Markdown } from '../../components/Markdown'
 import { SponsorLogo } from '../../components/SponsorLogo'
@@ -24,15 +24,12 @@ export function WorkoutView({
   workout,
   nameOf,
   videoOf,
-  blockHeader,
   blockFooter,
   oneRmOf,
 }: {
   workout: WorkoutDraft
   nameOf: (id: string) => string | undefined
   videoOf?: (id: string) => string | null | undefined
-  /** Extra content right after each block's title (reactions). */
-  blockHeader?: (block: BlockDraft) => ReactNode
   /** Extra content under each block (results). */
   blockFooter?: (block: BlockDraft, label: string) => ReactNode
   /** Viewer's 1RM per exercise: shows the load for "% 1RM" prescriptions. */
@@ -63,14 +60,7 @@ export function WorkoutView({
               </p>
               <TimerLink block={b} />
             </div>
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
-              {blockHeading(b) && (
-                <h3 className="min-w-0 text-lg font-bold">
-                  {blockHeading(b)}
-                </h3>
-              )}
-              {blockHeader?.(b)}
-            </div>
+            {blockHeading(b) && <h3 className="mt-1 text-lg font-bold">{blockHeading(b)}</h3>}
             {b.params.sponsor_id && <SponsorLine id={b.params.sponsor_id} />}
             {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
@@ -177,14 +167,15 @@ function ItemLine({
   )
 }
 
-/** The score type, plus the coach's note on how to enter it if any. */
+/** Team size and the coach's note on how to enter the score, if any (the score type itself is implied by the block). */
 function ScoreLine({ block }: { block: BlockDraft }) {
-  const type = scoreType(block.format, block.params)
-  if (type === 'none') return null
+  const { team_size, score_note } = block.params
+  if (scoreType(block.format, block.params) === 'none' || (!team_size && !score_note)) return null
   return (
     <p className="mt-2 text-sm text-zinc-400">
-      <span className="font-semibold text-zinc-300">Score : {SCORE_TYPES[type]}</span>
-      {block.params.score_note && <> · {block.params.score_note}</>}
+      {team_size && <span className="font-semibold text-zinc-300">Équipe de {team_size}</span>}
+      {team_size && score_note && ' · '}
+      {score_note}
     </p>
   )
 }

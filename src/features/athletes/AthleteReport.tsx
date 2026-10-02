@@ -24,11 +24,11 @@ const STATUS: Record<SessionStatus, { label: string; className: string }> = {
   missed: { label: 'Non faite', className: 'bg-zinc-800 text-zinc-400' },
 }
 
-type Data = { workouts: ReportWorkout[]; results: ReportResult[]; skipped: Set<string>; emojis: Map<string, string> }
+type Data = { workouts: ReportWorkout[]; results: ReportResult[]; skipped: Set<string> }
 
 /**
  * Coach view of what an athlete did: published sessions of the given programs (those the coach edits and
- * the athlete follows) over the period, with their scores, skips, ranks, comments and reactions.
+ * the athlete follows) over the period, with their scores, skips, ranks, comments and records.
  */
 export function AthleteReport({
   athleteId,
@@ -54,7 +54,7 @@ export function AthleteReport({
     let stale = false
     ;(async () => {
       setData(null)
-      if (!programIds.length) return setData({ workouts: [], results: [], skipped: new Set(), emojis: new Map() })
+      if (!programIds.length) return setData({ workouts: [], results: [], skipped: new Set() })
       const { data: rows } = await supabase
         .from('workouts')
         .select('id, title, date, program_id, programs(name), workout_blocks(id, position, kind, title, format, params, block_items(exercise_id))')
@@ -78,24 +78,23 @@ export function AthleteReport({
               label: `${String.fromCharCode(65 + i)} · ${name}`,
               type: scoreType(b.format as Format, params),
               ranked: isRanked(b.format as Format, params),
+              team: !!params.team_size,
               exerciseIds: b.block_items.flatMap((it) => (it.exercise_id ? [it.exercise_id] : [])),
             }
           }),
       }))
       const ids = workouts.map((w) => w.id)
-      const [res, skips, reactions] = ids.length
+      const [res, skips] = ids.length
         ? await Promise.all([
             supabase.from('results').select('*, profiles(gender)').in('workout_id', ids),
             supabase.from('block_skips').select('block_id').in('workout_id', ids).eq('athlete_id', athleteId),
-            supabase.from('block_reactions').select('block_id, emoji').in('workout_id', ids).eq('user_id', athleteId),
           ])
-        : [{ data: [] }, { data: [] }, { data: [] }]
+        : [{ data: [] }, { data: [] }]
       if (stale) return
       setData({
         workouts,
         results: (res.data ?? []).map((r) => ({ ...r, gender: (r.profiles?.gender ?? null) as Gender | null })),
         skipped: new Set((skips.data ?? []).map((s) => s.block_id)),
-        emojis: new Map((reactions.data ?? []).map((r) => [r.block_id, r.emoji])),
       })
     })()
     return () => {
@@ -105,7 +104,7 @@ export function AthleteReport({
 
   const periodRecords = records.filter((r) => r.date >= from && r.date <= to)
   const sessions = data
-    ? buildReport(athleteId, data.workouts, data.results, data.skipped, data.emojis, periodRecords)
+    ? buildReport(athleteId, data.workouts, data.results, data.skipped, periodRecords)
     : null
   const totals = sessions && reportTotals(sessions, periodRecords)
 
@@ -185,11 +184,12 @@ function Row({ row }: { row: ReportRow }) {
           {row.status === 'done' ? (row.block.type === 'none' ? 'Fait ✓' : row.score) : row.status === 'skipped' ? 'Passé' : '—'}
         </span>
       </div>
-      {(row.status === 'done' || row.emoji || row.record) && (
+      {(row.status === 'done' || row.record) && (
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-zinc-400">
           {row.rx && row.block.type !== 'none' && row.block.ranked !== false && (
             <span className="rounded bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-300 uppercase">RX</span>
           )}
+          {row.block.team && row.status === 'done' && <span>Équipe</span>}
           {row.rank && (
             <span>
               {row.rank.rank <= 3 ? ['🥇', '🥈', '🥉'][row.rank.rank - 1] + ' ' : ''}
@@ -198,7 +198,6 @@ function Row({ row }: { row: ReportRow }) {
             </span>
           )}
           {row.record && <span className="font-semibold text-amber-400">🏆 record</span>}
-          {row.emoji && <span>{row.emoji}</span>}
         </div>
       )}
       {row.comment && <p className="mt-1 border-l-2 border-zinc-700 pl-2 text-sm whitespace-pre-line text-zinc-300 italic">{row.comment}</p>}

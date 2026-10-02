@@ -28,7 +28,7 @@ Les scores ne sont saisis que sur les séances déjà publiées : relancer le sc
 
 ## Programmes
 
-| Programme | Owner | Contributeurs | Membres | Réactions | Classement |
+| Programme | Owner | Contributeurs | Membres | Claps | Classement |
 |---|---|---|---|---|---|
 | CrossFit (équivalent de « Kanda WOD » en prod) | c1 | c2 | tous | oui | oui |
 | Haltéro | c1 | | c1, a1, a2, a4, a10 | non | **non** |
@@ -105,7 +105,6 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-26 | Top 3 RX + ma ligne (même adaptée), classement complet en modale avec onglets Hommes/Femmes ouverts sur mon genre | a2 (H), a1 (F) | Josh |
 | UC-27 | Classement de la semaine (somme des rangs, bloc non scoré = dernier + 1) + badge LEADER par genre | a2 | semaines -1 et en cours ; Hugo et Léa attendus en tête |
 | UC-28 | Classement désactivé : l'athlète ne voit que son score, pas de classement hebdo ; le coach voit tout | a2 vs c1 | Haltéro |
-| UC-29 | Réactions à côté du titre : seulement les émojis utilisés + « + » (5 visages), masqué une fois réagi ; tap = liste avec « − » pour retirer la sienne | a2 | CrossFit ; absent sur Hyrox et Haltéro |
 
 ### Coach et admin
 
@@ -120,6 +119,7 @@ Colonne « Compte » : avec qui se connecter. « Données » : ce qui couvre le 
 | UC-37 | Liens d'invitation nommés (« Pour qui ? ») affichés dans les liens actifs | c1, « + » athlètes | lien « Julien Garnier » (usage unique) et un lien 24 h sans nom |
 | UC-38 | Inscriptions en cours (lien utilisé, inscription pas finie) listées à part avec le nom du lien, bouton « Supprimer » (le lien à usage unique redevient utilisable) ; suppression auto après 7 jours | c1 | « Marion Blanc » |
 | UC-39 | Adaptations du coach (coche « Adaptations », texte libre) repliables sous le bloc ; saisie avec coche RX cochée par défaut, décochée = adapté (pas d’étiquette RX), non classé, 0 pt au classement de la semaine | a3, a5 (adaptés), a6 (moitié) | Josh (lundi) |
+| UC-40 | WOD en équipe (coach : « Équipe : Par 2/3/4 ») : un équipier saisit le score pour l'équipe, équipiers du programme ou invités sans compte (prénom + genre) ; erreur si un équipier a déjà un score ; tout équipier modifie ou supprime le score ; classement du bloc Hommes / Femmes / Mixte ; hors classement de la semaine | a1 (avec Inès), a3 (tente avec Hugo → erreur), c1 (éditeur) | CrossFit, jeudi « WOD » : équipes H, F, mixte avec invitée, mixte adaptée |
 | UC-41 | Sponsor de bloc : « powered by » + logo sous le titre, à droite (lien ouvert au toucher) ; choix « Sponsor » dans l’éditeur de bloc ; liste gérée par les admins dans Communauté (nom, logo recadré 3:1, fond clair/sombre, lien), « Retirer » = archivé | c1 (gestion), tout athlète (affichage) | « Kanda Fitness » sur le bloc Fran |
 | UC-34 | Records et % de 1RM ; lien « 1RM ? » quand il manque | a3 (sans 1RM) vs a1 | Squat snatch 80 %, Front Squat 75 %, Clean and jerk 75 % du hang clean |
 

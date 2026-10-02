@@ -33,8 +33,8 @@ async function fetchWeeklyBoards(programId: string, monday: string): Promise<{ e
   const boards = weeklyLeaderboards(
     workouts.flatMap((w, i) =>
       (w?.blocks ?? []).map((b) => ({
-        // Unranked blocks count as unscored: out of the week.
-        type: isRanked(b.format, b.params) ? scoreType(b.format, b.params) : 'none',
+        // Unranked and team blocks count as unscored: out of the week.
+        type: isRanked(b.format, b.params) && !b.params.team_size ? scoreType(b.format, b.params) : 'none',
         results: rows.filter((r) => r.block_id === b.id),
         // A multi-day workout (challenge of the week) only breaks ties.
         bonus: published[i].days > 1,

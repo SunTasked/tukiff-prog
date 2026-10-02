@@ -298,7 +298,8 @@ const KANDA_WEEK = [
   ],
   [
     block('skill', 'emom', { rounds: 6, interval_s: 180, score: 'load' }, [item('Front Squat', { reps: '6', pct_1rm: 75 })], { title: 'Front Squat', notes: 'Bonus : skill pistol' }),
-    block('metcon', 'for_time', { rounds: 3, time_cap_s: 900, score: 'time' }, [
+    // Team WOD by 2 (UC-40).
+    block('metcon', 'for_time', { rounds: 3, time_cap_s: 900, score: 'time', team_size: 2 }, [
       item('Toes-to-Bar', { reps: '30' }),
       item('Power Clean', { reps: '12', load_kg: 80, load_kg_f: 50 }),
       item('Pistol', { reps: '30' }),
@@ -377,7 +378,6 @@ const between = (min, max) => Math.round(min + rand() * (max - min))
 const pick = (arr) => arr[between(0, arr.length - 1)]
 const COMMENTS = ['Grosse séance 🔥', 'Les DU ont piqué', 'Bras cramés', 'Rythme régulier', 'Dur mais propre', null, null, null]
 const DONE_COMMENTS = ['Technique ok', 'Barre à 60', 'Épaules raides', null]
-const FACES = ['😬', '😘', '🫠', '😏', '😭']
 
 function scoreFor(type, params, skill, female) {
   switch (type) {
@@ -398,7 +398,7 @@ function scoreFor(type, params, skill, female) {
 }
 const typeOf = (b) => b.params.score ?? { for_time: 'time', amrap: 'rounds_reps', sets_reps: 'load', tabata: 'reps' }[b.format] ?? 'none'
 
-let resultCount = 0, doneCount = 0, skipCount = 0, reactionCount = 0
+let resultCount = 0, doneCount = 0, skipCount = 0
 for (const u of USERS.filter((x) => x.skip < 1)) {
   const client = await clientFor(u.name)
   const female = u.gender === 'female'
@@ -406,7 +406,6 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
   for (const w of mine) {
     if (!w.publish_at || new Date(w.publish_at) > now) continue // coach preview of drafts / scheduled
     if (rand() < u.skip) continue
-    const reactionsOn = w.program_name === 'CrossFit'
     const blocks = must(await client.from('workout_blocks').select('id, kind, format, params').eq('workout_id', w.id).order('position'))
     for (const b of blocks) {
       if (b.kind === 'warmup') continue
@@ -416,6 +415,7 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
         skipCount++
         continue
       }
+      if (b.params.team_size) continue // scored by team below
       const type = typeOf(b)
       const rx = rand() < u.rx
       if (type === 'none') {
@@ -429,14 +429,35 @@ for (const u of USERS.filter((x) => x.skip < 1)) {
         }))
         resultCount++
       }
-      if (reactionsOn && rand() < 0.35) {
-        must(await client.from('block_reactions').insert({ workout_id: w.id, block_id: b.id, emoji: pick(FACES) }))
-        reactionCount++
-      }
     }
   }
 }
-console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe", ${reactionCount} réactions`)
+// Team WODs (UC-40): one entry per team, by its first member; men, women and mixed teams, guests without account.
+const TEAMS = [
+  { by: 'a1', with: ['a5'], time_s: 405, comment: 'On a souffert' },
+  { by: 'a4', with: ['a2'], time_s: 380 },
+  { by: 'a7', with: ['a9'], guests: [{ name: 'Zoé', gender: 'female' }], time_s: 470, rx: false },
+  { by: 'a6', with: [], guests: [{ name: 'Camille', gender: 'female' }], time_s: 450 },
+]
+let teamCount = 0
+for (const t of TEAMS) {
+  const client = await clientFor(t.by)
+  const mine = must(await client.rpc('my_workouts', { p_from: dayOf(-2, 0), p_to: today }))
+  for (const w of mine.filter((x) => x.publish_at && new Date(x.publish_at) <= now)) {
+    const blocks = must(await client.from('workout_blocks').select('id, params').eq('workout_id', w.id))
+    for (const b of blocks.filter((x) => x.params.team_size)) {
+      const ids = must(await client.rpc('team_candidates', { p_block: b.id }))
+      const members = t.with.map((n) => ids.find((c) => c.first_name === USERS.find((u) => u.name === n).first)?.id).filter(Boolean)
+      must(await client.rpc('save_team_result', {
+        p_block: b.id, p_team: null, p_members: members, p_guests: t.guests ?? [], p_time_s: t.time_s, p_capped: false,
+        p_rounds: null, p_reps: null, p_load_kg: null, p_rx: t.rx ?? true, p_comment: t.comment ?? null,
+      }))
+      teamCount++
+    }
+  }
+}
+console.log(`Résultats : ${teamCount} scores d'équipe`)
+console.log(`Résultats : ${resultCount} scores, ${doneCount} "Fait", ${skipCount} "Je passe"`)
 
 // Personal records: loads of % blocks (a3 has no Back Squat / Hang Clean 1RM, to show the "1RM ?" link).
 const RECORDS = {

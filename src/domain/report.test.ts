@@ -51,7 +51,7 @@ describe('buildReport', () => {
     res('b1', 'z', { load_kg: 140, gender: 'female' }),
     res('b3', 'me'),
   ]
-  const sessions = buildReport('me', workouts, results, new Set(['b2', 'b4']), new Map([['b1', '🔥']]), [
+  const sessions = buildReport('me', workouts, results, new Set(['b2', 'b4']), [
     { exercise_id: 'squat', benchmark_name: null, date: '2026-09-22' },
     { exercise_id: null, benchmark_name: 'fran', date: '2026-09-21' },
   ])
@@ -65,8 +65,8 @@ describe('buildReport', () => {
 
   it('ranks among the RX of the same gender, never a scaled score', () => {
     const row = sessions[1].rows[0]
-    expect(row).toMatchObject({ status: 'done', score: '100 kg', rank: { rank: 2, of: 2 }, comment: 'dur', emoji: '🔥', record: true })
-    const scaled = buildReport('y', workouts, results, new Set(), new Map(), [])[1].rows[0]
+    expect(row).toMatchObject({ status: 'done', score: '100 kg', rank: { rank: 2, of: 2 }, comment: 'dur', record: true })
+    const scaled = buildReport('y', workouts, results, new Set(), [])[1].rows[0]
     expect(scaled).toMatchObject({ score: '130 kg', rx: false, rank: undefined })
   })
 
