@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
 import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { useNewClappers } from '../../lib/clapsNotification'
 import { unreadMessages } from '../../lib/releases'
 import { useOnResume } from '../../lib/resume'
 import { getItem, setItem } from '../../lib/storage'
@@ -26,7 +27,8 @@ const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 /** Workouts assigned to me, one day at a time, with a week strip to navigate. */
 export function HomePage() {
   const { session, profile } = useAuth()
-  const unread = unreadMessages(profile)
+  const newClappers = useNewClappers(profile)
+  const unread = unreadMessages(profile) || newClappers > 0
   const me = session?.user.id
   const [params, setParams] = useSearchParams()
   const day = params.get('day') ?? today()
