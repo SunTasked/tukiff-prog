@@ -1,0 +1,19 @@
+{
+  "version": "1.1.0",
+  "date": "2026-10-02",
+  "admin": [
+    "Compliments des claps modifiables dans Communauté",
+    "Statistiques déplacées dans Profil",
+    "Sponsors : liste gérée dans Communauté (nom, logo recadré, lien)"
+  ],
+  "coach": [
+    "Création de séance : bibliothèque par sections, aperçu de chaque séance avant de la choisir",
+    "Sponsor au choix sur chaque bloc"
+  ],
+  "athlete": [
+    "Page Messages (cloche sur l'accueil) avec les nouveautés de chaque mise à jour",
+    "Messages : nombre d'athlètes qui ont clappé tes perfs depuis ta dernière visite (désactivable dans Profil)",
+    "Croix pour fermer la page Messages",
+    "« powered by » + logo du sponsor à côté du libellé du bloc (« Bloc A »)"
+  ]
+}
