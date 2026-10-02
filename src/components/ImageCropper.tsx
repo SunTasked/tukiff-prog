@@ -176,7 +176,7 @@ function ImageCropper({
         {round && <div className="pointer-events-none absolute inset-0 rounded-full shadow-[0_0_0_9999px_rgba(0,0,0,0.6)] ring-2 ring-lime-400" />}
       </div>
       {failed ? (
-        <p className="text-sm text-red-400">Image illisible : essaie une autre photo (JPEG ou PNG).</p>
+        <p className="text-sm text-red-400">Image illisible : essaie une autre image (JPEG ou PNG).</p>
       ) : (
         <p className="text-sm text-zinc-400">Déplace l’image et pince pour zoomer.</p>
       )}
