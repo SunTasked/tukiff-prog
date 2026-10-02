@@ -165,11 +165,13 @@ export function HomePage() {
             )
           })}
         </div>
-        {day !== today() && (
-          <button className="mt-1 w-full text-center text-xs text-lime-400" onClick={() => goTo(today())}>
-            Revenir à aujourd’hui
-          </button>
-        )}
+        {/* Hidden rather than removed on today: swiping to or from today doesn't shift the page. */}
+        <button
+          className={`mt-1 w-full text-center text-xs text-lime-400 ${day === today() ? 'invisible' : ''}`}
+          onClick={() => goTo(today())}
+        >
+          Revenir à aujourd’hui
+        </button>
       </div>
 
       {/* Tall enough that a swipe below a short day still counts; clips the neighbour days. */}
