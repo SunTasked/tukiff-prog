@@ -42,7 +42,7 @@ function LibraryList() {
 
   return (
     <>
-      <PageTitle>Bibliothèque</PageTitle>
+      <PageTitle>PR</PageTitle>
       <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-900 p-1 text-sm">
         {(['workouts', 'exercises'] as const).map((t) => (
           <button
