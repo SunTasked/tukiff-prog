@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { DateField } from '../../components/DatePicker'
 import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
-import { BENCHMARKS, MAX_LABELS } from '../../domain/records'
+import { BENCHMARKS, MAX_LABELS, RECORD_MEASURES } from '../../domain/records'
 import { emptyScore, normalizeScore, validateScore, type Score } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
 import { isCoach, useAuth } from '../auth/AuthProvider'
@@ -19,7 +19,7 @@ type BenchType = keyof typeof BENCH_TYPES
 const input = 'w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3'
 const int = (v: number | null) => (v == null ? null : Math.round(v))
 
-/** New record: an exercise load (1RM, 3RM…), an exercise max (reps, hold time…) or a benchmark score. */
+/** New record: an exercise load (1RM, 3RM…), a gymnastics max (reps, hold time) or a benchmark score. */
 export function RecordSheet({
   initialExercise,
   onClose,
@@ -93,7 +93,7 @@ export function RecordSheet({
                 </Field>
               </>
             ) : (
-              <Field label={MAX_LABELS[measure]}>
+              <Field label={MAX_LABELS[measure === 'time' ? 'time' : 'reps']}>
                 {measure === 'time' ? (
                   <DurationInput value={value} onChange={setValue} />
                 ) : (
@@ -144,7 +144,7 @@ export function RecordSheet({
       </div>
       {picking && (
         <ExercisePicker
-          exercises={exercises}
+          exercises={exercises.filter((e) => RECORD_MEASURES.includes(e.measure as Measure))}
           sections={sections}
           onPick={(e) => {
             setExerciseId(e.id)

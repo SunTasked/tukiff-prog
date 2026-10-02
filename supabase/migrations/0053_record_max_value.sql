@@ -1,5 +1,5 @@
 -- Records of exercises not measured in load (V-up, Plank, Run, Row…): one best value in the exercise's unit
--- (reps, seconds, metres, calories) instead of a rep max + load.
+-- (reps or seconds) instead of a rep max + load.
 alter table public.personal_records add column value numeric check (value > 0);
 alter table public.personal_records drop constraint personal_records_check;
 alter table public.personal_records add constraint personal_records_check check (
