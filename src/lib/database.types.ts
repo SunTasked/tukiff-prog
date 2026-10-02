@@ -311,9 +311,11 @@ export type Database = {
       personal_records: {
         Row: {
           athlete_id: string
+          block_id: string | null
           benchmark_name: string | null
           created_at: string
           date: string
+          entry_id: string
           exercise_id: string | null
           id: string
           load_kg: number | null
@@ -323,12 +325,16 @@ export type Database = {
           rounds: number | null
           score_type: string | null
           time_s: number | null
+          value: number | null
+          workout_id: string | null
         }
         Insert: {
           athlete_id?: string
+          block_id?: string | null
           benchmark_name?: string | null
           created_at?: string
           date?: string
+          entry_id?: string
           exercise_id?: string | null
           id?: string
           load_kg?: number | null
@@ -338,12 +344,16 @@ export type Database = {
           rounds?: number | null
           score_type?: string | null
           time_s?: number | null
+          value?: number | null
+          workout_id?: string | null
         }
         Update: {
           athlete_id?: string
+          block_id?: string | null
           benchmark_name?: string | null
           created_at?: string
           date?: string
+          entry_id?: string
           exercise_id?: string | null
           id?: string
           load_kg?: number | null
@@ -353,6 +363,8 @@ export type Database = {
           rounds?: number | null
           score_type?: string | null
           time_s?: number | null
+          value?: number | null
+          workout_id?: string | null
         }
         Relationships: [
           {
@@ -900,6 +912,25 @@ export type Database = {
         }[]
       }
       new_clappers: { Args: never; Returns: number }
+      benchmark_board: {
+        Args: { p_workout: string }
+        Returns: {
+          athlete_id: string
+          block_id: string
+          date: string
+          display_name: string | null
+          first_name: string | null
+          gender: string | null
+          last_name: string | null
+          load_kg: number | null
+          reps: number | null
+          rounds: number | null
+          score_type: string
+          time_s: number | null
+        }[]
+      }
+      library_blocks: { Args: never; Returns: string[] }
+      benchmarks_scored: { Args: never; Returns: string[] }
       copy_workout: {
         Args: {
           p_date: string

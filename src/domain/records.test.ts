@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { emptyScore } from './scoring'
-import { bestBenchmarks, bestLoads, loadFromPct, oneRepMaxes } from './records'
+import { bestBenchmarks, bestLoads, bestMaxes, formatMax, loadFromPct, oneRepMaxes, recordEntries } from './records'
 
 it('computes a load from a % of the 1RM, rounded to 1 kg', () => {
   expect(loadFromPct(100, 80)).toBe(80)
@@ -26,9 +26,22 @@ describe('loads', () => {
   })
 })
 
-it('keeps the best benchmark score per name', () => {
-  const b = (name: string, time_s: number) => ({ ...emptyScore(), benchmark_name: name, score_type: 'time' as const, time_s, date: '2026-01-01' })
-  const best = bestBenchmarks([b('Fran', 300), b('fran ', 260), b('Fran', 280), b('Grace', 200)])
-  expect(best.get('fran')!.time_s).toBe(260)
-  expect(best.get('grace')!.time_s).toBe(200)
+it('keeps the best benchmark score per block, else per name', () => {
+  const b = (name: string, time_s: number, block_id: string | null = null) => ({ ...emptyScore(), benchmark_name: name, score_type: 'time' as const, time_s, date: '2026-01-01', block_id })
+  const best = bestBenchmarks([b('Fran', 300, 'f'), b('Fran', 260, 'f'), b('Fran', 280, 'f'), b('Grace', 200), b('grace ', 190)])
+  expect(best.get('f')!.time_s).toBe(260)
+  expect(best.get('grace')!.time_s).toBe(190)
+})
+
+it('groups records entered together, most recent first', () => {
+  const r = (entry_id: string, date: string) => ({ entry_id, date, created_at: date })
+  expect(recordEntries([r('a', '2026-01-01'), r('b', '2026-02-01'), r('a', '2026-01-01')]).map((e) => e.length)).toEqual([1, 2])
+})
+
+it('keeps the highest max per exercise and formats it in the exercise unit', () => {
+  const m = (exercise_id: string, value: number) => ({ exercise_id, value, date: '2026-01-01' })
+  const best = bestMaxes([m('vup', 25), m('vup', 31), m('plank', 90)])
+  expect(best.get('vup')!.value).toBe(31)
+  expect(formatMax('reps', 31)).toBe('31 reps')
+  expect(formatMax('time', 90)).toBe('1:30')
 })

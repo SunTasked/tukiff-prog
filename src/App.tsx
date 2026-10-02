@@ -14,6 +14,7 @@ import { OnboardingPage } from './features/auth/OnboardingPage'
 import { PendingPage } from './features/auth/PendingPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
 import { ExerciseFormPage } from './features/exercises/ExerciseFormPage'
+import { ExercisePage } from './features/exercises/ExercisePage'
 import { HomePage } from './features/home/HomePage'
 import { LibraryPage } from './features/library/LibraryPage'
 import { MessagesPage } from './features/messages/MessagesPage'
@@ -73,6 +74,19 @@ export default function App() {
         <Route path="workouts/:id" element={narrow(<AthleteWorkoutPage />)} />
         <Route path="records" element={narrow(<RecordsPage />)} />
         <Route path="timer" element={narrow(<TimerPage />)} />
+        {/* Library: read-only for athletes (with their records); editors are coach-only. */}
+        <Route path="library" element={<LibraryPage />}>
+          <Route path="workouts/:id" element={<WorkoutPage />} />
+          <Route path="exercises/:id" element={<ExercisePage />} />
+          {isCoach(profile) && (
+            <>
+              <Route path="workouts/new" element={<WorkoutEditor />} />
+              <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
+              <Route path="exercises/new" element={<ExerciseFormPage />} />
+              <Route path="exercises/:id/edit" element={<ExerciseFormPage />} />
+            </>
+          )}
+        </Route>
         {isCoach(profile) && (
           <>
             <Route path="athletes" element={<AthletesPage />} />
@@ -80,13 +94,6 @@ export default function App() {
             <Route path="programs/:id" element={narrow(<ProgramPage />)} />
             <Route path="calendar" element={<CalendarPage />} />
             <Route path="calendar/workouts/:id" element={narrow(<ScheduledWorkoutPage />)} />
-            <Route path="library" element={<LibraryPage />}>
-              <Route path="workouts/new" element={<WorkoutEditor />} />
-              <Route path="workouts/:id" element={<WorkoutPage />} />
-              <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
-              <Route path="exercises/new" element={<ExerciseFormPage />} />
-              <Route path="exercises/:id" element={<ExerciseFormPage />} />
-            </Route>
           </>
         )}
         {isAdmin(profile) && <Route path="admin" element={<AdminStatsPage />} />}
