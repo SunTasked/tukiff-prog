@@ -131,3 +131,6 @@ node scripts/seed-dev.mjs --clean  # supprime seulement le jeu de test
 
 Le script refuse de créer des données avec `TARGET=prod` (seul `--clean` y est accepté).
 Il supprime aussi les programmes et séances créés à la main par les comptes `*@tkf.test` (ex. programme « tim » de staging).
+
+Pour repartir d'une base staging propre (migrations de la prod + migrations de la branche, bibliothèque d'exercices de la prod, puis ce jeu de test) :
+`node scripts/reset-staging.mjs --go` (voir le README, section Déploiement).
