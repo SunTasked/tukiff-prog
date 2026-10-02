@@ -54,18 +54,16 @@ export function WorkoutView({
         ) : (
           <section key={b.id} id={`block-${b.id}`} className="scroll-mt-4 rounded-2xl bg-zinc-900 p-4">
             <div className="flex items-center justify-between gap-2">
-              <p className="text-xs font-semibold tracking-widest text-zinc-500 uppercase">
-                Bloc {String.fromCharCode(65 + i)}
-                {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 tracking-normal whitespace-nowrap text-amber-300 normal-case">{levelName(workout.access_levels, b.params.min_level!)}</span>}
-              </p>
-              <TimerLink block={b} />
-            </div>
-            {(blockHeading(b) || b.params.sponsor_id) && (
-              <div className="mt-1 flex items-start gap-2">
-                <h3 className="min-w-0 flex-1 text-lg font-bold">{blockHeading(b)}</h3>
+              <div className="flex min-w-0 items-center gap-2 overflow-hidden">
+                <p className="shrink-0 text-xs font-semibold tracking-widest text-zinc-500 uppercase">
+                  Bloc {String.fromCharCode(65 + i)}
+                  {isPremium(b) && <span className="ml-2 rounded bg-amber-400/15 px-1.5 py-0.5 tracking-normal whitespace-nowrap text-amber-300 normal-case">{levelName(workout.access_levels, b.params.min_level!)}</span>}
+                </p>
                 {b.params.sponsor_id && <SponsorBadge id={b.params.sponsor_id} />}
               </div>
-            )}
+              <TimerLink block={b} />
+            </div>
+            {blockHeading(b) && <h3 className="mt-1 text-lg font-bold">{blockHeading(b)}</h3>}
             {b.format === 'none' && b.notes && <Markdown text={b.notes} className="mt-2 text-sm text-zinc-300" />}
             <ul className="mt-2 flex flex-col gap-1">
               {itemRuns(b).map(({ group, items }, k) => {
@@ -105,22 +103,22 @@ export function WorkoutView({
   )
 }
 
-/** "powered by" over the logo, right of the title (narrow, so long titles keep room); opens the sponsor's site when it has one. */
+/** "powered by" + logo next to "Bloc A"; opens the sponsor's site when it has one. */
 function SponsorBadge({ id }: { id: string }) {
   const sponsor = useSponsors().find((s) => s.id === id)
   if (!sponsor) return null
   const content = (
     <>
-      <span className="text-[10px] leading-none text-zinc-500 italic">powered by</span>
-      <SponsorLogo sponsor={sponsor} />
+      <span className="text-[10px] whitespace-nowrap text-zinc-500 italic max-[359px]:hidden">powered by</span>
+      <SponsorLogo sponsor={sponsor} className="h-5" />
     </>
   )
   return sponsor.link ? (
-    <a href={sponsor.link} target="_blank" rel="noreferrer" className="flex shrink-0 flex-col items-end gap-0.5">
+    <a href={sponsor.link} target="_blank" rel="noreferrer" className="flex min-w-0 items-center gap-1">
       {content}
     </a>
   ) : (
-    <div className="flex shrink-0 flex-col items-end gap-0.5">{content}</div>
+    <div className="flex min-w-0 items-center gap-1">{content}</div>
   )
 }
 
