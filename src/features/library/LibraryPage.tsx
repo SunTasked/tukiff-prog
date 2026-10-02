@@ -27,7 +27,7 @@ export function LibraryPage() {
         {child ? (
           <Outlet />
         ) : (
-          <p className="mt-24 text-center text-zinc-500">Sélectionne une séance ou un exercice.</p>
+          <p className="mt-24 text-center text-zinc-500">Sélectionne un benchmark ou un exercice.</p>
         )}
       </div>
     </div>
@@ -50,7 +50,7 @@ function LibraryList() {
             className={`rounded-lg py-2 font-semibold ${tab === t ? 'bg-zinc-800 text-lime-400' : 'text-zinc-400'}`}
             onClick={() => navigate(t === 'exercises' ? '/library?tab=exercises' : '/library', { replace: true })}
           >
-            {t === 'workouts' ? 'Séances' : 'Exercices'}
+            {t === 'workouts' ? 'Benchmarks' : 'Exercices'}
           </button>
         ))}
       </div>
@@ -88,26 +88,26 @@ function WorkoutList() {
     <div className="flex flex-col gap-3">
       <div className="flex gap-2">
         <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-          + Nouvelle séance
+          + Nouveau benchmark
         </Link>
         <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}>
           + Section
         </button>
       </div>
       <input
-        placeholder="Rechercher une séance"
+        placeholder="Rechercher un benchmark"
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      {rows?.length === 0 && <p className="text-zinc-400">Aucune séance pour l’instant.</p>}
+      {rows?.length === 0 && <p className="text-zinc-400">Aucun benchmark pour l’instant.</p>}
       <SectionedList
         items={filtered}
         sections={sections}
         query={query}
         storageKey="librarySectionsExpanded"
         actions={actions}
-        what="séances"
+        what="benchmarks"
         newHref={(s) => `/library/workouts/new?section=${s.id}`}
         renderItem={(w) => (
           <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>

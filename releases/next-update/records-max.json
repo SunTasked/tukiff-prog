@@ -1,1 +1,7 @@
-{ "athlete": ["Records : haltéro en RM + kg, gym en max de reps ou temps tenu (plus de kg pour les V-ups) ; le cardio n'est plus proposé"] }
+{
+  "coach": ["Bibliothèque : l'onglet « Séances » s'appelle « Benchmarks »"],
+  "athlete": [
+    "Records : haltéro en RM + kg, gym en max de reps ou temps tenu (plus de kg pour les V-ups)",
+    "Records de benchmark choisis dans la bibliothèque, par section, un record par score quand il y en a plusieurs"
+  ]
+}

@@ -2,8 +2,9 @@ import { useState } from 'react'
 import { DateField } from '../../components/DatePicker'
 import { DurationInput, NumberInput } from '../../components/inputs'
 import { Button, Chips, ErrorText, Field, Input } from '../../components/ui'
-import { BENCHMARKS, MAX_LABELS, RECORD_MEASURES } from '../../domain/records'
-import { emptyScore, normalizeScore, validateScore, type Score } from '../../domain/scoring'
+import { BenchmarkPicker } from './BenchmarkPicker'
+import { MAX_LABELS, RECORD_MEASURES } from '../../domain/records'
+import { emptyScore, normalizeScore, validateScore, type Score, type ScoreType } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
 import { isCoach, useAuth } from '../auth/AuthProvider'
 import { ExercisePicker } from '../exercises/ExercisePicker'
@@ -13,8 +14,6 @@ import type { Measure } from '../../domain/workout'
 
 const KINDS = { load: 'Exercice', benchmark: 'Benchmark' } as const
 const RM = { '1': '1RM', '2': '2RM', '3': '3RM', '5': '5RM', '10': '10RM' } as const
-const BENCH_TYPES = { time: 'Temps', rounds_reps: 'Rounds + reps', reps: 'Reps' } as const
-type BenchType = keyof typeof BENCH_TYPES
 
 const input = 'w-full rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3'
 const int = (v: number | null) => (v == null ? null : Math.round(v))
@@ -34,11 +33,12 @@ export function RecordSheet({
   const [kind, setKind] = useState<keyof typeof KINDS>('load')
   const [exerciseId, setExerciseId] = useState<string | null>(initialExercise ?? null)
   const [picking, setPicking] = useState(false)
+  const [pickingBench, setPickingBench] = useState(false)
   const [rm, setRm] = useState<keyof typeof RM>('1')
   const [load, setLoad] = useState<number | null>(null)
   const [value, setValue] = useState<number | null>(null)
   const [bench, setBench] = useState('')
-  const [benchType, setBenchType] = useState<BenchType>('time')
+  const [benchType, setBenchType] = useState<ScoreType>('time')
   const [score, setScore] = useState<Score>(emptyScore())
   const [date, setDate] = useState(today())
   const [notes, setNotes] = useState('')
@@ -58,11 +58,11 @@ export function RecordSheet({
         row = { exercise_id: exerciseId, value }
       }
     } else {
-      if (!bench.trim()) return setError('Indique le nom du benchmark.')
+      if (!bench.trim()) return setError('Choisis un benchmark.')
       const invalid = validateScore(benchType, score)
       if (invalid) return setError(invalid)
       const s = normalizeScore(benchType, score)
-      row = { benchmark_name: bench.trim(), score_type: benchType, time_s: s.time_s, rounds: s.rounds, reps: s.reps }
+      row = { benchmark_name: bench.trim(), score_type: benchType, time_s: s.time_s, rounds: s.rounds, reps: s.reps, load_kg: s.load_kg }
     }
     const { error } = await supabase.from('personal_records').insert({ ...row, date, notes: notes.trim() || null })
     if (error) return setError(error.message)
@@ -104,19 +104,15 @@ export function RecordSheet({
           </>
         ) : (
           <>
-            <Input label="Benchmark" list="benchmarks" value={bench} onChange={(e) => setBench(e.target.value)} />
-            <datalist id="benchmarks">
-              {BENCHMARKS.map((b) => (
-                <option key={b} value={b} />
-              ))}
-            </datalist>
-            <Chips options={BENCH_TYPES} value={benchType} onChange={setBenchType} />
-            {benchType === 'time' && (
+            <button className={`${input} text-left`} onClick={() => setPickingBench(true)}>
+              {bench || <span className="text-zinc-500">Choisir un benchmark</span>}
+            </button>
+            {bench && benchType === 'time' && (
               <Field label="Temps">
                 <DurationInput value={score.time_s} onChange={(v) => setScore({ ...score, time_s: v })} />
               </Field>
             )}
-            {benchType === 'rounds_reps' && (
+            {bench && benchType === 'rounds_reps' && (
               <div className="grid grid-cols-2 gap-3">
                 <Field label="Rounds">
                   <NumberInput value={score.rounds} onChange={(v) => setScore({ ...score, rounds: int(v) })} />
@@ -126,9 +122,14 @@ export function RecordSheet({
                 </Field>
               </div>
             )}
-            {benchType === 'reps' && (
+            {bench && benchType === 'reps' && (
               <Field label="Reps">
                 <NumberInput value={score.reps} onChange={(v) => setScore({ ...score, reps: int(v) })} />
+              </Field>
+            )}
+            {bench && benchType === 'load' && (
+              <Field label="Charge (kg)">
+                <NumberInput value={score.load_kg} onChange={(v) => setScore({ ...score, load_kg: v })} />
               </Field>
             )}
           </>
@@ -142,6 +143,17 @@ export function RecordSheet({
         <ErrorText>{error}</ErrorText>
         <Button onClick={save}>Enregistrer</Button>
       </div>
+      {pickingBench && (
+        <BenchmarkPicker
+          onPick={(b) => {
+            setBench(b.name)
+            setBenchType(b.score_type)
+            setScore(emptyScore())
+            setPickingBench(false)
+          }}
+          onClose={() => setPickingBench(false)}
+        />
+      )}
       {picking && (
         <ExercisePicker
           exercises={exercises.filter((e) => RECORD_MEASURES.includes(e.measure as Measure))}

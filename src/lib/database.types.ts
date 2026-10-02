@@ -903,6 +903,18 @@ export type Database = {
         }[]
       }
       new_clappers: { Args: never; Returns: number }
+      record_benchmarks: {
+        Args: never
+        Returns: {
+          block_position: number
+          block_title: string | null
+          id: string
+          score_type: string
+          section_id: string | null
+          section_name: string | null
+          title: string
+        }[]
+      }
       copy_workout: {
         Args: {
           p_date: string

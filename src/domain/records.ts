@@ -63,4 +63,3 @@ export function bestBenchmarks<T extends BenchmarkRecord>(records: T[]): Map<str
   return out
 }
 
-export const BENCHMARKS = ['Fran', 'Grace', 'Isabel', 'Helen', 'Diane', 'Elizabeth', 'Annie', 'Karen', 'Jackie', 'Cindy', 'Murph', 'Chelsea']
