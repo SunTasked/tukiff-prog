@@ -7,6 +7,7 @@ import { AthleteName } from './AthleteName'
 import { useAuth } from '../auth/AuthProvider'
 import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
+import { useCrowns } from './palmares'
 import { loadWeeklyBoards, type WeeklyBoards } from './weeklyBoards'
 
 const MEDALS = ['🥇', '🥈', '🥉']
@@ -32,6 +33,7 @@ export function WeeklyBoardSheet({
   const [tab, setTab] = useState<Gender>(profile?.gender === 'female' ? 'female' : 'male')
   const [open, setOpen] = useState<string | null>(null)
   const [help, setHelp] = useState(false)
+  const crowns = useCrowns()
   const countOf = (g: Gender) => boards?.find((b) => b.gender === g)?.rows.length ?? 0
 
   useEffect(() => {
@@ -72,8 +74,8 @@ export function WeeklyBoardSheet({
           >
             Sur chaque bloc classé de la semaine, ta place en RX rapporte des points : 10 pour le 1er, 9 pour le 2e… 1 pour le
             10e, 0 au-delà, en adapté ou sans score. Ton total est la somme de tes 3 meilleurs blocs, le plus grand gagne. Le
-            challenge de la semaine ne rapporte pas de points : il départage les égalités. Couronne pour 3 blocs gagnés (30
-            points), portée sur ta photo la semaine suivante. La semaine se termine le dimanche à 23:59 : les scores sont alors
+            challenge de la semaine ne rapporte pas de points : il départage les égalités. LEADER en or pour 3 blocs gagnés (30
+            points) : couronne sur ta photo la semaine suivante. La semaine se termine le dimanche à 23:59 : les scores sont alors
             figés et le leader est compté dans son palmarès.
           </p>
         )}
@@ -132,9 +134,9 @@ export function WeeklyBoardSheet({
                   >
                     <div className="flex items-center gap-2">
                       <span className="w-6 shrink-0 text-center text-zinc-500">{rank <= 3 ? MEDALS[rank - 1] : rank}</span>
-                      <Avatar url={a.profiles?.avatar_url} name={scoreName(a.profiles)} crown={crown} className="size-6 text-[10px]" />
+                      <Avatar url={a.profiles?.avatar_url} name={scoreName(a.profiles)} crown={crowns.has(a.athlete_id)} className="size-6 text-[10px]" />
                       <AthleteName profile={a.profiles} />
-                      {rank === 1 && <LeaderBadge />}
+                      {rank === 1 && <LeaderBadge gold={crown} />}
                       <span className="flex-1" />
                       <span className="shrink-0 font-semibold tabular-nums">
                         {total} pts

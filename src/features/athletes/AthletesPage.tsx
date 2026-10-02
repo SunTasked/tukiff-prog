@@ -18,16 +18,11 @@ type MemberRow = Profile & { invitations: { label: string | null } | null }
 
 const byName = (a: Profile, b: Profile) => fullName(a).localeCompare(fullName(b), 'fr', { sensitivity: 'base' })
 const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
-const yearFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })
-const shortDate = (ts: string) =>
-  (new Date(ts).getFullYear() === new Date().getFullYear() ? dateFmt : yearFmt).format(new Date(ts))
 
-type SortKey = 'name' | 'leader' | 'wins' | 'signup' | 'seen'
+type SortKey = 'name' | 'wins' | 'seen'
 const COLUMNS: { key: SortKey; label: string; className: string }[] = [
   { key: 'name', label: 'Nom', className: 'flex-1 text-left' },
-  { key: 'leader', label: 'L', className: 'w-7 text-right' },
   { key: 'wins', label: '🥇', className: 'w-7 text-right' },
-  { key: 'signup', label: 'Inscrit', className: 'w-16 text-right' },
   { key: 'seen', label: 'Vu', className: 'w-14 text-right' },
 ]
 
@@ -92,11 +87,11 @@ export function AthletesPage() {
   const athletes = members.filter((m) => !isAdmin(m) && !isCoach(m)).sort(byName)
   const sorted = (list: Profile[]) => {
     if (sort.key === 'name') return sort.desc ? [...list].reverse() : list
-    if (sort.key === 'leader' || sort.key === 'wins') {
-      const count = (m: Profile) => palmares.get(m.id)?.[sort.key === 'leader' ? 'leader_weeks' : 'wins'] ?? 0
+    if (sort.key === 'wins') {
+      const count = (m: Profile) => palmares.get(m.id)?.wins ?? 0
       return [...list].sort((a, b) => (sort.desc ? count(b) - count(a) : count(a) - count(b)))
     }
-    const value = (m: Profile) => (sort.key === 'signup' ? m.created_at : lastSeen.get(m.id)) ?? ''
+    const value = (m: Profile) => lastSeen.get(m.id) ?? ''
     // Never seen: always at the end.
     return [...list].sort((a, b) => {
       const [x, y] = [value(a), value(b)]
@@ -203,9 +198,7 @@ export function AthletesPage() {
                     </span>
                   )}
                 </span>
-                <span className="w-7 shrink-0 text-right text-xs text-zinc-300 tabular-nums">{palmares.get(m.id)?.leader_weeks || '–'}</span>
                 <span className="w-7 shrink-0 text-right text-xs text-zinc-300 tabular-nums">{palmares.get(m.id)?.wins || '–'}</span>
-                <span className="w-16 shrink-0 text-right text-xs text-zinc-400">{shortDate(m.created_at)}</span>
                 <span className="w-14 shrink-0 text-right text-xs text-zinc-400">{seen ? seenAgo(seen) : '—'}</span>
               </Link>
             </li>
