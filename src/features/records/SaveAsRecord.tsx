@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router'
-import { formatScore, scoreType } from '../../domain/scoring'
-import type { WorkoutDraft } from '../../domain/workout'
+import { formatScore } from '../../domain/scoring'
+import { sameAsBenchmark, type WorkoutDraft } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
 import { loadWorkout } from '../workouts/api'
 import type { ResultRow } from '../results/useWorkoutResults'
@@ -53,11 +53,11 @@ export function SaveAsRecord({ workout, results, me }: { workout: WorkoutDraft; 
 
   if (!benchmark) return null
   const blocks = scoredBlocks(benchmark.title, benchmark.blocks)
-  // My score on the scheduled copy of each scored benchmark block, with the same score type.
+  // My score on the scheduled copy of each scored benchmark block, its content unchanged (notes aside).
   const scores = blocks.map((b) => {
     const copy = workout.blocks.find((x) => links.some((l) => l.scheduled === x.id && l.template === b.block.id))
     const r = copy && results.find((x) => x.block_id === copy.id && x.athlete_id === me)
-    const usable = copy && r && r.rx && !r.capped && !r.team_id && scoreType(copy.format, copy.params) === b.type
+    const usable = copy && r && r.rx && !r.capped && !r.team_id && sameAsBenchmark(copy, b.block)
     return usable ? r : null
   })
   const to = `/library/workouts/${benchmark.id}`

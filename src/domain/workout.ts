@@ -311,6 +311,12 @@ const scoringSignature = (b: BlockDraft) => {
   return JSON.stringify([b.format, params, b.items, !!team_size])
 }
 
+/** Same workout as a library benchmark block: notes and titles aside (movement notes included). */
+export function sameAsBenchmark(copy: BlockDraft, benchmark: BlockDraft): boolean {
+  const strip = (b: BlockDraft) => scoringSignature({ ...b, items: b.items.map((it) => ({ ...it, notes: '' })) })
+  return strip(copy) === strip(benchmark)
+}
+
 /** Blocks of the original workout whose scores become invalid: scoring content changed, or removed. */
 export function invalidatedBlocks(original: WorkoutDraft, draft: WorkoutDraft): { changed: string[]; removed: string[] } {
   const current = new Map(draft.blocks.map((b) => [b.id, b]))
