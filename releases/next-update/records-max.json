@@ -1,6 +1,6 @@
 {
   "coach": [
-    "Bibliothèque : l'onglet « Séances » s'appelle « Benchmarks »"
+    "Bibliothèque : l'onglet « Séances » devient « Benchmarks », en lecture seule (contenu alimenté en base)"
   ],
   "athlete": [
     "Bibliothèque ouverte en lecture seule : benchmarks et exercices",
@@ -8,5 +8,8 @@
     "Gym en max de reps ou temps tenu (plus de kg pour les V-ups) ; benchmark à plusieurs scores saisi en une fois",
     "Mes records : meilleurs scores, un tap ouvre la page de la bibliothèque",
     "Classement Hommes/Femmes de la box sur chaque benchmark, un par score"
+  ],
+  "admin": [
+    "scripts/copy-library.mjs : copie les benchmarks de la prod vers staging"
   ]
 }

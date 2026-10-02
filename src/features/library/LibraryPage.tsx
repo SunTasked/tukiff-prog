@@ -7,8 +7,7 @@ import { isCoach, useAuth } from '../auth/AuthProvider'
 import { searchExercises, useExercises } from '../exercises/useExercises'
 import { SectionedList, useSectionActions, type Section } from './SectionedList'
 
-type WorkoutRow = { id: string; title: string; updated_at: string; section_id: string | null }
-const dateFmt = new Intl.DateTimeFormat('fr-FR', { day: 'numeric', month: 'short' })
+type WorkoutRow = { id: string; title: string; section_id: string | null }
 
 /**
  * Library layout. Mobile: list, or the selected item. Desktop: list and detail side by side;
@@ -64,43 +63,27 @@ const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active 
 
 function WorkoutList() {
   const { pathname } = useLocation()
-  const coach = isCoach(useAuth().profile)
   const [rows, setRows] = useState<WorkoutRow[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
     const [w, s] = await Promise.all([
-      supabase.from('workouts').select('id, title, updated_at, section_id').is('date', null),
+      supabase.from('workouts').select('id, title, section_id').is('date', null),
       supabase.from('library_sections').select('id, name'),
     ])
     setRows(w.data ?? [])
     setSections(s.data ?? [])
   }, [])
-  const actions = useSectionActions('library_sections', load)
 
-  // Reload when the detail pane changes (after a save or delete).
   useEffect(() => {
     load()
-  }, [load, pathname])
+  }, [load])
 
   const filtered = searchExercises((rows ?? []).map((r) => ({ ...r, name: r.title })), query)
 
   return (
     <div className="flex flex-col gap-3">
-      {coach && (
-        <div className="flex gap-2">
-          <Link to="/library/workouts/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-            + Nouveau benchmark
-          </Link>
-          <button
-            className="rounded-xl bg-zinc-800 px-4 font-semibold"
-            onClick={() => actions.create('Benchmark CrossFit, Hyrox, Haltéro')}
-          >
-            + Section
-          </button>
-        </div>
-      )}
       <input
         placeholder="Rechercher un benchmark"
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
@@ -113,13 +96,10 @@ function WorkoutList() {
         sections={sections}
         query={query}
         storageKey="librarySectionsExpanded"
-        actions={coach ? actions : undefined}
         what="benchmarks"
-        newHref={(s) => `/library/workouts/new?section=${s.id}`}
         renderItem={(w) => (
           <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
             <span className="truncate">{w.title}</span>
-            <span className="shrink-0 text-sm text-zinc-500">{dateFmt.format(new Date(w.updated_at))}</span>
           </Link>
         )}
       />
