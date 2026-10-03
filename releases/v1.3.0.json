@@ -1,0 +1,20 @@
+{
+  "version": "1.3.0",
+  "date": "2026-10-03",
+  "admin": [
+    "Staging : la remise à zéro copie aussi les sections d'exercices de la prod"
+  ],
+  "coach": [
+    "L'onglet Planning devient « Prog »",
+    "Les coachs peuvent encore corriger les scores d'une semaine terminée",
+    "Les exercices ne sont plus modifiables dans l'app : demande l'ajout d'un mouvement à l'admin"
+  ],
+  "athlete": [
+    "L'onglet PR devient « Progrès » : page Progression avec les onglets Records et Exercices",
+    "Records classés par catégorie : Force, Haltéro, Gym suspendue et Ergo (par machine), avec le classement Hommes/Femmes de la box",
+    "Les records se saisissent dans Records ; les exercices servent de référence",
+    "Le dimanche à 23:59, la semaine se termine : ses scores sont figés",
+    "Palmarès sur ton profil : semaines leader et blocs gagnés",
+    "Badge LEADER en or à 3 blocs gagnés dans la semaine, et couronne sur ta photo la semaine suivante"
+  ]
+}

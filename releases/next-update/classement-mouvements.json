@@ -1,9 +1,0 @@
-{
-  "athlete": [
-    "Classement de la box (Hommes / Femmes) sur chaque mouvement avec des PR, par RM pour l'haltéro",
-    "Onglet PR > Exercices : les mouvements sans PR sont masqués (interrupteur pour tout voir)"
-  ],
-  "coach": [
-    "Les exercices ne sont plus modifiables dans l'app : demande l'ajout d'un mouvement à l'admin"
-  ]
-}
