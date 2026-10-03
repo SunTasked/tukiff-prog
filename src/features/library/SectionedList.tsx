@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from 'react'
+import { Fragment, useState, type ReactNode } from 'react'
 import { groupBySection } from '../../domain/sections'
 import { getItem, setItem } from '../../lib/storage'
 
@@ -12,6 +12,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   storageKey,
   hideEmpty = false,
   ordered = false,
+  subOf,
   renderItem,
 }: {
   items: T[]
@@ -22,6 +23,8 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   hideEmpty?: boolean
   /** Keep the sections in the given order (A→Z otherwise). */
   ordered?: boolean
+  /** Sub-section of an item: items of a section are then listed under sub-section titles (A→Z). */
+  subOf?: (item: T) => string | undefined
   renderItem: (item: T) => ReactNode
 }) {
   const [expanded, setExpanded] = useState<string[]>(() => {
@@ -54,8 +57,13 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
             </div>
             {open && g.items.length > 0 && (
               <ul className="divide-y divide-zinc-800 border-t border-zinc-800">
-                {g.items.map((item) => (
-                  <li key={item.id}>{renderItem(item)}</li>
+                {subGroups(g.items, subOf).map(([sub, items]) => (
+                  <Fragment key={sub ?? ''}>
+                    {sub && <li className="bg-zinc-950/60 px-4 py-1.5 text-xs font-semibold tracking-wide text-zinc-500 uppercase">{sub}</li>}
+                    {items.map((item) => (
+                      <li key={item.id}>{renderItem(item)}</li>
+                    ))}
+                  </Fragment>
                 ))}
               </ul>
             )}
@@ -65,4 +73,14 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
       })}
     </>
   )
+}
+
+/** Items without a sub-section first, then each sub-section A→Z (items keep their order). */
+function subGroups<T>(items: T[], subOf?: (item: T) => string | undefined): [string | undefined, T[]][] {
+  const groups = new Map<string | undefined, T[]>()
+  for (const item of items) {
+    const sub = subOf?.(item)
+    groups.set(sub, [...(groups.get(sub) ?? []), item])
+  }
+  return [...groups].sort(([a], [b]) => (a === undefined ? -1 : b === undefined ? 1 : a.localeCompare(b)))
 }

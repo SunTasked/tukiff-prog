@@ -8,9 +8,9 @@ import { SectionedList, type Section } from './SectionedList'
 
 /**
  * Categories shown first, in this order: movement benchmarks (records of the movement, box leaderboard; exercises.benchmark_category)
- * then the library section of the same name for the ergos.
+ * then the library sections "Ergo / <machine>" (a library section "Parent / Child" is a sub-section of Parent).
  */
-const PINNED = ['Haltéro', 'Gym suspendue', 'Ergo']
+const PINNED = ['Force', 'Haltéro', 'Gym suspendue', 'Ergo']
 
 /**
  * Library layout. Mobile: list, or the selected item. Desktop: list and detail side by side;
@@ -64,7 +64,7 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
-type ListItem = { id: string; name: string; section_id: string | null; to: string }
+type ListItem = { id: string; name: string; section_id: string | null; sub?: string; to: string }
 
 function WorkoutList() {
   const { pathname } = useLocation()
@@ -81,14 +81,21 @@ function WorkoutList() {
       supabase.from('exercises').select('id, name, benchmark_category').not('benchmark_category', 'is', null),
       supabase.rpc('exercises_scored'),
     ])
+    // A section "Parent / Child" is shown as the sub-section Child of Parent; categories without a library section
+    // (movement categories, parents of sub-sections) get their name as id.
+    const library = s.data ?? []
+    const parentOf = new Map(library.map((l) => [l.id, l.name.split(' / ')]))
     setRows([
-      ...(w.data ?? []).map((t) => ({ id: t.id, name: t.title, section_id: t.section_id, to: `/library/workouts/${t.id}` })),
+      ...(w.data ?? []).map((t) => {
+        const [parent, sub] = (t.section_id && parentOf.get(t.section_id)) || []
+        const section_id = sub ? parent : t.section_id
+        return { id: t.id, name: t.title, section_id, sub, to: `/library/workouts/${t.id}` }
+      }),
       ...(m.data ?? []).map((e) => ({ id: e.id, name: e.name, section_id: e.benchmark_category, to: `/library/movements/${e.id}` })),
     ])
-    // Movement categories are not library sections: their id is their name.
-    const library = s.data ?? []
-    const movements = PINNED.filter((n) => !library.some((l) => l.name === n) && m.data?.some((e) => e.benchmark_category === n))
-    setSections([...library, ...movements.map((n) => ({ id: n, name: n }))])
+    const top = library.filter((l) => !l.name.includes(' / '))
+    const virtual = [...new Set([...(m.data ?? []).map((e) => e.benchmark_category!), ...library.flatMap((l) => (l.name.includes(' / ') ? [l.name.split(' / ')[0]] : []))])]
+    setSections([...top, ...virtual.filter((n) => !top.some((l) => l.name === n)).map((n) => ({ id: n, name: n }))])
     setScored(new Set([...(r.data ?? []), ...(ms.data ?? [])]))
   }, [])
 
@@ -122,6 +129,7 @@ function WorkoutList() {
         query={query}
         storageKey="librarySectionsExpanded"
         ordered
+        subOf={(i) => i.sub}
         renderItem={renderItem}
       />
       <SectionedList
@@ -129,6 +137,7 @@ function WorkoutList() {
         sections={others}
         query={query}
         storageKey="librarySectionsExpanded"
+        subOf={(i) => i.sub}
         renderItem={renderItem}
       />
     </div>
