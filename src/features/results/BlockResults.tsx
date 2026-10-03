@@ -23,6 +23,7 @@ import { supabase } from '../../lib/supabase'
 import { useAuth } from '../auth/AuthProvider'
 import { GenderTabs } from './GenderTabs'
 import { LeaderBadge } from './LeaderBadge'
+import { useCrowns } from './palmares'
 import { PeopleSheet } from './PeopleSheet'
 import { ScoreSheet } from './ScoreSheet'
 import type { Claps } from './useClaps'
@@ -35,12 +36,14 @@ type Props = {
   results: ResultRow[]
   me: string | undefined
   canLog: boolean
+  /** The week is closed (Sunday 23:59, Paris): my score, "Fait" and "Je passe" can't change any more. */
+  frozen: boolean
   /** I marked this block "Je passe"; entering a score clears it. */
   skipped: boolean
   /** Other athletes' scores (off when the program's leaderboard is disabled, for athletes). */
   showBoard: boolean
   /** Leaders of the program's weekly leaderboard ("L" badge). */
-  leaders: Set<string>
+  leaders: Map<string, boolean>
   /** Claps of the workout (absent when the program's reactions are off). */
   claps?: Claps
   onClap: (resultId: string) => void
@@ -55,7 +58,7 @@ const BOARD_TITLES = { male: 'Hommes', female: 'Femmes' }
  * "My score" / "Je passe" buttons + one leaderboard per gender: the RX ranked, the scaled scores under them, unranked.
  * Compact: my gender only, its RX top 3 plus me; the full board opens in a sheet.
  */
-export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, skipped, showBoard, leaders, claps, onClap, onUnclap, onChange }: Props) {
+export function BlockResults({ workoutId, block, blockLabel, results, me, canLog, frozen, skipped, showBoard, leaders, claps, onClap, onUnclap, onChange }: Props) {
   const [open, setOpen] = useState(false)
   const [busy, setBusy] = useState(false)
   const [full, setFull] = useState(false)
@@ -98,6 +101,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
   const myTeam = teams.flatMap((b) => b.rows).find((row) => row.result.members.some((m) => m.athlete_id === me))
   const myCategory: TeamCategory = myTeam?.result.category ?? teamCategory([(profile?.gender as Gender | null) ?? null])
   const [teamTab, setTeamTab] = useState<TeamCategory>(myCategory)
+  const crowns = useCrowns()
 
   // Blocks without score: one tap on the "Fait" box, the sheet stays available for the comment.
   async function toggleDone() {
@@ -120,7 +124,19 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
 
   return (
     <div className="mt-3 border-t border-zinc-800 pt-3">
-      {canLog && checkable && (
+      {canLog && frozen && (
+        <div className="flex items-center gap-2 rounded-xl border border-dashed border-zinc-700 px-3 py-2 text-sm text-zinc-400">
+          {mine ? (
+            <span className="min-w-0 flex-1 font-semibold text-zinc-200">
+              {checkable ? '✓ Fait' : `${teamSize ? 'Équipe' : 'Mon score'} : ${formatScore(type, mine)}${ranked && mine.rx ? ' · RX' : ''}`}
+            </span>
+          ) : (
+            <span className="flex-1">{skipped ? '⏭ Passé' : 'Pas de score'}</span>
+          )}
+          <span className="shrink-0">{mine ? '🔒' : '🔒 Semaine terminée'}</span>
+        </div>
+      )}
+      {canLog && !frozen && checkable && (
         <div className="flex gap-2">
           <button
             className={`flex flex-1 items-center justify-center gap-2 rounded-xl py-2 text-sm font-semibold ${
@@ -157,6 +173,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         </div>
       )}
       {canLog &&
+        !frozen &&
         !checkable &&
         (mine ? (
           <button className="w-full rounded-xl bg-zinc-800 py-2 text-sm font-semibold text-zinc-100" onClick={() => setOpen(true)}>
@@ -243,7 +260,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
             {commented.map((r) => (
               <li key={r.id} className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}>
                 <div className="flex items-center gap-2">
-                  <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
+                  <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} crown={crowns.has(r.athlete_id)} className="size-6 text-[10px]" />
                   <AthleteName profile={r.profiles} />
                 </div>
                 <p className="mt-0.5 pl-8 text-xs whitespace-pre-line text-zinc-400">{r.comment}</p>
@@ -296,7 +313,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
             {byName.map((r) => (
               <li key={r.id} className={`rounded-lg px-2 py-1.5 text-sm ${r.athlete_id === me ? 'bg-lime-400/10 ring-1 ring-lime-400/40' : 'bg-zinc-900'}`}>
                 <div className="flex items-center gap-2">
-                  <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
+                  <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} crown={crowns.has(r.athlete_id)} className="size-6 text-[10px]" />
                   <AthleteName profile={r.profiles} />
                   <span className="flex-1" />
                   <span className="shrink-0 font-semibold tabular-nums">{formatScore(type, r)}</span>
@@ -376,10 +393,11 @@ function Board({
   rows: BoardRow<ResultRow>[]
   type: ScoreType
   me: string | undefined
-  leaders: Set<string>
+  leaders: Map<string, boolean>
   clapping?: Clapping
   detail: (r: ResultRow) => string | null
 }) {
+  const crowns = useCrowns()
   return (
     <div className="mt-3">
       {showTitle && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title ?? BOARD_TITLES[gender]}</p>}
@@ -394,9 +412,9 @@ function Board({
               {type !== 'none' && (
                 <span className="w-6 shrink-0 text-center text-zinc-500">{rank === null ? '–' : rank <= 3 ? MEDALS[rank - 1] : rank}</span>
               )}
-              <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} className="size-6 text-[10px]" />
+              <Avatar url={r.profiles?.avatar_url} name={scoreName(r.profiles)} crown={crowns.has(r.athlete_id)} className="size-6 text-[10px]" />
               <AthleteName profile={r.profiles} />
-              {leaders.has(r.athlete_id) && <LeaderBadge short />}
+              {leaders.has(r.athlete_id) && <LeaderBadge short gold={leaders.get(r.athlete_id)} />}
               <span className="flex-1" />
               {clapping && <ClapButton resultId={r.id} mine={r.athlete_id === me} clapping={clapping} />}
               {rank !== null && <RxTag />}
@@ -429,6 +447,7 @@ function TeamBoard({
   clapping?: Clapping
   unranked?: boolean
 }) {
+  const crowns = useCrowns()
   return (
     <div className="mt-3">
       {title && <p className="mb-1 text-xs font-semibold tracking-widest text-zinc-500 uppercase">{title}</p>}
@@ -450,7 +469,13 @@ function TeamBoard({
                 )}
                 <span className="flex shrink-0 -space-x-2">
                   {t.members.map((m) => (
-                    <Avatar key={m.id} url={m.profiles?.avatar_url} name={scoreName(m.profiles)} className="size-6 text-[10px] ring-2 ring-zinc-950" />
+                    <Avatar
+                      key={m.id}
+                      url={m.profiles?.avatar_url}
+                      name={scoreName(m.profiles)}
+                      crown={crowns.has(m.athlete_id)}
+                      className="size-6 text-[10px] ring-2 ring-zinc-950"
+                    />
                   ))}
                 </span>
                 <span className="min-w-0 flex-1 truncate">

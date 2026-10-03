@@ -930,6 +930,15 @@ export type Database = {
         }[]
       }
       new_clappers: { Args: never; Returns: number }
+      palmares: {
+        Args: never
+        Returns: {
+          athlete_id: string
+          leader_weeks: number | null
+          wins: number | null
+          crown: boolean
+        }[]
+      }
       benchmark_board: {
         Args: { p_workout: string }
         Returns: {
