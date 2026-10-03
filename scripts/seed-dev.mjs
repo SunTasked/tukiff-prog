@@ -123,13 +123,13 @@ for (const u of USERS.filter((x) => x.avatar)) {
 const coach = { c1: await clientFor('c1'), c2: await clientFor('c2') }
 const c1 = coach.c1
 
-// Invitation links (UC-37): one named single-use link, one unnamed 24 h link.
+// Invitation links (UC-37): one named single-use link, one unnamed permanent link.
 const inDays = (d) => new Date(Date.now() + d * 86400e3).toISOString()
 must(await c1.from('invitations').insert({ role: 'athlete', max_uses: 1, expires_at: inDays(7), label: 'Julien Garnier' }))
 const used = must(await c1.from('invitations').insert({ role: 'athlete', max_uses: 1, expires_at: inDays(7), label: 'Marion Blanc' }).select().single())
 await sql(`update public.invitations set uses = 1 where id = ${q(used.id)};
   update public.profiles set invitation_id = ${q(used.id)} where id = ${q(userId.p1)}`)
-must(await c1.from('invitations').insert({ role: 'athlete', expires_at: inDays(1) }))
+must(await c1.from('invitations').insert({ role: 'athlete', expires_at: '9999-12-31T00:00:00.000Z' }))
 
 const programId = {}
 const ownerOf = {}

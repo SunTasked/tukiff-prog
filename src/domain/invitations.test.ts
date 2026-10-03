@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { invitationStatus, invitationUrl, invitationValues } from './invitations'
+import { invitationStatus, invitationUrl, invitationValues, isPermanent } from './invitations'
 
 const now = new Date('2026-01-10T12:00:00Z')
 const base = { expires_at: '2026-01-17T12:00:00Z', revoked_at: null, max_uses: null, uses: 0 }
@@ -28,7 +28,13 @@ describe('invitationValues', () => {
   it('single use lasts 7 days', () => {
     expect(invitationValues('single', now)).toEqual({ max_uses: 1, expires_at: '2026-01-17T12:00:00.000Z' })
   })
-  it('day link is unlimited for 24 h', () => {
-    expect(invitationValues('day', now)).toEqual({ max_uses: null, expires_at: '2026-01-11T12:00:00.000Z' })
+  it('permanent link is unlimited and never expires', () => {
+    const values = invitationValues('permanent', now)
+    expect(values).toEqual({ max_uses: null, expires_at: '9999-12-31T00:00:00.000Z' })
+    expect(isPermanent(values)).toBe(true)
+    expect(invitationStatus({ ...values, revoked_at: null, uses: 300 }, now)).toBe('active')
+  })
+  it('detects non-permanent links', () => {
+    expect(isPermanent(invitationValues('single', now))).toBe(false)
   })
 })

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Button, CloseButton, ErrorText, Input } from '../../components/ui'
-import { invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
+import { invitationUrl, invitationValues, isPermanent, type InvitationValidity } from '../../domain/invitations'
 import { levelName, type AccessLevel } from '../../domain/workout'
 import { supabase, type Invitation, type Program } from '../../lib/supabase'
 
@@ -128,13 +128,13 @@ export function InviteSheet({
             Usage unique
           </Button>
           {role === 'athlete' && (
-            <Button variant="secondary" className="flex-1" onClick={() => create('day')}>
-              Valable 24 h
+            <Button variant="secondary" className="flex-1" onClick={() => create('permanent')}>
+              Permanent
             </Button>
           )}
         </div>
         <p className="mt-2 text-xs text-zinc-500">
-          Usage unique : 1 personne, valable 7 jours.{role === 'athlete' && ' 24 h : plusieurs personnes.'}
+          Usage unique : 1 personne, valable 7 jours.{role === 'athlete' && ' Permanent : plusieurs personnes, jusqu’à révocation.'}
           {role === 'coach' && ' Les liens coach sont toujours à usage unique.'}
         </p>
         <ErrorText>{error}</ErrorText>
@@ -146,9 +146,10 @@ export function InviteSheet({
                 <li key={inv.id} className="rounded-xl border border-zinc-800 p-3">
                   {inv.label && <p className="mb-1 truncate font-semibold">{inv.label}</p>}
                   <div className="flex items-baseline justify-between gap-2 text-sm">
-                    <span className={inv.label ? 'text-zinc-300' : 'font-semibold'}>{inv.max_uses === 1 ? 'Usage unique' : '24 h'}</span>
+                    <span className={inv.label ? 'text-zinc-300' : 'font-semibold'}>{inv.max_uses === 1 ? 'Usage unique' : isPermanent(inv) ? 'Permanent' : '24 h'}</span>
                     <span className="text-right text-zinc-400">
-                      expire le {dateFmt.format(new Date(inv.expires_at))} · {inv.uses} utilisé
+                      {!isPermanent(inv) && `expire le ${dateFmt.format(new Date(inv.expires_at))} · `}
+                      {inv.uses} utilisé
                       {inv.uses > 1 ? 's' : ''}
                     </span>
                   </div>
