@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useState } from 'react'
+import { weekClosed } from '../../domain/dates'
 import type { WorkoutDraft } from '../../domain/workout'
 import { useOnResume } from '../../lib/resume'
 import { supabase } from '../../lib/supabase'
-import { useAuth } from '../auth/AuthProvider'
+import { isAdmin, isCoach, useAuth } from '../auth/AuthProvider'
 import { useExercises } from '../exercises/useExercises'
 import { SaveAsRecord } from '../records/SaveAsRecord'
 import { useRecords } from '../records/useRecords'
@@ -20,7 +21,7 @@ export function WorkoutWithResults({
   workout: WorkoutDraft
   canLog: boolean
 }) {
-  const { session } = useAuth()
+  const { session, profile } = useAuth()
   const me = session?.user.id
   const { nameOf, byId } = useExercises()
   const { results, loaded, reload } = useWorkoutResults(workout.id)
@@ -55,6 +56,8 @@ export function WorkoutWithResults({
     reloadSettings()
     reloadSkips()
   })
+  // Closed week: athletes' scores are frozen; coaches and admins can still correct them.
+  const frozen = !!workout.date && weekClosed(workout.date) && !isAdmin(profile) && !isCoach(profile)
   const { oneRms } = useRecords(canLog ? me : undefined)
   // "L" badge: leaders of the program's weekly leaderboard, refreshed with the scores.
   const leaders = useWeekLeaders(loaded ? programId : null, workout.date, results)
@@ -77,6 +80,7 @@ export function WorkoutWithResults({
             results={results.filter((r) => r.block_id === block.id)}
             me={me}
             canLog={canLog}
+            frozen={frozen}
             skipped={skips?.has(block.id) ?? false}
             showBoard={boardOn || !canLog}
             leaders={leaders}

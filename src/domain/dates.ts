@@ -22,6 +22,29 @@ export function mondayOf(iso: string): string {
   return addDays(iso, -((d.getDay() + 6) % 7))
 }
 
+/** Monday 00:00, Paris time, after the week of the date: the week is closed and its scores are frozen. */
+export function weekEnd(iso: string): Date {
+  const [y, m, d] = addDays(mondayOf(iso), 7).split('-').map(Number)
+  const utcMidnight = Date.UTC(y, m - 1, d)
+  // Paris is 1 h (winter) or 2 h (summer) ahead of UTC; DST never changes on a Monday.
+  const parts = Object.fromEntries(
+    parisFormat.formatToParts(new Date(utcMidnight)).map((p) => [p.type, Number(p.value)]),
+  )
+  const paris = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute)
+  return new Date(utcMidnight - (paris - utcMidnight))
+}
+const parisFormat = new Intl.DateTimeFormat('en-US', {
+  timeZone: 'Europe/Paris',
+  hourCycle: 'h23',
+  year: 'numeric',
+  month: 'numeric',
+  day: 'numeric',
+  hour: 'numeric',
+  minute: 'numeric',
+})
+
+export const weekClosed = (iso: string, now = new Date()) => now >= weekEnd(iso)
+
 export const weekDays = (monday: string) => Array.from({ length: 7 }, (_, i) => addDays(monday, i))
 
 export const today = () => toISODate(new Date())

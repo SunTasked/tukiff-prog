@@ -6,6 +6,7 @@ import {
   bestLoads,
   bestMaxes,
   formatMax,
+  withInherited,
   recordEntries,
   RECORD_MEASURES,
   type BenchmarkRecord,
@@ -20,7 +21,7 @@ import { AthleteName } from '../results/AthleteName'
 import { GenderTabs } from '../results/GenderTabs'
 import { BenchmarkRecordSheet, ExerciseRecordSheet, scoredBlocks } from './RecordForms'
 import { useExercises } from '../exercises/useExercises'
-import { useRecords } from './useRecords'
+import { useLiftParents, useRecords } from './useRecords'
 
 const score = (r: PersonalRecord) => formatScore(r.score_type as ScoreType, { ...emptyScore(), ...r })
 
@@ -86,6 +87,7 @@ export function ExerciseRecords({
   const { records, loads: allLoads, reload } = useRecords(session?.user.id)
   const { nameOf } = useExercises()
   const [open, setOpen] = useState(adding)
+  const [version, setVersion] = useState(0)
   const measure = exercise.measure as Measure
   if (!RECORD_MEASURES.includes(measure)) return null
 
@@ -117,8 +119,12 @@ export function ExerciseRecords({
         entries={recordEntries(mine)}
         label={([r]) => [r.load_kg !== null ? `${r.rep_max}RM · ${formatNumber(r.load_kg)} kg` : formatMax(measure, r.value!)]}
         onAdd={() => setOpen(true)}
-        onChange={reload}
+        onChange={() => {
+          reload()
+          setVersion((v) => v + 1)
+        }}
       />
+      <ExerciseBoard exerciseId={exercise.id} measure={measure} version={version} />
       {open && (
         <ExerciseRecordSheet
           exercise={{ ...exercise, measure }}
@@ -126,6 +132,7 @@ export function ExerciseRecords({
           onSaved={() => {
             setOpen(false)
             reload()
+            setVersion((v) => v + 1)
           }}
         />
       )}
@@ -239,6 +246,90 @@ function BenchmarkBoard({ workoutId, blocks, version }: { workoutId: string; blo
           </li>
         ))}
         {byGender(gender).length === 0 && <li className="text-zinc-500">Aucun record.</li>}
+      </ol>
+    </Card>
+  )
+}
+
+type ExerciseBoardRow = {
+  exercise_id: string
+  athlete_id: string
+  rep_max: number | null
+  load_kg: number | null
+  value: number | null
+  date: string
+  gender: string | null
+} & NonNullable<Parameters<typeof AthleteName>[0]['profile']>
+type BoardLine = { athlete_id: string; gender: string | null; amount: number; via?: string; profile: ExerciseBoardRow }
+
+/** Box leaderboard of a movement: everyone's best (per rep max for a lift, variants counted), men / women apart. */
+function ExerciseBoard({ exerciseId, measure, version }: { exerciseId: string; measure: Measure; version: number }) {
+  const { session, profile } = useAuth()
+  const me = session?.user.id
+  const parents = useLiftParents()
+  const { nameOf } = useExercises()
+  const [rows, setRows] = useState<ExerciseBoardRow[]>([])
+  const [rm, setRm] = useState<number | null>(null)
+  const [gender, setGender] = useState<Gender>((profile?.gender as Gender | null) ?? 'male')
+
+  useEffect(() => {
+    supabase.rpc('exercise_board', { p_exercise: exerciseId }).then(({ data }) => setRows(data ?? []))
+  }, [exerciseId, version])
+
+  const load = measure === 'load'
+  const byAthlete = new Map<string, ExerciseBoardRow[]>()
+  for (const r of rows) byAthlete.set(r.athlete_id, [...(byAthlete.get(r.athlete_id) ?? []), r])
+  const perRm = new Map<number, BoardLine[]>()
+  const maxes: BoardLine[] = []
+  for (const [athlete, own] of byAthlete) {
+    const p = own[0]
+    if (load) {
+      const lifts = own.flatMap((r) => (r.load_kg !== null && r.rep_max !== null ? [{ ...r, rep_max: r.rep_max, load_kg: r.load_kg }] : []))
+      for (const [n, r] of bestLoads(withInherited(lifts, parents)).get(exerciseId) ?? [])
+        perRm.set(n, [...(perRm.get(n) ?? []), { athlete_id: athlete, gender: p.gender, amount: r.load_kg, via: r.via, profile: p }])
+    } else {
+      const values = own.flatMap((r) => (r.exercise_id === exerciseId && r.value !== null ? [{ ...r, value: r.value }] : []))
+      const best = bestMaxes(values).get(exerciseId)
+      if (best) maxes.push({ athlete_id: athlete, gender: p.gender, amount: best.value, profile: p })
+    }
+  }
+  const rms = [...perRm.keys()].sort((a, b) => a - b)
+  const shownRm = rm !== null && perRm.has(rm) ? rm : rms.includes(1) ? 1 : rms[0]
+  const lines = load ? (perRm.get(shownRm) ?? []) : maxes
+  const byGender = (g: Gender) => lines.filter((l) => ((l.gender as Gender | null) ?? 'male') === g).sort((a, b) => b.amount - a.amount)
+  const shown = byGender(gender)
+
+  return (
+    <Card className="mt-4">
+      <h2 className="mb-2 font-semibold">Classement de la box</h2>
+      {rms.length > 1 && (
+        <div className="mb-3">
+          <Chips
+            options={Object.fromEntries(rms.map((n) => [String(n), `${n}RM`]))}
+            value={String(shownRm)}
+            onChange={(v) => setRm(Number(v))}
+          />
+        </div>
+      )}
+      <GenderTabs
+        value={gender}
+        counts={Object.fromEntries((Object.keys(GENDERS) as Gender[]).map((g) => [g, byGender(g).length])) as Record<Gender, number>}
+        onChange={setGender}
+      />
+      <ol className="flex flex-col gap-1 text-sm">
+        {shown.map((l) => (
+          <li key={l.athlete_id} className={`flex items-center gap-2 rounded-lg px-2 py-1.5 ${l.athlete_id === me ? 'bg-zinc-800' : ''}`}>
+            <span className="w-6 shrink-0 text-zinc-500">{1 + shown.filter((o) => o.amount > l.amount).length}</span>
+            <span className="flex min-w-0 flex-1">
+              <AthleteName profile={l.profile} />
+            </span>
+            <span className="shrink-0 text-right">
+              <b>{load ? `${formatNumber(l.amount)} kg` : formatMax(measure, l.amount)}</b>
+              {l.via && nameOf(l.via) && <span className="block text-xs text-zinc-500">via {nameOf(l.via)}</span>}
+            </span>
+          </li>
+        ))}
+        {shown.length === 0 && <li className="text-zinc-500">Aucun record.</li>}
       </ol>
     </Card>
   )

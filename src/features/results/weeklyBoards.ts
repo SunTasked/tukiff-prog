@@ -62,11 +62,11 @@ export function loadWeeklyBoards(programId: string, monday: string, fresh = fals
 }
 
 /**
- * Leaders (rank 1, ties included) of the week of `date` in the program, whatever the gender. Empty when the
- * leaderboard is off. Reloaded when `version` changes (the workout's scores were reloaded).
+ * Leaders (rank 1, ties included) of the week of `date` in the program, whatever the gender, true when at 30 points
+ * (gold badge). Empty when the leaderboard is off. Reloaded when `version` changes (the workout's scores were reloaded).
  */
 export function useWeekLeaders(programId: string | null | undefined, date: string | null | undefined, version: unknown) {
-  const [leaders, setLeaders] = useState<Set<string>>(new Set())
+  const [leaders, setLeaders] = useState<Map<string, boolean>>(new Map())
   const first = useRef(true)
   useEffect(() => {
     if (!programId || !date) return
@@ -75,7 +75,7 @@ export function useWeekLeaders(programId: string | null | undefined, date: strin
     first.current = false
     loadWeeklyBoards(programId, mondayOf(date), fresh).then(({ enabled, boards }) => {
       if (!live) return
-      setLeaders(new Set(enabled ? boards.flatMap((b) => b.rows.filter((r) => r.rank === 1).map((r) => r.athlete.athlete_id)) : []))
+      setLeaders(new Map(enabled ? boards.flatMap((b) => b.rows.filter((r) => r.rank === 1).map((r) => [r.athlete.athlete_id, r.crown])) : []))
     })
     return () => {
       live = false

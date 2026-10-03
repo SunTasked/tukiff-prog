@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { addDays, seenAgo, coversDay, lastDay, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays } from './dates'
+import { addDays, seenAgo, coversDay, lastDay, addMonths, monthGrid, fromLocalInput, mondayOf, publicationStatus, toLocalInput, weekDays, weekClosed, weekEnd } from './dates'
 
 describe('weeks', () => {
   it('finds the Monday of a week', () => {
@@ -66,5 +66,18 @@ describe('seenAgo', () => {
     expect(seenAgo(new Date(2026, 8, 30, 23, 0).toISOString(), now)).toBe('hier')
     expect(seenAgo(new Date(2026, 8, 28, 10, 0).toISOString(), now)).toBe('3 j')
     expect(seenAgo(new Date(2026, 5, 1).toISOString(), now)).toBe('4 mois')
+  })
+})
+
+describe('closed weeks', () => {
+  it('closes on Monday 00:00, Paris time', () => {
+    expect(weekEnd('2026-10-04').toISOString()).toBe('2026-10-04T22:00:00.000Z')
+    expect(weekEnd('2026-09-28').toISOString()).toBe('2026-10-04T22:00:00.000Z')
+    // Winter time (after 25/10/2026).
+    expect(weekEnd('2026-10-28').toISOString()).toBe('2026-11-01T23:00:00.000Z')
+  })
+  it('is open until then', () => {
+    expect(weekClosed('2026-10-01', new Date('2026-10-04T21:59:59Z'))).toBe(false)
+    expect(weekClosed('2026-10-01', new Date('2026-10-04T22:00:00Z'))).toBe(true)
   })
 })

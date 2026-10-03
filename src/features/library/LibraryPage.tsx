@@ -3,11 +3,14 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
-import { isCoach, useAuth } from '../auth/AuthProvider'
 import { searchExercises, useExercises } from '../exercises/useExercises'
-import { SectionedList, useSectionActions, type Section } from './SectionedList'
+import { SectionedList, type Section } from './SectionedList'
 
-type WorkoutRow = { id: string; title: string; section_id: string | null }
+/**
+ * Categories shown first, in this order: movement benchmarks (records of the movement, box leaderboard; exercises.benchmark_category)
+ * then the library sections "Ergo / <machine>" (a library section "Parent / Child" is a sub-section of Parent).
+ */
+const PINNED = ['Force', 'Haltéro', 'Gym suspendue', 'Ergo']
 
 /**
  * Library layout. Mobile: list, or the selected item. Desktop: list and detail side by side;
@@ -42,7 +45,7 @@ function LibraryList() {
 
   return (
     <>
-      <PageTitle>PR</PageTitle>
+      <PageTitle>Progression</PageTitle>
       <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-900 p-1 text-sm">
         {(['workouts', 'exercises'] as const).map((t) => (
           <button
@@ -50,7 +53,7 @@ function LibraryList() {
             className={`rounded-lg py-2 font-semibold ${tab === t ? 'bg-zinc-800 text-lime-400' : 'text-zinc-400'}`}
             onClick={() => navigate(t === 'exercises' ? '/library?tab=exercises' : '/library', { replace: true })}
           >
-            {t === 'workouts' ? 'Benchmarks' : 'Exercices'}
+            {t === 'workouts' ? 'Records' : 'Exercices'}
           </button>
         ))}
       </div>
@@ -61,29 +64,55 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
+type ListItem = { id: string; name: string; section_id: string | null; sub?: string; to: string }
+
 function WorkoutList() {
   const { pathname } = useLocation()
-  const [rows, setRows] = useState<WorkoutRow[] | null>(null)
+  const [rows, setRows] = useState<ListItem[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [scored, setScored] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
-    const [w, s, r] = await Promise.all([
+    const [w, s, r, m, ms] = await Promise.all([
       supabase.from('workouts').select('id, title, section_id').is('date', null),
       supabase.from('library_sections').select('id, name'),
       supabase.rpc('benchmarks_scored'),
+      supabase.from('exercises').select('id, name, benchmark_category').not('benchmark_category', 'is', null),
+      supabase.rpc('exercises_scored'),
     ])
-    setRows(w.data ?? [])
-    setSections(s.data ?? [])
-    setScored(new Set(r.data ?? []))
+    // A section "Parent / Child" is shown as the sub-section Child of Parent; categories without a library section
+    // (movement categories, parents of sub-sections) get their name as id.
+    const library = s.data ?? []
+    const parentOf = new Map(library.map((l) => [l.id, l.name.split(' / ')]))
+    setRows([
+      ...(w.data ?? []).map((t) => {
+        const [parent, sub] = (t.section_id && parentOf.get(t.section_id)) || []
+        const section_id = sub ? parent : t.section_id
+        return { id: t.id, name: t.title, section_id, sub, to: `/library/workouts/${t.id}` }
+      }),
+      ...(m.data ?? []).map((e) => ({ id: e.id, name: e.name, section_id: e.benchmark_category, to: `/library/movements/${e.id}` })),
+    ])
+    const top = library.filter((l) => !l.name.includes(' / '))
+    const virtual = [...new Set([...(m.data ?? []).map((e) => e.benchmark_category!), ...library.flatMap((l) => (l.name.includes(' / ') ? [l.name.split(' / ')[0]] : []))])]
+    setSections([...top, ...virtual.filter((n) => !top.some((l) => l.name === n)).map((n) => ({ id: n, name: n }))])
+    setScored(new Set([...(r.data ?? []), ...(ms.data ?? [])]))
   }, [])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const filtered = searchExercises((rows ?? []).map((r) => ({ ...r, name: r.title })), query)
+  const filtered = searchExercises(rows ?? [], query)
+  const pinned = PINNED.flatMap((n) => sections.filter((s) => s.name === n))
+  const others = sections.filter((s) => !pinned.includes(s))
+  const inPinned = (item: ListItem) => pinned.some((s) => s.id === item.section_id)
+  const renderItem = (item: ListItem) => (
+    <Link to={item.to} className={itemClass(pathname.startsWith(item.to))}>
+      <span className="truncate">{item.name}</span>
+      {scored.has(item.id) && <Podium />}
+    </Link>
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -95,17 +124,21 @@ function WorkoutList() {
       />
       {rows?.length === 0 && <p className="text-zinc-400">Aucun benchmark pour l’instant.</p>}
       <SectionedList
-        items={filtered}
-        sections={sections}
+        items={filtered.filter(inPinned)}
+        sections={pinned}
         query={query}
         storageKey="librarySectionsExpanded"
-        what="benchmarks"
-        renderItem={(w) => (
-          <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
-            <span className="truncate">{w.title}</span>
-            {scored.has(w.id) && <Podium />}
-          </Link>
-        )}
+        ordered
+        subOf={(i) => i.sub}
+        renderItem={renderItem}
+      />
+      <SectionedList
+        items={filtered.filter((i) => !inPinned(i))}
+        sections={others}
+        query={query}
+        storageKey="librarySectionsExpanded"
+        subOf={(i) => i.sub}
+        renderItem={renderItem}
       />
     </div>
   )
@@ -113,27 +146,15 @@ function WorkoutList() {
 
 function ExerciseList() {
   const { pathname } = useLocation()
-  const coach = isCoach(useAuth().profile)
   const { exercises, sections, reload } = useExercises()
   useEffect(() => {
     reload()
   }, [pathname, reload])
-  const actions = useSectionActions('exercise_sections', reload)
   const [query, setQuery] = useState('')
   const results = searchExercises(exercises, query)
 
   return (
     <div className="flex flex-col gap-3">
-      {coach && (
-        <div className="flex gap-2">
-          <Link to="/library/exercises/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-            + Nouvel exercice
-          </Link>
-          <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Ergos, Gymnastique, Haltéro')}>
-            + Section
-          </button>
-        </div>
-      )}
       <input
         placeholder={`Rechercher parmi ${exercises.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
@@ -145,13 +166,10 @@ function ExerciseList() {
         sections={sections}
         query={query}
         storageKey="exerciseSectionsExpanded"
-        actions={coach ? actions : undefined}
-        what="exercices"
-        newHref={(s) => `/library/exercises/new?section=${s.id}`}
         renderItem={(e) => (
           <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
             <span className="truncate">{e.name}</span>
-            <span className="shrink-0 text-sm text-zinc-500">
+            <span className="flex shrink-0 items-center gap-2 text-sm text-zinc-500">
               {MEASURES[e.measure as Measure]}
               {e.video_url ? ' · ▶' : ''}
             </span>

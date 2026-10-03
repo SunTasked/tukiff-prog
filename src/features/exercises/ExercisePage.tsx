@@ -1,17 +1,17 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { Button, PageTitle, Spinner } from '../../components/ui'
+import { Link, useParams, useSearchParams } from 'react-router'
+import { PageTitle, Spinner } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase, type Exercise } from '../../lib/supabase'
-import { isCoach, useAuth } from '../auth/AuthProvider'
 import { ExerciseRecords } from '../records/LibraryRecords'
 
-/** Library exercise, read-only, with my records. ?add=1 opens the record form (link "1RM ?" from a workout). */
-export function ExercisePage() {
+/**
+ * Library exercise, read-only. As a movement benchmark (categories Force, Haltéro… of the benchmarks), with my records and
+ * the box leaderboard; ?add=1 opens the record form (link "1RM ?" from a workout).
+ */
+export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const navigate = useNavigate()
-  const coach = isCoach(useAuth().profile)
   const [exercise, setExercise] = useState<Exercise | null | undefined>()
 
   useEffect(() => {
@@ -28,8 +28,8 @@ export function ExercisePage() {
 
   return (
     <>
-      <Link to="/library?tab=exercises" className="text-sm text-zinc-400">
-        ‹ PR
+      <Link to={benchmark ? '/library' : '/library?tab=exercises'} className="text-sm text-zinc-400">
+        ‹ Progression
       </Link>
       <PageTitle>{exercise.name}</PageTitle>
       <p className="text-sm text-zinc-400">{MEASURES[exercise.measure as Measure]}</p>
@@ -39,11 +39,14 @@ export function ExercisePage() {
           ▶ Voir la vidéo
         </a>
       )}
-      <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} />
-      {coach && (
-        <Button variant="secondary" className="mt-6 w-full" onClick={() => navigate(`/library/exercises/${exercise.id}/edit`)}>
-          Modifier
-        </Button>
+      {benchmark ? (
+        <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} />
+      ) : (
+        exercise.benchmark_category && (
+          <Link to={`/library/movements/${exercise.id}`} className="mt-6 block text-lime-400">
+            Voir dans Records › {exercise.benchmark_category}
+          </Link>
+        )
       )}
     </>
   )

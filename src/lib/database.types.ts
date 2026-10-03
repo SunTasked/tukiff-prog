@@ -179,6 +179,7 @@ export type Database = {
       }
       exercises: {
         Row: {
+          benchmark_category: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -189,6 +190,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          benchmark_category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          benchmark_category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -930,6 +933,15 @@ export type Database = {
         }[]
       }
       new_clappers: { Args: never; Returns: number }
+      palmares: {
+        Args: never
+        Returns: {
+          athlete_id: string
+          leader_weeks: number | null
+          wins: number | null
+          crown: boolean
+        }[]
+      }
       benchmark_board: {
         Args: { p_workout: string }
         Returns: {
@@ -949,6 +961,22 @@ export type Database = {
       }
       library_blocks: { Args: never; Returns: string[] }
       benchmarks_scored: { Args: never; Returns: string[] }
+      exercise_board: {
+        Args: { p_exercise: string }
+        Returns: {
+          athlete_id: string
+          date: string
+          display_name: string | null
+          exercise_id: string
+          first_name: string | null
+          gender: string | null
+          last_name: string | null
+          load_kg: number | null
+          rep_max: number | null
+          value: number | null
+        }[]
+      }
+      exercises_scored: { Args: never; Returns: string[] }
       copy_workout: {
         Args: {
           p_date: string

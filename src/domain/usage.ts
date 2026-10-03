@@ -27,7 +27,6 @@ const pages: Record<string, string> = {
   '/library/workouts/new': 'Nouvelle séance',
   '/library/workouts/:id': 'Séance (bibliothèque)',
   '/library/workouts/:id/edit': 'Édition de séance',
-  '/library/exercises/new': 'Nouveau mouvement',
   '/library/exercises/:id': 'Mouvement',
   '/admin': 'Stats',
 }

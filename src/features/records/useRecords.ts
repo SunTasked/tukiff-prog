@@ -22,6 +22,21 @@ export function useLiftParents() {
   return parents
 }
 
+// Movement benchmarks (exercises.benchmark_category): the only movements records are entered on. Loaded once too.
+let movementsOnce: Promise<Set<string>> | null = null
+
+/** Ids of the movement benchmarks (categories Force, Haltéro… of the benchmarks). */
+export function useBenchmarkMovements() {
+  const [ids, setIds] = useState<Set<string>>(new Set())
+  useEffect(() => {
+    movementsOnce ??= Promise.resolve(supabase.from('exercises').select('id').not('benchmark_category', 'is', null)).then(
+      ({ data }) => new Set((data ?? []).map((e) => e.id)),
+    )
+    movementsOnce.then(setIds)
+  }, [])
+  return ids
+}
+
 /**
  * Personal records of one athlete (RLS: own, or any for coaches).
  * loads: with the records inherited from variants (via), so a parent lift's best and 1RM count them.

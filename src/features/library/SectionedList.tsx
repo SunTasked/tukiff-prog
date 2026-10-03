@@ -1,37 +1,8 @@
-import { useState, type ReactNode } from 'react'
-import { Link } from 'react-router'
-import { ErrorText } from '../../components/ui'
+import { Fragment, useState, type ReactNode } from 'react'
 import { groupBySection } from '../../domain/sections'
 import { getItem, setItem } from '../../lib/storage'
-import { supabase } from '../../lib/supabase'
 
 export type Section = { id: string; name: string }
-type SectionTable = 'library_sections' | 'exercise_sections'
-
-/** Create / rename / delete sections of a library table; `reload` runs after each change. */
-export function useSectionActions(table: SectionTable, reload: () => void) {
-  const [error, setError] = useState('')
-  async function run(p: PromiseLike<{ error: { message: string; code?: string } | null }>) {
-    const { error } = await p
-    setError(error ? (error.code === '23505' ? 'Une section porte déjà ce nom.' : error.message) : '')
-    reload()
-  }
-  return {
-    error,
-    create: (example: string) => {
-      const name = prompt(`Nom de la nouvelle section (ex. ${example})`)?.trim()
-      if (name) run(supabase.from(table).insert({ name }))
-    },
-    rename: (s: Section) => {
-      const name = prompt('Nouveau nom de la section', s.name)?.trim()
-      if (name && name !== s.name) run(supabase.from(table).update({ name }).eq('id', s.id))
-    },
-    remove: (s: Section, what: string) => {
-      if (confirm(`Supprimer la section « ${s.name} » ? Ses ${what} restent dans la bibliothèque, sans section.`))
-        run(supabase.from(table).delete().eq('id', s.id))
-    },
-  }
-}
 
 /** Items grouped in collapsible sections (collapsed by default, remembered on the device; opened while searching). */
 export function SectionedList<T extends { id: string; name: string; section_id: string | null }>({
@@ -39,20 +10,21 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   sections,
   query,
   storageKey,
-  actions,
-  what,
-  newHref,
+  hideEmpty = false,
+  ordered = false,
+  subOf,
   renderItem,
 }: {
   items: T[]
   sections: Section[]
   query: string
   storageKey: string
-  /** Absent: read-only (no rename / delete). */
-  actions?: ReturnType<typeof useSectionActions>
-  /** Plural noun for the items ("séances", "exercices"). */
-  what: string
-  newHref?: (s: Section) => string
+  /** Hide sections left empty by a filter (as while searching). */
+  hideEmpty?: boolean
+  /** Keep the sections in the given order (A→Z otherwise). */
+  ordered?: boolean
+  /** Sub-section of an item: items of a section are then listed under sub-section titles (A→Z). */
+  subOf?: (item: T) => string | undefined
   renderItem: (item: T) => ReactNode
 }) {
   const [expanded, setExpanded] = useState<string[]>(() => {
@@ -67,15 +39,13 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
     setItem(storageKey, JSON.stringify(next))
     setExpanded(next)
   }
-  const groups = groupBySection(items, sections).filter((g) => !query || g.items.length > 0)
+  const groups = groupBySection(items, sections, ordered).filter((g) => (!query && !hideEmpty) || g.items.length > 0)
 
   return (
     <>
-      <ErrorText>{actions?.error}</ErrorText>
       {groups.map((g) => {
         const key = g.id ?? 'none'
         const open = query !== '' || expanded.includes(key)
-        const section = sections.find((s) => s.id === g.id)
         return (
           <section key={key} className="rounded-2xl bg-zinc-900">
             <div className="flex items-center gap-2 px-4 py-3">
@@ -84,26 +54,16 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
                 <span className="truncate font-semibold">{g.name}</span>
                 <span className="text-sm text-zinc-500">{g.items.length}</span>
               </button>
-              {section && actions && (
-                <>
-                  {newHref && (
-                    <Link to={newHref(section)} className="px-1 text-lg text-lime-400" aria-label={`Ajouter dans ${section.name}`}>
-                      +
-                    </Link>
-                  )}
-                  <button className="px-1 text-zinc-400" onClick={() => actions.rename(section)} aria-label="Renommer la section">
-                    ✎
-                  </button>
-                  <button className="px-1 text-sm text-red-400" onClick={() => actions.remove(section, what)} aria-label="Supprimer la section">
-                    ✕
-                  </button>
-                </>
-              )}
             </div>
             {open && g.items.length > 0 && (
               <ul className="divide-y divide-zinc-800 border-t border-zinc-800">
-                {g.items.map((item) => (
-                  <li key={item.id}>{renderItem(item)}</li>
+                {subGroups(g.items, subOf).map(([sub, items]) => (
+                  <Fragment key={sub ?? ''}>
+                    {sub && <li className="bg-zinc-950/60 px-4 py-1.5 text-xs font-semibold tracking-wide text-zinc-500 uppercase">{sub}</li>}
+                    {items.map((item) => (
+                      <li key={item.id}>{renderItem(item)}</li>
+                    ))}
+                  </Fragment>
                 ))}
               </ul>
             )}
@@ -113,4 +73,14 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
       })}
     </>
   )
+}
+
+/** Items without a sub-section first, then each sub-section A→Z (items keep their order). */
+function subGroups<T>(items: T[], subOf?: (item: T) => string | undefined): [string | undefined, T[]][] {
+  const groups = new Map<string | undefined, T[]>()
+  for (const item of items) {
+    const sub = subOf?.(item)
+    groups.set(sub, [...(groups.get(sub) ?? []), item])
+  }
+  return [...groups].sort(([a], [b]) => (a === undefined ? -1 : b === undefined ? 1 : a.localeCompare(b)))
 }
