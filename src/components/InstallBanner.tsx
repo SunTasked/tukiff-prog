@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { installHint } from '../domain/install'
 import { canPromptInstall, isStandalone, onInstallChange, promptInstall } from '../lib/install'
 import { getItem, setItem } from '../lib/storage'
+import { CloseButton } from './ui'
 
 const DISMISS_KEY = 'installBannerDismissed'
 
@@ -23,9 +24,7 @@ export function InstallBanner() {
     <div className="mb-4 rounded-2xl border border-zinc-800 bg-zinc-900 p-4 text-sm">
       <div className="flex items-start justify-between gap-2">
         <p className="font-semibold">Installe l’application</p>
-        <button aria-label="Fermer" className="-m-2 p-2 text-zinc-500" onClick={dismiss}>
-          ✕
-        </button>
+        <CloseButton onClick={dismiss} />
       </div>
       {hint === 'ios' && (
         <p className="mt-1 text-zinc-400">

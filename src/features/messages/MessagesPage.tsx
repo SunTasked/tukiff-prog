@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router'
-import { Card } from '../../components/ui'
+import { Card, CloseButton } from '../../components/ui'
 import { clapsMessage } from '../../domain/clapsMessage'
 import { formatLongDay } from '../../domain/dates'
 import type { Audience } from '../../domain/releases'
@@ -37,11 +37,7 @@ export function MessagesPage() {
     <>
       <div className="mb-4 flex items-center justify-between">
         <h1 className="text-2xl font-bold">Messages</h1>
-        <button type="button" onClick={close} aria-label="Fermer" className="rounded-full bg-zinc-900 p-2 text-zinc-300">
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-            <path d="M18 6 6 18M6 6l12 12" />
-          </svg>
-        </button>
+        <CloseButton onClick={close} />
       </div>
       <div className="flex flex-col gap-3">
         {clapsNote && <Card className="text-sm">{clapsNote}</Card>}
