@@ -66,7 +66,7 @@ export function bestMaxes<T extends MaxRecord>(records: T[]): Map<string, T> {
 export const RECORD_MEASURES: readonly Measure[] = ['load', 'reps', 'time']
 
 /** Field label of a max record (gymnastics). */
-export const MAX_LABELS = { reps: 'Max de répétitions', time: 'Meilleur temps tenu' } as const
+export const MAX_LABELS = { reps: 'Max de répétitions unbroken', time: 'Meilleur temps tenu' } as const
 
 /** 25 reps, 1:30. */
 export const formatMax = (measure: Measure, value: number) =>

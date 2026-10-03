@@ -4,7 +4,7 @@
 //   3. with --prod-data only: copies the production data (public tables, auth.users, auth.identities; prod is
 //      only read). Real emails and password hashes end up on staging: keep it for a release test on real data,
 //      then rerun without it,
-//      without it, only the exercise library (authors removed) is copied,
+//      without it, only the exercise library (sections, exercises without authors) is copied,
 //   4. applies the migrations of this checkout that production does not have yet (features waiting in `staging`),
 //   5. reruns the test dataset (scripts/seed-dev.mjs).
 // Use it to drop the migration of an abandoned feature, or to test a release on production data.
@@ -146,7 +146,9 @@ if (withData) {
 } else {
   // The exercise library is shared reference data (no personal data once its author is removed); seed-dev needs it.
   console.log('Copie de la bibliothèque d’exercices de la prod…')
-  await sql('delete from public.exercises')
+  // Sections too: the replayed migrations create them with other ids, exercises would point to missing sections.
+  await sql('delete from public.exercises; delete from public.exercise_sections;')
+  await copyTable('public.exercise_sections')
   await copyTable('public.exercises', { exclude: ['created_by'] })
 }
 
