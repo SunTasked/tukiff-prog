@@ -3,7 +3,7 @@ import type { Database } from './database.types'
 
 // Writes in flight (anything but GET: inserts, updates, RPCs): the app shows a blocking throbber while they last.
 // Read-only RPCs are reads: they load screens (and off-screen neighbour days), they must not block taps or swipes.
-const READ_RPCS = /\/rpc\/(admin_usage|benchmark_board|benchmarks_scored|clap_counts|locked_blocks|member_email|members_last_seen|my_workouts|new_clappers|team_candidates)\b/
+const READ_RPCS = /\/rpc\/(admin_usage|benchmark_board|benchmarks_scored|clap_counts|locked_blocks|member_email|members_last_seen|my_workouts|new_clappers|palmares|team_candidates)\b/
 let pendingWrites = 0
 const listeners = new Set<() => void>()
 const notify = () => listeners.forEach((l) => l())
