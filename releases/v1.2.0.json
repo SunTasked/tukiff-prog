@@ -1,0 +1,26 @@
+{
+  "version": "1.2.0",
+  "date": "2026-10-03",
+  "admin": [
+    "Hiérarchie des mouvements dans la table exercise_links (migration 0059), alimentée en base",
+    "scripts/copy-library.mjs : copie les benchmarks de la prod vers staging",
+    "Benchmarks et sections de la bibliothèque en lecture seule aussi en base (RLS)"
+  ],
+  "coach": [
+    "Modifier un bloc copié d'un benchmark (hors notes) demande confirmation et retire le lien au benchmark",
+    "Bibliothèque : l'onglet « Séances » devient « Benchmarks », en lecture seule (contenu alimenté en base)"
+  ],
+  "athlete": [
+    "L'onglet Biblio devient « PR » (icône graphique)",
+    "Records d'haltéro par association : un Power Snatch compte aussi pour le Snatch (affiché « via … »), y compris pour les % de 1RM",
+    "Séance tirée d'un benchmark : bouton « Enregistrer comme record » une fois tous les scores RX saisis",
+    "Bibliothèque ouverte en lecture seule : benchmarks et exercices",
+    "Records saisis depuis la page de l'exercice ou du benchmark, avec historique et suppression",
+    "Gym en max de reps ou temps tenu (plus de kg pour les V-ups) ; benchmark à plusieurs scores saisi en une fois",
+    "Mes records : meilleurs scores, un tap ouvre la page de la bibliothèque",
+    "Classement Hommes/Femmes de la box sur chaque benchmark, un par score ; icône podium dans la liste dès qu'un score existe",
+    "Accueil : glisse à gauche pour le jour suivant, à droite pour le jour précédent ; la veille et le lendemain sont déjà chargés",
+    "Accueil : plus de défilement automatique vers le premier bloc non saisi",
+    "Timer : l'explication des bips passe derrière un (?) à côté du titre"
+  ]
+}
