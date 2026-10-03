@@ -18,7 +18,7 @@ export function RecordsPage() {
       </Link>
       <PageTitle>Mes records</PageTitle>
       <p className="mb-4 text-sm text-zinc-400">
-        Pour saisir ou corriger un record, ouvre l’exercice ou le benchmark dans l’onglet{' '}
+        Pour saisir ou corriger un record, ouvre son benchmark dans l’onglet{' '}
         <Link to="/library" className="text-lime-400 underline">
           PR
         </Link>
