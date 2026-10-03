@@ -7,7 +7,7 @@ export function groupBySection<T extends { section_id: string | null; name: stri
   ordered = false,
 ): SectionGroup<T>[] {
   const sorted = ordered ? sections : [...sections].sort((a, b) => a.name.localeCompare(b.name))
-  const byName = (a: T, b: T) => a.name.localeCompare(b.name)
+  const byName = (a: T, b: T) => a.name.localeCompare(b.name, 'fr', { numeric: true })
   const known = new Set(sections.map((s) => s.id))
   const groups: SectionGroup<T>[] = sorted.map((s) => ({
     id: s.id,
