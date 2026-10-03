@@ -9,7 +9,7 @@ import { useRecords } from './useRecords'
 export function RecordsPage() {
   const { session } = useAuth()
   const { nameOf, measureOf } = useExercises()
-  const { records } = useRecords(session?.user.id)
+  const { records, loads } = useRecords(session?.user.id)
 
   return (
     <>
@@ -18,13 +18,13 @@ export function RecordsPage() {
       </Link>
       <PageTitle>Mes records</PageTitle>
       <p className="mb-4 text-sm text-zinc-400">
-        Pour saisir ou corriger un record, ouvre l’exercice ou le benchmark dans la{' '}
+        Pour saisir ou corriger un record, ouvre l’exercice ou le benchmark dans l’onglet{' '}
         <Link to="/library" className="text-lime-400 underline">
-          bibliothèque
+          PR
         </Link>
         .
       </p>
-      <RecordsList records={records} nameOf={nameOf} measureOf={measureOf} linked />
+      <RecordsList records={records} loads={loads} nameOf={nameOf} measureOf={measureOf} linked />
     </>
   )
 }

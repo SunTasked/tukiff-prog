@@ -29,7 +29,7 @@ export function ExercisePage() {
   return (
     <>
       <Link to="/library?tab=exercises" className="text-sm text-zinc-400">
-        ‹ Bibliothèque
+        ‹ PR
       </Link>
       <PageTitle>{exercise.name}</PageTitle>
       <p className="text-sm text-zinc-400">{MEASURES[exercise.measure as Measure]}</p>

@@ -16,10 +16,30 @@ export function bestLoads<T extends LoadRecord>(records: T[]): Map<string, Map<n
   for (const r of records) {
     const byRm = out.get(r.exercise_id) ?? new Map<number, T>()
     const best = byRm.get(r.rep_max)
-    if (!best || r.load_kg > best.load_kg || (r.load_kg === best.load_kg && r.date > best.date)) byRm.set(r.rep_max, r)
+    // Ties: my own lift over one inherited from a variant, then the most recent.
+    const own = (x: T) => !(x as { via?: string }).via
+    const better =
+      !best || r.load_kg > best.load_kg || (r.load_kg === best.load_kg && (own(r) !== own(best) ? own(r) : r.date > best.date))
+    if (better) byRm.set(r.rep_max, r)
     out.set(r.exercise_id, byRm)
   }
   return out
+}
+
+/** Lift hierarchy: exercise -> parent lifts its records also count for (Power Snatch -> Snatch). */
+export type LiftParents = Map<string, string[]>
+
+/** Loads plus, for every ancestor of their exercise (transitively), a copy counted for it; via: the lift actually done. */
+export function withInherited<T extends LoadRecord>(records: T[], parents: LiftParents): (T & { via?: string })[] {
+  const ancestors = (id: string, seen = new Set<string>()): Set<string> => {
+    for (const p of parents.get(id) ?? [])
+      if (!seen.has(p)) {
+        seen.add(p)
+        ancestors(p, seen)
+      }
+    return seen
+  }
+  return records.flatMap((r) => [r, ...[...ancestors(r.exercise_id)].map((a) => ({ ...r, exercise_id: a, via: r.exercise_id }))])
 }
 
 /** True 1RM only (no estimate from 3RM/5RM). */
