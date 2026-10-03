@@ -151,39 +151,21 @@ function ExerciseList() {
     reload()
   }, [pathname, reload])
   const [query, setQuery] = useState('')
-  const [scored, setScored] = useState<Set<string> | null>(null)
-  const [onlyScored, setOnlyScored] = useState(true)
-  useEffect(() => {
-    supabase.rpc('exercises_scored').then(({ data }) => setScored(new Set(data ?? [])))
-  }, [pathname])
-  const shown = onlyScored && scored ? exercises.filter((e) => scored.has(e.id)) : exercises
-  const results = searchExercises(shown, query)
+  const results = searchExercises(exercises, query)
 
   return (
     <div className="flex flex-col gap-3">
       <input
-        placeholder={`Rechercher parmi ${shown.length} exercices`}
+        placeholder={`Rechercher parmi ${exercises.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <button
-        role="switch"
-        aria-checked={onlyScored}
-        className="flex items-center justify-between gap-2 text-sm text-zinc-400"
-        onClick={() => setOnlyScored((on) => !on)}
-      >
-        Masquer les mouvements sans PR
-        <span className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${onlyScored ? 'bg-lime-400' : 'bg-zinc-700'}`}>
-          <span className={`size-4 rounded-full bg-zinc-950 transition-transform ${onlyScored ? 'translate-x-4' : ''}`} />
-        </span>
-      </button>
       <SectionedList
         items={results}
         sections={sections}
         query={query}
         storageKey="exerciseSectionsExpanded"
-        hideEmpty={onlyScored}
         renderItem={(e) => (
           <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
             <span className="truncate">{e.name}</span>

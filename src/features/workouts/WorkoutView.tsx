@@ -6,6 +6,7 @@ import { timerFromBlock, timerToParams } from '../../domain/timer'
 import { Markdown } from '../../components/Markdown'
 import { SponsorLogo } from '../../components/SponsorLogo'
 import { useSponsors } from '../../lib/sponsors'
+import { useBenchmarkMovements } from '../records/useRecords'
 import {
   blockName,
   isPremium,
@@ -183,12 +184,14 @@ function ScoreLine({ block }: { block: BlockDraft }) {
 }
 
 function PctLoad({ exerciseId, pct, oneRm }: { exerciseId: string; pct: number; oneRm: number | undefined }) {
+  const movements = useBenchmarkMovements()
+  // Records are entered on the movement benchmarks only.
   if (oneRm === undefined)
-    return (
-      <Link to={`/library/exercises/${exerciseId}?add=1`} className="ml-2 text-sm text-lime-400">
+    return movements.has(exerciseId) ? (
+      <Link to={`/library/movements/${exerciseId}?add=1`} className="ml-2 text-sm text-lime-400">
         1RM ?
       </Link>
-    )
+    ) : null
   return <span className="ml-2 font-semibold text-lime-400">≈ {loadFromPct(oneRm, pct)} kg</span>
 }
 
