@@ -31,3 +31,7 @@ language sql stable security definer set search_path = '' as $$
 $$;
 revoke execute on function public.exercises_scored() from anon, public;
 grant execute on function public.exercises_scored() to authenticated;
+
+-- Movements and their sections are read-only for every user, coaches included, like benchmarks: fed through the database.
+drop policy "exercises: coach write" on public.exercises;
+drop policy "exercise_sections: coach write" on public.exercise_sections;

@@ -3,9 +3,8 @@ import { Link, Outlet, useLocation, useNavigate, useSearchParams } from 'react-r
 import { PageTitle } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase } from '../../lib/supabase'
-import { isCoach, useAuth } from '../auth/AuthProvider'
 import { searchExercises, useExercises } from '../exercises/useExercises'
-import { SectionedList, useSectionActions, type Section } from './SectionedList'
+import { SectionedList, type Section } from './SectionedList'
 
 type WorkoutRow = { id: string; title: string; section_id: string | null }
 
@@ -99,7 +98,6 @@ function WorkoutList() {
         sections={sections}
         query={query}
         storageKey="librarySectionsExpanded"
-        what="benchmarks"
         renderItem={(w) => (
           <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
             <span className="truncate">{w.title}</span>
@@ -113,12 +111,10 @@ function WorkoutList() {
 
 function ExerciseList() {
   const { pathname } = useLocation()
-  const coach = isCoach(useAuth().profile)
   const { exercises, sections, reload } = useExercises()
   useEffect(() => {
     reload()
   }, [pathname, reload])
-  const actions = useSectionActions('exercise_sections', reload)
   const [query, setQuery] = useState('')
   const [scored, setScored] = useState<Set<string> | null>(null)
   const [onlyScored, setOnlyScored] = useState(true)
@@ -130,34 +126,28 @@ function ExerciseList() {
 
   return (
     <div className="flex flex-col gap-3">
-      {coach && (
-        <div className="flex gap-2">
-          <Link to="/library/exercises/new" className="flex-1 rounded-xl bg-lime-400 py-3 text-center font-semibold text-zinc-950">
-            + Nouvel exercice
-          </Link>
-          <button className="rounded-xl bg-zinc-800 px-4 font-semibold" onClick={() => actions.create('Ergos, Gymnastique, Haltéro')}>
-            + Section
-          </button>
-        </div>
-      )}
       <input
         placeholder={`Rechercher parmi ${shown.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <label className="flex items-center gap-2 text-sm text-zinc-400">
-        <input type="checkbox" className="size-4 accent-lime-400" checked={onlyScored} onChange={(e) => setOnlyScored(e.target.checked)} />
+      <button
+        role="switch"
+        aria-checked={onlyScored}
+        className="flex items-center justify-between gap-2 text-sm text-zinc-400"
+        onClick={() => setOnlyScored((on) => !on)}
+      >
         Masquer les mouvements sans PR
-      </label>
+        <span className={`flex h-5 w-9 shrink-0 items-center rounded-full p-0.5 transition-colors ${onlyScored ? 'bg-lime-400' : 'bg-zinc-700'}`}>
+          <span className={`size-4 rounded-full bg-zinc-950 transition-transform ${onlyScored ? 'translate-x-4' : ''}`} />
+        </span>
+      </button>
       <SectionedList
         items={results}
         sections={sections}
         query={query}
         storageKey="exerciseSectionsExpanded"
-        actions={coach ? actions : undefined}
-        what="exercices"
-        newHref={(s) => `/library/exercises/new?section=${s.id}`}
         renderItem={(e) => (
           <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
             <span className="truncate">{e.name}</span>
