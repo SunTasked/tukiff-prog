@@ -49,9 +49,9 @@ function chunks(src: string): Chunk[] {
   return out.filter((c) => c.type !== 'p' || c.lines.length)
 }
 
-export function Markdown({ text, className = '' }: { text: string; className?: string }) {
+export function Markdown({ text, className = '', gap = 'gap-1.5' }: { text: string; className?: string; gap?: string }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className}`}>
+    <div className={`flex flex-col ${gap} ${className}`}>
       {chunks(text).map((c, i) => {
         if (c.type === 'h')
           return (

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from 'react'
 import { LogoCropper } from '../../components/ImageCropper'
 import { SponsorLogo } from '../../components/SponsorLogo'
-import { Button, Card, Chips, ErrorText, Input } from '../../components/ui'
+import { Button, Card, Chips, CloseButton, ErrorText, Input } from '../../components/ui'
 import { normalizeLink } from '../../domain/sponsors'
 import { reloadSponsors, uploadLogo, useSponsors } from '../../lib/sponsors'
 import { supabase, type Sponsor } from '../../lib/supabase'
@@ -86,9 +86,7 @@ function SponsorSheet({ sponsor, onClose }: { sponsor: Sponsor | null; onClose: 
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
       <div className="flex items-center justify-between border-b border-zinc-800 p-3">
         <span className="font-semibold">{sponsor ? 'Modifier le sponsor' : 'Nouveau sponsor'}</span>
-        <button className="px-2 text-zinc-400" onClick={onClose}>
-          Fermer
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
       <form onSubmit={save} className="flex flex-col gap-4 overflow-y-auto p-4">
         <Input label="Nom" required maxLength={60} value={name} onChange={(e) => setName(e.target.value)} />

@@ -1,4 +1,5 @@
 import { Avatar } from '../../components/Avatar'
+import { CloseButton } from '../../components/ui'
 import { scoreName } from '../../domain/profile'
 
 export type Person = {
@@ -28,9 +29,7 @@ export function PeopleSheet({
       >
         <div className="flex items-center justify-between border-b border-zinc-800 p-3">
           <span className="font-semibold">{title}</span>
-          <button className="px-2 text-zinc-400" onClick={onClose}>
-            Fermer
-          </button>
+          <CloseButton onClick={onClose} />
         </div>
         <ul className="flex flex-col gap-1 overflow-y-auto p-3">
           {people.map((p) => (

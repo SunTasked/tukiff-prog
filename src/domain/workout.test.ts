@@ -122,10 +122,9 @@ describe('blocks & validation', () => {
   it('validates', () => {
     expect(validateWorkout({ title: ' ', notes: '', blocks: [] })).toMatch(/titre/)
     const b = { ...newBlock('metcon', 'x'), items: [emptyItem()] }
-    expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toMatch(/Bloc A : donne-lui un titre/)
-    b.title = 'Fran'
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toMatch(/Bloc 1/)
     b.items[0] = emptyItem('t')
+    // The block title is optional: the block is then named by its format summary.
     expect(validateWorkout({ title: 'Fran', notes: '', blocks: [b] })).toBeNull()
   })
 })

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router'
 import { DurationPicker, NumberInput } from '../../components/inputs'
-import { Button, Chips, Field } from '../../components/ui'
+import { Button, Chips, CloseButton, Field, HelpBubble, HelpButton } from '../../components/ui'
 import {
   TIMER_MODES,
   cue,
@@ -36,22 +36,8 @@ export function TimerPage() {
       </button>
       <div className="relative flex items-center gap-2">
         <h1 className="min-w-0 truncate text-2xl font-bold">Timer{title ? ` · ${title}` : ''}</h1>
-        <button
-          className={`grid size-5 shrink-0 place-items-center rounded-full border text-xs ${help ? 'border-lime-400 text-lime-400' : 'border-zinc-600 text-zinc-400'}`}
-          aria-label="Comment fonctionnent les bips"
-          onClick={() => setHelp(!help)}
-        >
-          ?
-        </button>
-        {help && (
-          <p
-            className="absolute top-full right-0 left-0 z-10 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-xs text-zinc-300 shadow-lg shadow-black"
-            onClick={() => setHelp(false)}
-          >
-            10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle ou
-            palier. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
-          </p>
-        )}
+        <HelpButton open={help} onClick={() => setHelp(!help)} label="Comment fonctionnent les bips" />
+        {help && <HelpBubble text={BEEPS_HELP} onClose={() => setHelp(false)} className="top-full right-0 left-0 mt-1" />}
       </div>
       <Chips options={TIMER_MODES} value={c.mode} onChange={(m: TimerMode) => setConfig(defaultTimer(m))} />
 
@@ -171,9 +157,7 @@ function RunningTimer({ config, title, onExit }: { config: TimerConfig; title: s
           {TIMER_MODES[config.mode]}
           {title ? ` · ${title}` : ''}
         </span>
-        <button className="px-2 py-1" onClick={onExit}>
-          Fermer
-        </button>
+        <CloseButton onClick={onExit} />
       </div>
 
       <div className="flex flex-1 flex-col items-center justify-center gap-4">
@@ -223,3 +207,9 @@ function RunningTimer({ config, title, onExit }: { config: TimerConfig; title: s
     </div>
   )
 }
+
+const BEEPS_HELP = `**Bips** :
+- **10 s de décompte** avant le départ, bips à 3-2-1 puis au top
+- sur les **3 dernières secondes** de chaque intervalle ou palier
+
+Sur iPhone, les bips sortent **même en mode silencieux** et mettent en pause la musique du téléphone.`

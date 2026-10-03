@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
-import { Chips } from '../../components/ui'
+import { Chips, CloseButton } from '../../components/ui'
 import { GENDERS, fullName, scoreName, type Gender } from '../../domain/profile'
 import type { TeamGuest } from '../../domain/scoring'
 import { supabase } from '../../lib/supabase'
@@ -121,9 +121,7 @@ export function TeamPicker({
                 Ajouter en invité
               </button>
             )}
-            <button className="px-3 py-1.5 text-sm text-zinc-400" onClick={() => setAdding(false)}>
-              Fermer
-            </button>
+            <CloseButton onClick={() => setAdding(false)} className="ml-auto" />
           </div>
         </div>
       )}

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
+import { CloseButton } from '../../components/ui'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
 import { formatBreakdown, repBreakdown } from '../../domain/repcount'
@@ -252,9 +253,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Commentaires · {blockLabel}</span>
-            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
-              Fermer
-            </button>
+            <CloseButton onClick={() => setFull(false)} />
           </div>
           <ol className="flex flex-1 flex-col gap-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {commented.map((r) => (
@@ -274,9 +273,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">{ranked ? 'Classement' : 'Scores'} · {blockLabel}</span>
-            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
-              Fermer
-            </button>
+            <CloseButton onClick={() => setFull(false)} />
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <div className="mb-3 flex gap-1 rounded-xl bg-zinc-900 p-1">
@@ -305,9 +302,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Scores · {blockLabel}</span>
-            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
-              Fermer
-            </button>
+            <CloseButton onClick={() => setFull(false)} />
           </div>
           <ol className="flex flex-1 flex-col gap-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             {byName.map((r) => (
@@ -330,9 +325,7 @@ export function BlockResults({ workoutId, block, blockLabel, results, me, canLog
         <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
           <div className="flex items-center justify-between border-b border-zinc-800 p-3">
             <span className="min-w-0 truncate font-semibold">Classement · {blockLabel}</span>
-            <button className="px-2 text-zinc-400" onClick={() => setFull(false)}>
-              Fermer
-            </button>
+            <CloseButton onClick={() => setFull(false)} />
           </div>
           <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
             <GenderTabs value={tab} counts={genderCounts} onChange={setTab} />

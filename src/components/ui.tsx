@@ -2,6 +2,7 @@ import type React from 'react'
 import { useEffect, useState, useSyncExternalStore } from 'react'
 import type { ButtonHTMLAttributes, InputHTMLAttributes, ReactNode } from 'react'
 import { pendingRequests } from '../lib/supabase'
+import { Markdown } from './Markdown'
 
 type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' | 'danger' }
 
@@ -141,6 +142,45 @@ export function BusyOverlay() {
   return (
     <div className={`fixed inset-0 z-[100] flex items-center justify-center ${visible ? 'bg-black/40' : ''}`} aria-busy="true">
       {visible && <div className="size-10 animate-spin rounded-full border-2 border-zinc-700 border-t-lime-400" />}
+    </div>
+  )
+}
+
+/** Encircled cross that closes a sheet, modal or panel. */
+export function CloseButton({ onClick, className = '' }: { onClick: () => void; className?: string }) {
+  return (
+    <button type="button" aria-label="Fermer" onClick={onClick} className={`-m-1 shrink-0 p-1 text-zinc-400 active:text-zinc-200 ${className}`}>
+      <svg viewBox="0 0 24 24" className="size-7" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+        <circle cx="12" cy="12" r="10" />
+        <path d="M15 9l-6 6M9 9l6 6" />
+      </svg>
+    </button>
+  )
+}
+
+/** The (?) button that shows or hides a help bubble. */
+export function HelpButton({ open, onClick, label }: { open: boolean; onClick: () => void; label: string }) {
+  return (
+    <button
+      type="button"
+      className={`grid size-5 shrink-0 place-items-center rounded-full border text-xs ${open ? 'border-lime-400 text-lime-400' : 'border-zinc-600 text-zinc-400'}`}
+      aria-label={label}
+      aria-expanded={open}
+      onClick={onClick}
+    >
+      ?
+    </button>
+  )
+}
+
+/** Help bubble under a (?): light markdown (blank line = paragraph, - list, **bold**); tap closes it. */
+export function HelpBubble({ text, onClose, className = '' }: { text: string; onClose: () => void; className?: string }) {
+  return (
+    <div
+      className={`absolute z-10 rounded-xl border border-zinc-700 bg-zinc-900 px-4 py-3 text-sm leading-snug text-zinc-300 shadow-lg shadow-black ${className}`}
+      onClick={onClose}
+    >
+      <Markdown text={text} gap="gap-2.5" />
     </div>
   )
 }
