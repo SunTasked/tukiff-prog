@@ -23,7 +23,7 @@ export function WorkoutPage() {
   return (
     <>
       <Link to="/library" className="text-sm text-zinc-400">
-        ‹ PR
+        ‹ Progression
       </Link>
       <PageTitle>{workout.title}</PageTitle>
       <WorkoutView workout={workout} nameOf={nameOf} videoOf={(eid) => byId.get(eid)?.video_url} />

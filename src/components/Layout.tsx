@@ -11,15 +11,15 @@ const tabs: Tab[] = [
   { to: '/', label: 'Accueil', icon: 'M3 11l9-8 9 8v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z' },
   {
     to: '/calendar',
-    label: 'Planning',
+    label: 'Prog',
     longLabel: 'Programmation',
     coachOnly: true,
     icon: 'M8 2v4M16 2v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z',
   },
   {
     to: '/library',
-    label: 'PR',
-    longLabel: 'PR',
+    label: 'Progrès',
+    longLabel: 'Progression',
     // Rising chart.
     icon: 'M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4',
   },
