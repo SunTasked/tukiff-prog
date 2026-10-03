@@ -1,0 +1,4 @@
+{
+  "coach": ["Le titre d'un bloc est facultatif : sans titre, le bloc affiche son format (ex. For Time · cap 10')"],
+  "athlete": ["Séances allégées : la mention « Bloc A, B… » disparaît, le titre du bloc est à côté du Timer"]
+}

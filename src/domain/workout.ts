@@ -300,7 +300,6 @@ export function itemSummary(item: ItemDraft, exerciseName: (id: string) => strin
 export function validateWorkout(w: WorkoutDraft): string | null {
   if (!w.title.trim()) return 'Donne un titre à la séance.'
   for (const [i, b] of w.blocks.entries()) {
-    if (!b.title.trim()) return `Bloc ${String.fromCharCode(65 + i)} : donne-lui un titre.`
     if (b.items.some((it) => !it.exercise_id && !it.label.trim())) return `Bloc ${i + 1} : un mouvement n’a pas d’exercice.`
   }
   return null
