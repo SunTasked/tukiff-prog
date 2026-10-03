@@ -24,6 +24,7 @@ export function useExercises() {
 
   const byId = useMemo(() => new Map(exercises.map((e) => [e.id, e])), [exercises])
   const nameOf = useCallback((id: string) => byId.get(id)?.name, [byId])
+  const measureOf = useCallback((id: string) => byId.get(id)?.measure as Measure | undefined, [byId])
 
   const create = useCallback(
     async (name: string, measure: Measure = 'reps') => {
@@ -35,7 +36,7 @@ export function useExercises() {
     [],
   )
 
-  return { exercises, sections, loading, byId, nameOf, reload, create }
+  return { exercises, sections, loading, byId, nameOf, measureOf, reload, create }
 }
 
 export const normalize = (s: string) =>

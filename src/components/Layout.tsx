@@ -18,10 +18,10 @@ const tabs: Tab[] = [
   },
   {
     to: '/library',
-    label: 'Biblio',
-    longLabel: 'Bibliothèque',
-    coachOnly: true,
-    icon: 'M4 19V5a2 2 0 0 1 2-2h13v16H6a2 2 0 0 0-2 2zm0 0a2 2 0 0 0 2 2h13M8 7h7',
+    label: 'PR',
+    longLabel: 'PR',
+    // Rising chart.
+    icon: 'M3 3v18h18M7 15l4-4 3 3 6-6M16 8h4v4',
   },
   {
     to: '/athletes',

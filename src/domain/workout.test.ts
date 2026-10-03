@@ -9,6 +9,8 @@ import {
   formatDuration,
   formatSummary,
   invalidatedBlocks,
+  sameAsBenchmark,
+  unlinkedBlocks,
   itemSummary,
   newBlock,
   parseDuration,
@@ -220,4 +222,36 @@ it('block heading does not repeat a title copied from the format', () => {
   const b = { ...newBlock('metcon', 'h'), format: 'amrap' as const, params: { duration_s: 1200 } }
   expect(blockHeading({ ...b, title: "AMRAP 20'" })).toBe("AMRAP 20'")
   expect(blockHeading({ ...b, title: 'DB DT' })).toBe("DB DT — AMRAP 20'")
+})
+
+describe('sameAsBenchmark', () => {
+  const fran = () => ({ ...newBlock('metcon', 'f'), format: 'for_time' as const, items: [{ ...emptyItem('thr'), reps: '21-15-9', load_kg: 43, load_kg_f: 29 }] })
+  it('ignores titles and notes', () => {
+    const copy = { ...fran(), id: 'c', title: 'WOD', notes: 'Vite !', items: fran().items.map((it) => ({ ...it, notes: 'pieds serrés' })) }
+    expect(sameAsBenchmark(copy, fran())).toBe(true)
+  })
+  it('detects reps or load changes', () => {
+    expect(sameAsBenchmark({ ...fran(), items: [{ ...fran().items[0], reps: '15-12-9' }] }, fran())).toBe(false)
+    expect(sameAsBenchmark({ ...fran(), items: [{ ...fran().items[0], load_kg: 40 }] }, fran())).toBe(false)
+  })
+})
+
+describe('unlinkedBlocks', () => {
+  const w = () => ({
+    title: 'WOD',
+    notes: '',
+    blocks: [
+      { ...newBlock('metcon', 'a'), source_block_id: 'fran', items: [{ ...emptyItem('thr'), reps: '21-15-9', load_kg: 43 }] },
+      { ...newBlock('metcon', 'b'), items: [emptyItem('t')] },
+    ],
+  })
+  it('keeps the link on notes, drops it on content changes of linked blocks only', () => {
+    const notes = w()
+    notes.blocks[0].notes = 'Vite'
+    expect(unlinkedBlocks(w(), notes)).toEqual([])
+    const load = w()
+    load.blocks[0].items[0].load_kg = 40
+    load.blocks[1].items[0].reps = '10'
+    expect(unlinkedBlocks(w(), load)).toEqual(['a'])
+  })
 })

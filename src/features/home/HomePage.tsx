@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { Link, useSearchParams } from 'react-router'
 import { programColor, programPanelColor } from '../../components/ProgramBadges'
-import { compareWorkouts, firstPendingBlock, groupByProgram } from '../../domain/grouping'
+import { compareWorkouts, groupByProgram } from '../../domain/grouping'
 import { useNewClappers } from '../../lib/clapsNotification'
 import { unreadMessages } from '../../lib/releases'
 import { useOnResume } from '../../lib/resume'
+import { pageOffset, usePageSwipe } from '../../lib/swipe'
 import { getItem, setItem } from '../../lib/storage'
 import { Card, Spinner } from '../../components/ui'
 import { addDays, coversDay, formatDay, formatLongDay, lastDay, fromISODate, mondayOf, publicationStatus, today, weekDays } from '../../domain/dates'
@@ -24,42 +25,40 @@ const HATCHED =
 
 const DAY_LETTERS = ['L', 'M', 'M', 'J', 'V', 'S', 'D']
 
-/** Workouts assigned to me, one day at a time, with a week strip to navigate. */
+/** Workouts assigned to me, one day at a time, with a week strip to navigate (or a swipe to the next/previous day). */
 export function HomePage() {
   const { session, profile } = useAuth()
   const newClappers = useNewClappers(profile)
   const unread = unreadMessages(profile) || newClappers > 0
   const me = session?.user.id
   const [params, setParams] = useSearchParams()
-  const day = params.get('day') ?? today()
+  // Local copy of ?day=: the router updates the URL in a transition, a swipe needs the new day in the same frame.
+  const [picked, setPicked] = useState(() => params.get('day'))
+  const day = picked ?? today()
   const monday = mondayOf(day)
   const [week, setWeek] = useState<Row[] | null>(null)
-  const [workouts, setWorkouts] = useState<(WorkoutDraft & Row)[] | null>(null)
 
-  // Auto-scroll, once per day shown, to the first block of the open panels I neither scored nor skipped.
-  const done = useRef(new Map<string, Set<string>>())
-  const scrolledDay = useRef<string | null>(null)
-  const report = (workoutId: string, blockIds: Set<string>) => {
-    done.current.set(workoutId, blockIds)
-    if (!workouts || scrolledDay.current === day) return
-    const open = groupByProgram(workouts)
-      .filter((p) => getItem(panelStorageKey(p.key)) !== '1')
-      .flatMap((p) => p.items)
-    if (!open.every((w) => done.current.has(w.id))) return
-    scrolledDay.current = day
-    const target = firstPendingBlock(open, done.current)
-    if (target) document.getElementById(`block-${target}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  const goTo = (d: string) => {
+    const next = d === today() ? null : d
+    setPicked(next)
+    setParams(next ? { day: next } : {}, { replace: true })
   }
 
-  const goTo = (d: string) => setParams(d === today() ? {} : { day: d }, { replace: true })
+  // Swipe left = next day, right = previous day; the neighbour days are already rendered beside the current one.
+  const swipeArea = useRef<HTMLDivElement>(null)
+  const track = useRef<HTMLDivElement>(null)
+  usePageSwipe(swipeArea, track, (dir) => goTo(addDays(day, dir === 'next' ? 1 : -1)))
 
+  // The week of the strip, plus the neighbour days when they fall in another week.
+  const from = addDays(day, -1) < monday ? addDays(day, -1) : monday
+  const to = addDays(day, 1) > addDays(monday, 6) ? addDays(day, 1) : addDays(monday, 6)
   const loadWeek = useCallback(
     () =>
       supabase
-        .rpc('my_workouts', { p_from: monday, p_to: addDays(monday, 6) })
+        .rpc('my_workouts', { p_from: from, p_to: to })
         // Same rows: keep the previous array so the open sessions aren't reloaded for nothing.
         .then(({ data }) => setWeek((prev) => (JSON.stringify(prev) === JSON.stringify(data ?? []) ? prev : ((data ?? []) as Row[])))),
-    [monday],
+    [from, to],
   )
   useEffect(() => {
     loadWeek()
@@ -100,23 +99,27 @@ export function HomePage() {
     })
   }, [programIds, me])
 
-  useEffect(() => {
-    if (!week) return
-    setWorkouts(null)
-    done.current = new Map()
-    // Multi-day workouts (challenges) show every day of their range, after the day's workouts.
-    const rows = week.filter((r) => coversDay(r.date, r.days, day)).sort(
-        (a, b) =>
-          Number(a.days > 1) - Number(b.days > 1) ||
-          compareWorkouts({ ...a, program: a.program_name }, { ...b, program: b.program_name }),
-      )
-    Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
-      setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
-    )
-  }, [week, day])
+  const toggleAthleteView = (key: string) =>
+    setAthleteView((prev) => {
+      const next = new Set(prev)
+      if (!next.delete(key)) next.add(key)
+      return next
+    })
+  const dayView = (d: string) => (
+    <DayView
+      day={d}
+      week={week}
+      boardOff={boardOff}
+      coached={coached}
+      athleteView={athleteView}
+      onToggleAthleteView={toggleAthleteView}
+      onWeekBoard={setWeekBoard}
+    />
+  )
 
   return (
-    <>
+    // Sideways moves are ours (iOS ignores preventDefault once it has started scrolling); vertical scroll and zoom stay native.
+    <div ref={swipeArea} className="touch-pan-y touch-pinch-zoom">
       <div className="flex items-center justify-between">
         {/* mix-blend-screen makes the logo's black background disappear on the dark page */}
         <img src="/tkf-logo.jpg" alt="TKF Programming" className="h-14 w-auto mix-blend-screen lg:invisible" />
@@ -162,86 +165,133 @@ export function HomePage() {
             )
           })}
         </div>
-        {day !== today() && (
-          <button className="mt-1 w-full text-center text-xs text-lime-400" onClick={() => goTo(today())}>
-            Revenir à aujourd’hui
-          </button>
-        )}
+        {/* Hidden rather than removed on today: swiping to or from today doesn't shift the page. */}
+        <button
+          className={`mt-1 w-full text-center text-xs text-lime-400 ${day === today() ? 'invisible' : ''}`}
+          onClick={() => goTo(today())}
+        >
+          Revenir à aujourd’hui
+        </button>
       </div>
 
-      {workouts === null ? (
-        <Spinner />
-      ) : workouts.length === 0 ? (
-        <Card>
-          <p className="text-zinc-400">Pas de séance ce jour-là.</p>
-        </Card>
-      ) : (
-        groupByProgram(workouts).map((panel) => {
-          const myLevel = coached.get(panel.key)
-          const asAthlete = myLevel !== undefined && athleteView.has(panel.key)
-          return (
-          <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
-            {(!boardOff.has(panel.key) || myLevel !== undefined) && (
-              <div className="-mb-3 flex items-center justify-between gap-2">
-                {!boardOff.has(panel.key) ? (
-                  <button className="text-sm whitespace-nowrap text-lime-400" onClick={() => setWeekBoard(panel)}>
-                    🏆 Classement de la semaine ›
-                  </button>
-                ) : (
-                  <span />
-                )}
-                {myLevel !== undefined && (
-                  <button
-                    role="switch"
-                    aria-checked={asAthlete}
-                    className={`flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap ${asAthlete ? 'text-amber-300' : 'text-zinc-400'}`}
-                    onClick={() =>
-                      setAthleteView((prev) => {
-                        const next = new Set(prev)
-                        if (!next.delete(panel.key)) next.add(panel.key)
-                        return next
-                      })
-                    }
-                  >
-                    🔎 Athlète
-                    <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${asAthlete ? 'bg-amber-400' : 'bg-zinc-700'}`}>
-                      <span className={`size-4 rounded-full bg-zinc-950 transition-transform ${asAthlete ? 'translate-x-4' : ''}`} />
-                    </span>
-                  </button>
-                )}
-              </div>
-            )}
-            {panel.items.map((w) => {
-              const published = publicationStatus(w.publish_at) === 'published'
-              return (
-                <div key={w.id} className={published ? '' : HATCHED}>
-                  <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
-                  {w.days > 1 && (
-                    <p className="-mt-1 mb-2 text-xs text-amber-300">
-                      🗓 Du {formatDay(w.date)} au {formatDay(lastDay(w.date, w.days))}
-                    </p>
-                  )}
-                  {!published && (
-                    <p className="-mt-1 mb-2">
-                      <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
-                    </p>
-                  )}
-                  <WorkoutWithResults workout={asAthlete ? viewAs(w, myLevel) : w} canLog={published}
-                    // Unpublished: nothing to log, so never the auto-scroll target.
-                    onDone={(ids) => report(w.id, published ? ids : new Set(w.blocks.map((b) => b.id)))}
-                  />
-                </div>
-              )
-            })}
-          </ProgramPanel>
-          )
-        })
-      )}
+      {/* Tall enough that a swipe below a short day still counts; clips the neighbour days. */}
+      <div className="-mx-4 min-h-[70dvh] overflow-hidden px-4 lg:mx-0 lg:px-0">
+        <div ref={track} className="relative">
+          {/* Keyed by date: after a swipe, the neighbour becomes the current day without reloading. */}
+          <div key={addDays(day, -1)} style={pageOffset(-1)} aria-hidden inert>
+            {dayView(addDays(day, -1))}
+          </div>
+          <div key={day}>{dayView(day)}</div>
+          <div key={addDays(day, 1)} style={pageOffset(1)} aria-hidden inert>
+            {dayView(addDays(day, 1))}
+          </div>
+        </div>
+      </div>
       {weekBoard && (
         <WeeklyBoardSheet programId={weekBoard.key} programName={weekBoard.label} week={monday} onClose={() => setWeekBoard(null)} />
       )}
-    </>
+    </div>
   )
+}
+
+/** The workouts of one day. Neighbour days are rendered too (off screen) so that a swipe shows them at once. */
+function DayView({
+  day,
+  week,
+  boardOff,
+  coached,
+  athleteView,
+  onToggleAthleteView,
+  onWeekBoard,
+}: {
+  day: string
+  week: Row[] | null
+  boardOff: Set<string>
+  coached: Map<string, number>
+  athleteView: Set<string>
+  onToggleAthleteView: (programId: string) => void
+  onWeekBoard: (panel: { key: string; label: string }) => void
+}) {
+  const [workouts, setWorkouts] = useState<(WorkoutDraft & Row)[] | null>(null)
+
+  const rows = useMemo(
+    () =>
+      // Multi-day workouts (challenges) show every day of their range, after the day's workouts.
+      week
+        ?.filter((r) => coversDay(r.date, r.days, day))
+        .sort(
+          (a, b) =>
+            Number(a.days > 1) - Number(b.days > 1) ||
+            compareWorkouts({ ...a, program: a.program_name }, { ...b, program: b.program_name }),
+        ),
+    [week, day],
+  )
+  useEffect(() => {
+    if (!rows) return
+    setWorkouts(null)
+    Promise.all(rows.map((r) => loadWorkout(r.id))).then((list) =>
+      setWorkouts(list.flatMap((w, i) => (w ? [{ ...w, ...rows[i] }] : []))),
+    )
+  }, [rows])
+
+  if (workouts === null) return <Spinner />
+  if (workouts.length === 0)
+    return (
+      <Card>
+        <p className="text-zinc-400">Pas de séance ce jour-là.</p>
+      </Card>
+    )
+  return groupByProgram(workouts).map((panel) => {
+    const myLevel = coached.get(panel.key)
+    const asAthlete = myLevel !== undefined && athleteView.has(panel.key)
+    return (
+      <ProgramPanel key={panel.key} panelKey={panel.key} label={panel.label}>
+        {(!boardOff.has(panel.key) || myLevel !== undefined) && (
+          <div className="-mb-3 flex items-center justify-between gap-2">
+            {!boardOff.has(panel.key) ? (
+              <button className="text-sm whitespace-nowrap text-lime-400" onClick={() => onWeekBoard(panel)}>
+                🏆 Classement de la semaine ›
+              </button>
+            ) : (
+              <span />
+            )}
+            {myLevel !== undefined && (
+              <button
+                role="switch"
+                aria-checked={asAthlete}
+                className={`flex shrink-0 items-center gap-1.5 text-xs whitespace-nowrap ${asAthlete ? 'text-amber-300' : 'text-zinc-400'}`}
+                onClick={() => onToggleAthleteView(panel.key)}
+              >
+                🔎 Athlète
+                <span className={`flex h-5 w-9 items-center rounded-full p-0.5 transition-colors ${asAthlete ? 'bg-amber-400' : 'bg-zinc-700'}`}>
+                  <span className={`size-4 rounded-full bg-zinc-950 transition-transform ${asAthlete ? 'translate-x-4' : ''}`} />
+                </span>
+              </button>
+            )}
+          </div>
+        )}
+        {panel.items.map((w) => {
+          const published = publicationStatus(w.publish_at) === 'published'
+          return (
+            <div key={w.id} className={published ? '' : HATCHED}>
+              <h2 className="mb-2 text-xl font-bold">{w.title}</h2>
+              {w.days > 1 && (
+                <p className="-mt-1 mb-2 text-xs text-amber-300">
+                  🗓 Du {formatDay(w.date)} au {formatDay(lastDay(w.date, w.days))}
+                </p>
+              )}
+              {!published && (
+                <p className="-mt-1 mb-2">
+                  <StatusBadge publishAt={w.publish_at} /> <span className="text-xs text-zinc-400">· non visible des athlètes</span>
+                </p>
+              )}
+              <WorkoutWithResults workout={asAthlete ? viewAs(w, myLevel) : w} canLog={published} />
+            </div>
+          )
+        })}
+      </ProgramPanel>
+    )
+  })
 }
 
 const panelStorageKey = (panelKey: string) => `panel-collapsed:${panelKey}`
