@@ -1,0 +1,13 @@
+{
+  "version": "1.4.0",
+  "date": "2026-10-03",
+  "admin": [],
+  "coach": [
+    "Communauté : la colonne Inscrit (date d'inscription) remplace le nombre de blocs gagnés",
+    "Le titre d'un bloc est facultatif : sans titre, le bloc affiche son format (ex. For Time · cap 10')"
+  ],
+  "athlete": [
+    "Les fenêtres se ferment avec une croix, et les aides (?) sont plus lisibles",
+    "Séances allégées : la mention « Bloc A, B… » disparaît, le titre du bloc est à côté du Timer"
+  ]
+}
