@@ -1,5 +1,5 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { Button, Card, ErrorText, Input } from '../../components/ui'
+import { Button, Card, CloseButton, ErrorText, Input } from '../../components/ui'
 import { clapCompliments } from '../../lib/clapsNotification'
 import { supabase, type ClapCompliment } from '../../lib/supabase'
 
@@ -81,9 +81,7 @@ function ComplimentSheet({ compliment, onClose }: { compliment: ClapCompliment |
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
       <div className="flex items-center justify-between border-b border-zinc-800 p-3">
         <span className="font-semibold">{compliment ? 'Modifier le compliment' : 'Nouveau compliment'}</span>
-        <button className="px-2 text-zinc-400" onClick={() => onClose()}>
-          Fermer
-        </button>
+        <CloseButton onClick={() => onClose()} />
       </div>
       <form onSubmit={save} className="flex flex-col gap-4 overflow-y-auto p-4">
         <Input label="Compliment" required maxLength={80} placeholder="C'est qui le patron ?!" value={text} onChange={(e) => setText(e.target.value)} />

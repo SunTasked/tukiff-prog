@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Avatar } from '../../components/Avatar'
-import { Card, Spinner } from '../../components/ui'
+import { Card, CloseButton, HelpBubble, HelpButton, Spinner } from '../../components/ui'
 import { addDays, formatWeek, mondayOf, weekClosed } from '../../domain/dates'
 import { scoreName, type Gender } from '../../domain/profile'
 import { AthleteName } from './AthleteName'
@@ -56,29 +56,10 @@ export function WeeklyBoardSheet({
       <div className="relative flex items-center justify-between border-b border-zinc-800 p-3">
         <span className="flex min-w-0 items-center gap-2">
           <span className="truncate font-semibold">Classement de la semaine · {programName}</span>
-          <button
-            className={`grid size-5 shrink-0 place-items-center rounded-full border text-xs ${help ? 'border-lime-400 text-lime-400' : 'border-zinc-600 text-zinc-400'}`}
-            aria-label="Comment sont comptés les points"
-            onClick={() => setHelp(!help)}
-          >
-            ?
-          </button>
+          <HelpButton open={help} onClick={() => setHelp(!help)} label="Comment sont comptés les points" />
         </span>
-        <button className="px-2 text-zinc-400" onClick={onClose}>
-          Fermer
-        </button>
-        {help && (
-          <p
-            className="absolute top-full right-3 left-3 z-10 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-xs text-zinc-300 shadow-lg shadow-black"
-            onClick={() => setHelp(false)}
-          >
-            Sur chaque bloc classé de la semaine, ta place en RX rapporte des points : 10 pour le 1er, 9 pour le 2e… 1 pour le
-            10e, 0 au-delà, en adapté ou sans score. Ton total est la somme de tes 3 meilleurs blocs, le plus grand gagne. Le
-            challenge de la semaine ne rapporte pas de points : il départage les égalités. LEADER en or pour 3 blocs gagnés (30
-            points) : couronne sur ta photo la semaine suivante. La semaine se termine le dimanche à 23:59 : les scores sont alors
-            figés et le leader est compté dans son palmarès.
-          </p>
-        )}
+        <CloseButton onClick={onClose} />
+        {help && <HelpBubble text={WEEKLY_HELP} onClose={() => setHelp(false)} className="top-full right-3 left-3 mt-1" />}
       </div>
       <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         <div className="mb-3 flex items-center justify-between">
@@ -174,3 +155,15 @@ export function WeeklyBoardSheet({
     </div>
   )
 }
+
+const WEEKLY_HELP = `**Points par bloc classé** (score RX) :
+- 1er : **10 pts**, 2e : 9 pts… 10e : 1 pt
+- au-delà, en adapté ou sans score : 0 pt
+
+**Total** = tes **3 meilleurs blocs**. Le plus grand total gagne.
+
+Le **challenge** ne rapporte pas de points : il **départage les égalités**.
+
+**LEADER** en or à 3 blocs gagnés (30 pts) : couronne sur ta photo la semaine suivante.
+
+🔒 Fin de semaine le **dimanche à 23:59** : scores figés, le leader entre dans son palmarès.`

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, ErrorText, Input } from '../../components/ui'
+import { Button, CloseButton, ErrorText, Input } from '../../components/ui'
 import { invitationUrl, invitationValues, type InvitationValidity } from '../../domain/invitations'
 import { levelName, type AccessLevel } from '../../domain/workout'
 import { supabase, type Invitation, type Program } from '../../lib/supabase'
@@ -75,9 +75,7 @@ export function InviteSheet({
     <div className="fixed inset-0 z-50 flex flex-col bg-zinc-950 pt-[env(safe-area-inset-top)] lg:inset-auto lg:top-[8vh] lg:left-1/2 lg:h-[84vh] lg:w-[34rem] lg:-translate-x-1/2 lg:rounded-2xl lg:border lg:border-zinc-800 lg:shadow-2xl lg:shadow-black">
       <div className="flex items-center justify-between border-b border-zinc-800 p-3">
         <span className="font-semibold">{role === 'coach' ? 'Inviter un coach' : 'Inviter des athlètes'}</span>
-        <button className="px-2 text-zinc-400" onClick={onClose}>
-          Fermer
-        </button>
+        <CloseButton onClick={onClose} />
       </div>
       <div className="flex-1 overflow-y-auto p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]">
         {programs.length > 0 && (
