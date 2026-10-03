@@ -6,8 +6,8 @@ import { supabase, type Exercise } from '../../lib/supabase'
 import { ExerciseRecords } from '../records/LibraryRecords'
 
 /**
- * Library exercise, read-only, with my records. ?add=1 opens the record form (link "1RM ?" from a workout).
- * As a movement benchmark (category "Mouvements" of the benchmarks), it also shows the box leaderboard.
+ * Library exercise, read-only. As a movement benchmark (categories Force, Haltéro… of the benchmarks), with my records and
+ * the box leaderboard; ?add=1 opens the record form (link "1RM ?" from a workout).
  */
 export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
   const { id } = useParams()
@@ -39,7 +39,15 @@ export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
           ▶ Voir la vidéo
         </a>
       )}
-      <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} board={benchmark} />
+      {benchmark ? (
+        <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} />
+      ) : (
+        exercise.benchmark_category && (
+          <Link to={`/library/movements/${exercise.id}`} className="mt-6 block text-lime-400">
+            Voir dans Benchmarks › {exercise.benchmark_category}
+          </Link>
+        )
+      )}
     </>
   )
 }

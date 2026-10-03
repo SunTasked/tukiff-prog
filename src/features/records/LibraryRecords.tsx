@@ -79,12 +79,9 @@ function RecordsCard({
 export function ExerciseRecords({
   exercise,
   adding = false,
-  board = false,
 }: {
   exercise: { id: string; name: string; measure: string }
   adding?: boolean
-  /** Box leaderboard: only on the movement benchmarks (category "Mouvements"). */
-  board?: boolean
 }) {
   const { session } = useAuth()
   const { records, loads: allLoads, reload } = useRecords(session?.user.id)
@@ -127,7 +124,7 @@ export function ExerciseRecords({
           setVersion((v) => v + 1)
         }}
       />
-      {board && <ExerciseBoard exerciseId={exercise.id} measure={measure} version={version} />}
+      <ExerciseBoard exerciseId={exercise.id} measure={measure} version={version} />
       {open && (
         <ExerciseRecordSheet
           exercise={{ ...exercise, measure }}

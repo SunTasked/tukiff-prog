@@ -13,10 +13,11 @@ import {
 import { emptyScore, formatScore, type ScoreType } from '../../domain/scoring'
 import { formatNumber, type Measure } from '../../domain/workout'
 import type { PersonalRecord } from '../../lib/supabase'
+import { useBenchmarkMovements } from './useRecords'
 
 /**
- * Best loads, gymnastics maxes and benchmark scores, read-only. `linked`: each row opens its library page,
- * where records are entered and their history kept.
+ * Best loads, gymnastics maxes and benchmark scores, read-only. `linked`: each row opens its benchmark page,
+ * where records are entered and their history kept. Movements: the movement benchmarks only (variants count via the hierarchy).
  */
 export function RecordsList({
   records,
@@ -34,9 +35,12 @@ export function RecordsList({
 }) {
   const maxes = records.filter((r): r is PersonalRecord & MaxRecord => r.exercise_id !== null && r.value !== null)
   const benches = records.filter((r) => r.benchmark_name !== null) as (PersonalRecord & BenchmarkRecord)[]
+  const movements = useBenchmarkMovements()
   const byName = (a: string, b: string) => (nameOf(a) ?? '').localeCompare(nameOf(b) ?? '')
-  const bestByExercise = [...bestLoads(loads)].sort(([a], [b]) => byName(a, b))
-  const bestMax = [...bestMaxes(maxes).values()].sort((a, b) => byName(a.exercise_id, b.exercise_id))
+  const bestByExercise = [...bestLoads(loads)].filter(([id]) => movements.has(id)).sort(([a], [b]) => byName(a, b))
+  const bestMax = [...bestMaxes(maxes).values()]
+    .filter((r) => movements.has(r.exercise_id))
+    .sort((a, b) => byName(a.exercise_id, b.exercise_id))
   const bestBench = [...bestBenchmarks(benches).values()].sort((a, b) => a.benchmark_name.localeCompare(b.benchmark_name))
 
   const row = (key: string, to: string | null, name: ReactNode, value: ReactNode) => {
@@ -78,7 +82,7 @@ export function RecordsList({
         bestByExercise.map(([id, byRm]) =>
           row(
             id,
-            `/library/exercises/${id}`,
+            `/library/movements/${id}`,
             <ViaName name={nameOf(id) ?? '?'} via={[...byRm.values()].map((r) => r.via && nameOf(r.via))} />,
             [...byRm.entries()]
               .sort(([a], [b]) => a - b)
@@ -95,7 +99,7 @@ export function RecordsList({
         bestMax.map((r) =>
           row(
             r.exercise_id,
-            `/library/exercises/${r.exercise_id}`,
+            `/library/movements/${r.exercise_id}`,
             nameOf(r.exercise_id) ?? '?',
             <b>{formatMax(measureOf(r.exercise_id) ?? 'reps', r.value)}</b>,
           ),
