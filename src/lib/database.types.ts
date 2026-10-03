@@ -162,6 +162,21 @@ export type Database = {
         }
         Relationships: []
       }
+      exercise_links: {
+        Row: {
+          exercise_id: string
+          parent_id: string
+        }
+        Insert: {
+          exercise_id: string
+          parent_id: string
+        }
+        Update: {
+          exercise_id?: string
+          parent_id?: string
+        }
+        Relationships: []
+      }
       exercises: {
         Row: {
           created_at: string
@@ -766,6 +781,7 @@ export type Database = {
           notes: string | null
           params: Json
           position: number
+          source_block_id: string | null
           title: string | null
           workout_id: string
         }
@@ -776,6 +792,7 @@ export type Database = {
           notes?: string | null
           params?: Json
           position: number
+          source_block_id?: string | null
           title?: string | null
           workout_id: string
         }
@@ -786,6 +803,7 @@ export type Database = {
           notes?: string | null
           params?: Json
           position?: number
+          source_block_id?: string | null
           title?: string | null
           workout_id?: string
         }

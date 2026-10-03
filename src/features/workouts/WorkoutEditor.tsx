@@ -6,6 +6,7 @@ import {
   blockName,
   addItem,
   invalidatedBlocks,
+  unlinkedBlocks,
   newBlock,
   prefilledItem,
   suggestedKind,
@@ -105,15 +106,29 @@ export function WorkoutEditor() {
     const invalid = validateWorkout(draft!)
     if (invalid) return setError(invalid)
     const { changed, removed } = original ? invalidatedBlocks(original, draft!) : { changed: [], removed: [] }
+    const unlinked = original ? unlinkedBlocks(original, draft!) : []
+    if (!confirmUnlink(unlinked)) return
     if (!(await confirmScoreLoss([...changed, ...removed]))) return
     setSaving(true)
     try {
-      const savedId = await saveWorkout(draft!, changed)
+      const savedId = await saveWorkout(draft!, changed, unlinked)
       navigate(draft!.date ? `/calendar/workouts/${savedId}` : `/library/workouts/${savedId}`, { replace: true })
     } catch (e) {
       setError((e as Error).message)
       setSaving(false)
     }
+  }
+
+  /** Warns when changed blocks lose their benchmark link (no more "save as record"); true to proceed. */
+  function confirmUnlink(blockIds: string[]) {
+    if (!blockIds.length) return true
+    const lines = original!.blocks
+      .map((b, i) => ({ b, i }))
+      .filter(({ b }) => blockIds.includes(b.id))
+      .map(({ b, i }) => `• ${String.fromCharCode(65 + i)} · ${blockName(b)}`)
+    return confirm(
+      `Ces blocs viennent d’un benchmark de la bibliothèque. Les modifier supprime ce lien : les athlètes ne pourront plus enregistrer leur score comme record.\n\n${lines.join('\n')}\n\nContinuer ?`,
+    )
   }
 
   /** Warns when saving deletes existing scores; true to proceed. */

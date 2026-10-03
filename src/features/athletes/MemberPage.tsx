@@ -25,7 +25,7 @@ export function MemberPage() {
   const { programs: mine } = useMyPrograms()
   const programs = mine ?? []
   const { nameOf, measureOf } = useExercises()
-  const { records } = useRecords(id)
+  const { records, loads } = useRecords(id)
   const [member, setMember] = useState<Profile | null>(null)
   const [programIds, setProgramIds] = useState<string[]>([])
   // Access level per program followed (0 = Free, 1 = Premium).
@@ -122,7 +122,7 @@ export function MemberPage() {
         <Chips options={TABS} value={tab} onChange={setTab} />
       </div>
       {tab === 'report' && (mine ? <AthleteReport athleteId={id!} programs={shared} records={records} /> : <Spinner />)}
-      {tab === 'records' && <RecordsList records={records} nameOf={nameOf} measureOf={measureOf} linked={false} />}
+      {tab === 'records' && <RecordsList records={records} loads={loads} nameOf={nameOf} measureOf={measureOf} linked={false} />}
       {tab === 'access' && (
         <div className="flex flex-col gap-4">
           {admin && member.id !== session?.user.id && !member.is_app_owner && (
