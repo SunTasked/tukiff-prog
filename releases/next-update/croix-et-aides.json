@@ -1,1 +1,4 @@
-{ "athlete": ["Les fenêtres se ferment avec une croix, et les aides (?) sont plus lisibles"] }
+{
+  "coach": ["Communauté : la colonne Inscrit (date d'inscription) remplace le nombre de blocs gagnés"],
+  "athlete": ["Les fenêtres se ferment avec une croix, et les aides (?) sont plus lisibles"]
+}
