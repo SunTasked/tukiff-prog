@@ -120,7 +120,13 @@ function ExerciseList() {
   }, [pathname, reload])
   const actions = useSectionActions('exercise_sections', reload)
   const [query, setQuery] = useState('')
-  const results = searchExercises(exercises, query)
+  const [scored, setScored] = useState<Set<string> | null>(null)
+  const [onlyScored, setOnlyScored] = useState(true)
+  useEffect(() => {
+    supabase.rpc('exercises_scored').then(({ data }) => setScored(new Set(data ?? [])))
+  }, [pathname])
+  const shown = onlyScored && scored ? exercises.filter((e) => scored.has(e.id)) : exercises
+  const results = searchExercises(shown, query)
 
   return (
     <div className="flex flex-col gap-3">
@@ -135,11 +141,15 @@ function ExerciseList() {
         </div>
       )}
       <input
-        placeholder={`Rechercher parmi ${exercises.length} exercices`}
+        placeholder={`Rechercher parmi ${shown.length} exercices`}
         className="rounded-xl border border-zinc-800 bg-zinc-900 px-4 py-3 outline-none focus:border-lime-400"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
+      <label className="flex items-center gap-2 text-sm text-zinc-400">
+        <input type="checkbox" className="size-4 accent-lime-400" checked={onlyScored} onChange={(e) => setOnlyScored(e.target.checked)} />
+        Masquer les mouvements sans PR
+      </label>
       <SectionedList
         items={results}
         sections={sections}
@@ -151,9 +161,10 @@ function ExerciseList() {
         renderItem={(e) => (
           <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
             <span className="truncate">{e.name}</span>
-            <span className="shrink-0 text-sm text-zinc-500">
+            <span className="flex shrink-0 items-center gap-2 text-sm text-zinc-500">
               {MEASURES[e.measure as Measure]}
               {e.video_url ? ' · ▶' : ''}
+              {scored?.has(e.id) && <Podium />}
             </span>
           </Link>
         )}
@@ -162,7 +173,7 @@ function ExerciseList() {
   )
 }
 
-/** At least one record on this benchmark (anyone's): its leaderboard has rows. */
+/** At least one record on this benchmark or movement (anyone's): its leaderboard has rows. */
 function Podium() {
   return (
     <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-label="Classement">
