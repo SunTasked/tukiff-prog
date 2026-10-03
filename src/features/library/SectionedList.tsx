@@ -10,12 +10,15 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   sections,
   query,
   storageKey,
+  hideEmpty = false,
   renderItem,
 }: {
   items: T[]
   sections: Section[]
   query: string
   storageKey: string
+  /** Hide sections left empty by a filter (as while searching). */
+  hideEmpty?: boolean
   renderItem: (item: T) => ReactNode
 }) {
   const [expanded, setExpanded] = useState<string[]>(() => {
@@ -30,7 +33,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
     setItem(storageKey, JSON.stringify(next))
     setExpanded(next)
   }
-  const groups = groupBySection(items, sections).filter((g) => !query || g.items.length > 0)
+  const groups = groupBySection(items, sections).filter((g) => (!query && !hideEmpty) || g.items.length > 0)
 
   return (
     <>

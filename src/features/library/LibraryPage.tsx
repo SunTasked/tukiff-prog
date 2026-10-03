@@ -148,6 +148,7 @@ function ExerciseList() {
         sections={sections}
         query={query}
         storageKey="exerciseSectionsExpanded"
+        hideEmpty={onlyScored}
         renderItem={(e) => (
           <Link to={`/library/exercises/${e.id}`} className={itemClass(pathname === `/library/exercises/${e.id}`)}>
             <span className="truncate">{e.name}</span>

@@ -26,17 +26,7 @@ export function useExercises() {
   const nameOf = useCallback((id: string) => byId.get(id)?.name, [byId])
   const measureOf = useCallback((id: string) => byId.get(id)?.measure as Measure | undefined, [byId])
 
-  const create = useCallback(
-    async (name: string, measure: Measure = 'reps') => {
-      const { data, error } = await supabase.from('exercises').insert({ name: name.trim(), measure }).select().single()
-      if (error) throw new Error(error.code === '23505' ? 'Cet exercice existe déjà.' : error.message)
-      setExercises((list) => [...list, data].sort((a, b) => a.name.localeCompare(b.name)))
-      return data
-    },
-    [],
-  )
-
-  return { exercises, sections, loading, byId, nameOf, measureOf, reload, create }
+  return { exercises, sections, loading, byId, nameOf, measureOf, reload }
 }
 
 export const normalize = (s: string) =>
