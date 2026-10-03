@@ -1,8 +1,11 @@
 // Personal records: best entries and loads computed from a percentage of the 1RM.
 import { compareScores, emptyScore, type Score, type ScoreType } from './scoring'
+import { formatDuration, formatNumber, type Measure } from './workout'
 
 export type LoadRecord = { exercise_id: string; rep_max: number; load_kg: number; date: string }
-export type BenchmarkRecord = Score & { benchmark_name: string; score_type: ScoreType; date: string }
+/** Gymnastics exercise (V-up, Pull-up, Plank…): best value in the exercise's unit, higher is better. */
+export type MaxRecord = { exercise_id: string; value: number; date: string }
+export type BenchmarkRecord = Score & { benchmark_name: string; score_type: ScoreType; date: string; block_id?: string | null }
 
 /** Load for a percentage of the 1RM, rounded to the kilogram. */
 export const loadFromPct = (oneRm: number, pct: number) => Math.round((oneRm * pct) / 100)
@@ -29,15 +32,42 @@ export function oneRepMaxes(records: LoadRecord[]): Map<string, number> {
   return out
 }
 
-/** Best score per benchmark name (case-insensitive), ranked like a leaderboard. */
+/** Best value per exercise (ties: most recent). */
+export function bestMaxes<T extends MaxRecord>(records: T[]): Map<string, T> {
+  const out = new Map<string, T>()
+  for (const r of records) {
+    const best = out.get(r.exercise_id)
+    if (!best || r.value > best.value || (r.value === best.value && r.date > best.date)) out.set(r.exercise_id, r)
+  }
+  return out
+}
+
+/** Records exist for weightlifting (load: rep max + kg) and gymnastics (reps, hold time); not for cardio. */
+export const RECORD_MEASURES: readonly Measure[] = ['load', 'reps', 'time']
+
+/** Field label of a max record (gymnastics). */
+export const MAX_LABELS = { reps: 'Max de répétitions', time: 'Meilleur temps tenu' } as const
+
+/** 25 reps, 1:30. */
+export const formatMax = (measure: Measure, value: number) =>
+  measure === 'time' ? formatDuration(value) : `${formatNumber(value)} reps`
+
+/** Best score per benchmark block (the block, else the name for a block deleted since), ranked like a leaderboard. */
 export function bestBenchmarks<T extends BenchmarkRecord>(records: T[]): Map<string, T> {
   const out = new Map<string, T>()
   for (const r of records) {
-    const key = r.benchmark_name.trim().toLowerCase()
+    const key = benchmarkKey(r)
     const best = out.get(key)
     if (!best || compareScores(r.score_type, { ...emptyScore(), ...r }, { ...emptyScore(), ...best }) < 0) out.set(key, r)
   }
   return out
 }
 
-export const BENCHMARKS = ['Fran', 'Grace', 'Isabel', 'Helen', 'Diane', 'Elizabeth', 'Annie', 'Karen', 'Jackie', 'Cindy', 'Murph', 'Chelsea']
+export const benchmarkKey = (r: BenchmarkRecord) => r.block_id ?? r.benchmark_name.trim().toLowerCase()
+
+/** Records entered together (one benchmark session, all its scored blocks), most recent first. */
+export function recordEntries<T extends { entry_id: string; date: string; created_at: string }>(records: T[]): T[][] {
+  const out = new Map<string, T[]>()
+  for (const r of records) out.set(r.entry_id, [...(out.get(r.entry_id) ?? []), r])
+  return [...out.values()].sort((a, b) => b[0].date.localeCompare(a[0].date) || b[0].created_at.localeCompare(a[0].created_at))
+}

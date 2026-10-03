@@ -12,18 +12,13 @@ import { useClaps } from './useClaps'
 import { useWorkoutResults } from './useWorkoutResults'
 import { useWeekLeaders } from './weeklyBoards'
 
-/**
- * Workout + score entry + leaderboards. canLog: the workout is assigned to the viewer.
- * onDone: once everything is loaded (layout stable), the ids of the blocks I scored or skipped.
- */
+/** Workout + score entry + leaderboards. canLog: the workout is assigned to the viewer. */
 export function WorkoutWithResults({
   workout,
   canLog,
-  onDone,
 }: {
   workout: WorkoutDraft
   canLog: boolean
-  onDone?: (blockIds: Set<string>) => void
 }) {
   const { session, profile } = useAuth()
   const me = session?.user.id
@@ -56,10 +51,6 @@ export function WorkoutWithResults({
     reloadSettings()
     reloadSkips()
   })
-  useEffect(() => {
-    if (!onDone || !loaded || !settings || !skips) return
-    onDone(new Set([...skips, ...results.filter((r) => r.athlete_id === me).map((r) => r.block_id)]))
-  }, [onDone, loaded, settings, skips, results, me])
   // Closed week: athletes' scores are frozen; coaches and admins can still correct them.
   const frozen = !!workout.date && weekClosed(workout.date) && !isAdmin(profile) && !isCoach(profile)
   const { oneRms } = useRecords(canLog ? me : undefined)

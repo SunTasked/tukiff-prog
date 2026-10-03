@@ -22,6 +22,7 @@ export function TimerPage() {
   const navigate = useNavigate()
   const [config, setConfig] = useState<TimerConfig>(() => timerFromParams(params) ?? defaultTimer('amrap'))
   const [running, setRunning] = useState(false)
+  const [help, setHelp] = useState(false)
   const title = params.get('title')
 
   if (running) return <RunningTimer config={config} title={title} onExit={() => setRunning(false)} />
@@ -33,7 +34,25 @@ export function TimerPage() {
       <button onClick={() => navigate(-1)} className="self-start text-sm text-zinc-400">
         ‹ Retour
       </button>
-      <h1 className="text-2xl font-bold">Timer{title ? ` · ${title}` : ''}</h1>
+      <div className="relative flex items-center gap-2">
+        <h1 className="min-w-0 truncate text-2xl font-bold">Timer{title ? ` · ${title}` : ''}</h1>
+        <button
+          className={`grid size-5 shrink-0 place-items-center rounded-full border text-xs ${help ? 'border-lime-400 text-lime-400' : 'border-zinc-600 text-zinc-400'}`}
+          aria-label="Comment fonctionnent les bips"
+          onClick={() => setHelp(!help)}
+        >
+          ?
+        </button>
+        {help && (
+          <p
+            className="absolute top-full right-0 left-0 z-10 mt-1 rounded-xl border border-zinc-700 bg-zinc-900 p-3 text-xs text-zinc-300 shadow-lg shadow-black"
+            onClick={() => setHelp(false)}
+          >
+            10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle ou
+            palier. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
+          </p>
+        )}
+      </div>
       <Chips options={TIMER_MODES} value={c.mode} onChange={(m: TimerMode) => setConfig(defaultTimer(m))} />
 
       {c.mode === 'for_time' && (
@@ -89,9 +108,6 @@ export function TimerPage() {
       >
         ▶ Démarrer
       </Button>
-      <p className="text-xs text-zinc-500">
-        10 s de décompte avant le départ, bips à 3-2-1 puis au top, et sur les 3 dernières secondes de chaque intervalle ou palier. Sur iPhone, les bips sortent même en mode silencieux et mettent en pause la musique du téléphone.
-      </p>
     </div>
   )
 }

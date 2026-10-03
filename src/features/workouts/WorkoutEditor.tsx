@@ -136,6 +136,9 @@ export function WorkoutEditor() {
     if (!saving) save()
   }
 
+  // Benchmarks (library templates) are immutable in the app: their content is fed through the database.
+  if (!draft.date) return <p className="text-zinc-400">Les benchmarks ne sont pas modifiables.</p>
+
   return (
     <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-8">
       <div className="flex flex-col gap-4">
