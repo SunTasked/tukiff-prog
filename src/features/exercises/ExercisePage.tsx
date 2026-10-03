@@ -5,8 +5,11 @@ import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase, type Exercise } from '../../lib/supabase'
 import { ExerciseRecords } from '../records/LibraryRecords'
 
-/** Library exercise, read-only, with my records. ?add=1 opens the record form (link "1RM ?" from a workout). */
-export function ExercisePage() {
+/**
+ * Library exercise, read-only, with my records. ?add=1 opens the record form (link "1RM ?" from a workout).
+ * As a movement benchmark (category "Mouvements" of the benchmarks), it also shows the box leaderboard.
+ */
+export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
   const { id } = useParams()
   const [params] = useSearchParams()
   const [exercise, setExercise] = useState<Exercise | null | undefined>()
@@ -25,7 +28,7 @@ export function ExercisePage() {
 
   return (
     <>
-      <Link to="/library?tab=exercises" className="text-sm text-zinc-400">
+      <Link to={benchmark ? '/library' : '/library?tab=exercises'} className="text-sm text-zinc-400">
         ‹ PR
       </Link>
       <PageTitle>{exercise.name}</PageTitle>
@@ -36,7 +39,7 @@ export function ExercisePage() {
           ▶ Voir la vidéo
         </a>
       )}
-      <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} />
+      <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} board={benchmark} />
     </>
   )
 }

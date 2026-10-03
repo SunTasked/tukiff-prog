@@ -11,6 +11,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   query,
   storageKey,
   hideEmpty = false,
+  ordered = false,
   renderItem,
 }: {
   items: T[]
@@ -19,6 +20,8 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
   storageKey: string
   /** Hide sections left empty by a filter (as while searching). */
   hideEmpty?: boolean
+  /** Keep the sections in the given order (A→Z otherwise). */
+  ordered?: boolean
   renderItem: (item: T) => ReactNode
 }) {
   const [expanded, setExpanded] = useState<string[]>(() => {
@@ -33,7 +36,7 @@ export function SectionedList<T extends { id: string; name: string; section_id: 
     setItem(storageKey, JSON.stringify(next))
     setExpanded(next)
   }
-  const groups = groupBySection(items, sections).filter((g) => (!query && !hideEmpty) || g.items.length > 0)
+  const groups = groupBySection(items, sections, ordered).filter((g) => (!query && !hideEmpty) || g.items.length > 0)
 
   return (
     <>

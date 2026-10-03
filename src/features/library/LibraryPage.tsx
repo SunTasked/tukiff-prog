@@ -6,7 +6,11 @@ import { supabase } from '../../lib/supabase'
 import { searchExercises, useExercises } from '../exercises/useExercises'
 import { SectionedList, type Section } from './SectionedList'
 
-type WorkoutRow = { id: string; title: string; section_id: string | null }
+/**
+ * Categories shown first, in this order: movement benchmarks (records of the movement, box leaderboard; exercises.benchmark_category)
+ * then the library section of the same name for the ergos.
+ */
+const PINNED = ['Haltéro', 'Gym suspendue', 'Ergo']
 
 /**
  * Library layout. Mobile: list, or the selected item. Desktop: list and detail side by side;
@@ -60,29 +64,48 @@ function LibraryList() {
 
 const itemClass = (active: boolean) => `flex justify-between px-4 py-3 ${active ? 'bg-zinc-800 text-lime-400' : ''}`
 
+type ListItem = { id: string; name: string; section_id: string | null; to: string }
+
 function WorkoutList() {
   const { pathname } = useLocation()
-  const [rows, setRows] = useState<WorkoutRow[] | null>(null)
+  const [rows, setRows] = useState<ListItem[] | null>(null)
   const [sections, setSections] = useState<Section[]>([])
   const [scored, setScored] = useState<Set<string>>(new Set())
   const [query, setQuery] = useState('')
 
   const load = useCallback(async () => {
-    const [w, s, r] = await Promise.all([
+    const [w, s, r, m, ms] = await Promise.all([
       supabase.from('workouts').select('id, title, section_id').is('date', null),
       supabase.from('library_sections').select('id, name'),
       supabase.rpc('benchmarks_scored'),
+      supabase.from('exercises').select('id, name, benchmark_category').not('benchmark_category', 'is', null),
+      supabase.rpc('exercises_scored'),
     ])
-    setRows(w.data ?? [])
-    setSections(s.data ?? [])
-    setScored(new Set(r.data ?? []))
+    setRows([
+      ...(w.data ?? []).map((t) => ({ id: t.id, name: t.title, section_id: t.section_id, to: `/library/workouts/${t.id}` })),
+      ...(m.data ?? []).map((e) => ({ id: e.id, name: e.name, section_id: e.benchmark_category, to: `/library/movements/${e.id}` })),
+    ])
+    // Movement categories are not library sections: their id is their name.
+    const library = s.data ?? []
+    const movements = PINNED.filter((n) => !library.some((l) => l.name === n) && m.data?.some((e) => e.benchmark_category === n))
+    setSections([...library, ...movements.map((n) => ({ id: n, name: n }))])
+    setScored(new Set([...(r.data ?? []), ...(ms.data ?? [])]))
   }, [])
 
   useEffect(() => {
     load()
   }, [load])
 
-  const filtered = searchExercises((rows ?? []).map((r) => ({ ...r, name: r.title })), query)
+  const filtered = searchExercises(rows ?? [], query)
+  const pinned = PINNED.flatMap((n) => sections.filter((s) => s.name === n))
+  const others = sections.filter((s) => !pinned.includes(s))
+  const inPinned = (item: ListItem) => pinned.some((s) => s.id === item.section_id)
+  const renderItem = (item: ListItem) => (
+    <Link to={item.to} className={itemClass(pathname.startsWith(item.to))}>
+      <span className="truncate">{item.name}</span>
+      {scored.has(item.id) && <Podium />}
+    </Link>
+  )
 
   return (
     <div className="flex flex-col gap-3">
@@ -94,16 +117,19 @@ function WorkoutList() {
       />
       {rows?.length === 0 && <p className="text-zinc-400">Aucun benchmark pour l’instant.</p>}
       <SectionedList
-        items={filtered}
-        sections={sections}
+        items={filtered.filter(inPinned)}
+        sections={pinned}
         query={query}
         storageKey="librarySectionsExpanded"
-        renderItem={(w) => (
-          <Link to={`/library/workouts/${w.id}`} className={itemClass(pathname.startsWith(`/library/workouts/${w.id}`))}>
-            <span className="truncate">{w.title}</span>
-            {scored.has(w.id) && <Podium />}
-          </Link>
-        )}
+        ordered
+        renderItem={renderItem}
+      />
+      <SectionedList
+        items={filtered.filter((i) => !inPinned(i))}
+        sections={others}
+        query={query}
+        storageKey="librarySectionsExpanded"
+        renderItem={renderItem}
       />
     </div>
   )
@@ -155,7 +181,6 @@ function ExerciseList() {
             <span className="flex shrink-0 items-center gap-2 text-sm text-zinc-500">
               {MEASURES[e.measure as Measure]}
               {e.video_url ? ' · ▶' : ''}
-              {scored?.has(e.id) && <Podium />}
             </span>
           </Link>
         )}
@@ -164,7 +189,7 @@ function ExerciseList() {
   )
 }
 
-/** At least one record on this benchmark or movement (anyone's): its leaderboard has rows. */
+/** At least one record on this benchmark (anyone's): its leaderboard has rows. */
 function Podium() {
   return (
     <svg viewBox="0 0 24 24" className="size-5 shrink-0 text-zinc-400" fill="none" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" aria-label="Classement">

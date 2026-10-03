@@ -179,6 +179,7 @@ export type Database = {
       }
       exercises: {
         Row: {
+          benchmark_category: string | null
           created_at: string
           created_by: string | null
           description: string | null
@@ -189,6 +190,7 @@ export type Database = {
           video_url: string | null
         }
         Insert: {
+          benchmark_category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null
@@ -199,6 +201,7 @@ export type Database = {
           video_url?: string | null
         }
         Update: {
+          benchmark_category?: string | null
           created_at?: string
           created_by?: string | null
           description?: string | null

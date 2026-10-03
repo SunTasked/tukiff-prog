@@ -77,6 +77,7 @@ export default function App() {
         <Route path="library" element={<LibraryPage />}>
           <Route path="workouts/:id" element={<WorkoutPage />} />
           <Route path="exercises/:id" element={<ExercisePage />} />
+          <Route path="movements/:id" element={<ExercisePage benchmark />} />
           {isCoach(profile) && (
             <>
               <Route path="workouts/new" element={<WorkoutEditor />} />
