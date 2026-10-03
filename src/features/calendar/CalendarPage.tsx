@@ -713,7 +713,6 @@ function AddSheet({ date, programs, onClose }: { date: string; programs: Editabl
           sections={sections}
           query={query}
           storageKey="librarySectionsExpanded"
-          what="séances"
           renderItem={(t) => (
             <TemplateItem id={t.id} title={t.name} exercises={exercises} disabled={!programId} onPick={() => pick(t.id)} />
           )}

@@ -30,7 +30,7 @@ export function WorkoutEditor() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [search] = useSearchParams()
-  const { exercises, sections: exerciseSections, byId, nameOf, create } = useExercises()
+  const { exercises, sections: exerciseSections, byId, nameOf } = useExercises()
   const [draft, setDraft] = useState<WorkoutDraft | null>(
     id ? null : { title: '', notes: '', date: search.get('date'), program_id: search.get('program'), section_id: search.get('section'), blocks: [newBlock('warmup', crypto.randomUUID())] },
   )
@@ -255,7 +255,6 @@ export function WorkoutEditor() {
           sections={exerciseSections}
           used={usedExercises(draft, pick.block)}
           onPick={onPicked}
-          onCreate={(n) => create(n)}
           onClose={() => setPick(null)}
         />
       )}

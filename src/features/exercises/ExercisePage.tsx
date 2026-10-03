@@ -1,17 +1,14 @@
 import { useEffect, useState } from 'react'
-import { Link, useNavigate, useParams, useSearchParams } from 'react-router'
-import { Button, PageTitle, Spinner } from '../../components/ui'
+import { Link, useParams, useSearchParams } from 'react-router'
+import { PageTitle, Spinner } from '../../components/ui'
 import { MEASURES, type Measure } from '../../domain/workout'
 import { supabase, type Exercise } from '../../lib/supabase'
-import { isCoach, useAuth } from '../auth/AuthProvider'
 import { ExerciseRecords } from '../records/LibraryRecords'
 
 /** Library exercise, read-only, with my records. ?add=1 opens the record form (link "1RM ?" from a workout). */
 export function ExercisePage() {
   const { id } = useParams()
   const [params] = useSearchParams()
-  const navigate = useNavigate()
-  const coach = isCoach(useAuth().profile)
   const [exercise, setExercise] = useState<Exercise | null | undefined>()
 
   useEffect(() => {
@@ -40,11 +37,6 @@ export function ExercisePage() {
         </a>
       )}
       <ExerciseRecords key={exercise.id} exercise={exercise} adding={params.has('add')} />
-      {coach && (
-        <Button variant="secondary" className="mt-6 w-full" onClick={() => navigate(`/library/exercises/${exercise.id}/edit`)}>
-          Modifier
-        </Button>
-      )}
     </>
   )
 }

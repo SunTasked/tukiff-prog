@@ -13,7 +13,6 @@ import { LoginPage } from './features/auth/LoginPage'
 import { OnboardingPage } from './features/auth/OnboardingPage'
 import { PendingPage } from './features/auth/PendingPage'
 import { ResetPasswordPage } from './features/auth/ResetPasswordPage'
-import { ExerciseFormPage } from './features/exercises/ExerciseFormPage'
 import { ExercisePage } from './features/exercises/ExercisePage'
 import { HomePage } from './features/home/HomePage'
 import { LibraryPage } from './features/library/LibraryPage'
@@ -82,8 +81,6 @@ export default function App() {
             <>
               <Route path="workouts/new" element={<WorkoutEditor />} />
               <Route path="workouts/:id/edit" element={<WorkoutEditor />} />
-              <Route path="exercises/new" element={<ExerciseFormPage />} />
-              <Route path="exercises/:id/edit" element={<ExerciseFormPage />} />
             </>
           )}
         </Route>
