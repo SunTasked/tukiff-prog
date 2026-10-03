@@ -29,7 +29,7 @@ export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
   return (
     <>
       <Link to={benchmark ? '/library' : '/library?tab=exercises'} className="text-sm text-zinc-400">
-        ‹ PR
+        ‹ Progression
       </Link>
       <PageTitle>{exercise.name}</PageTitle>
       <p className="text-sm text-zinc-400">{MEASURES[exercise.measure as Measure]}</p>
@@ -44,7 +44,7 @@ export function ExercisePage({ benchmark = false }: { benchmark?: boolean }) {
       ) : (
         exercise.benchmark_category && (
           <Link to={`/library/movements/${exercise.id}`} className="mt-6 block text-lime-400">
-            Voir dans Benchmarks › {exercise.benchmark_category}
+            Voir dans Records › {exercise.benchmark_category}
           </Link>
         )
       )}

@@ -45,7 +45,7 @@ function LibraryList() {
 
   return (
     <>
-      <PageTitle>PR</PageTitle>
+      <PageTitle>Progression</PageTitle>
       <div className="mb-4 grid grid-cols-2 rounded-xl bg-zinc-900 p-1 text-sm">
         {(['workouts', 'exercises'] as const).map((t) => (
           <button
@@ -53,7 +53,7 @@ function LibraryList() {
             className={`rounded-lg py-2 font-semibold ${tab === t ? 'bg-zinc-800 text-lime-400' : 'text-zinc-400'}`}
             onClick={() => navigate(t === 'exercises' ? '/library?tab=exercises' : '/library', { replace: true })}
           >
-            {t === 'workouts' ? 'Benchmarks' : 'Exercices'}
+            {t === 'workouts' ? 'Records' : 'Exercices'}
           </button>
         ))}
       </div>
